@@ -207,6 +207,8 @@ void propagate(Link subs) {
                 ? SubscriberFlags.runInnerEffects
                 : SubscriberFlags.toCheckDirty;
           }
+
+          continue;
         }
       } else if (sub.flags & targetFlag == SubscriberFlags.none) {
         sub.flags |= targetFlag;
@@ -277,9 +279,10 @@ bool _isValidLink(Link subLink, Subscriber sub) {
 bool checkDirty(Link deps) {
   int stack = 0;
   Link? nextDep;
+  late bool dirty;
 
   do {
-    bool dirty = false;
+    dirty = false;
     final dep = deps.dep;
     if (dep is IComputed) {
       if (dep.version != deps.version) {
@@ -298,10 +301,10 @@ bool checkDirty(Link deps) {
       }
     }
 
-    nextDep = deps.nextDep;
-    if (dirty || nextDep == null) {
+    if (dirty || (nextDep = deps.nextDep) == null) {
       if (stack > 0) {
         var sub = deps.sub as IComputed, shouldContinue = false;
+
         do {
           --stack;
           final subSubs = sub.subs!,
@@ -333,7 +336,7 @@ bool checkDirty(Link deps) {
       return dirty;
     }
 
-    deps = nextDep;
+    deps = nextDep!;
   } while (true);
 }
 
@@ -380,8 +383,8 @@ void _clearTrack(Link link) {
       dep.subs = nextSub;
     }
 
-    link.nextDep = _linkPool;
-    _linkPool = link;
+    current.nextDep = _linkPool;
+    _linkPool = current;
 
     if (dep.subs == null && dep is Subscriber) {
       if (dep is IEffect) {

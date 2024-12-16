@@ -1,5 +1,5 @@
 name: alien_signals
-description: A starting point for Dart libraries or applications.
+description: The lightest signal library - Dart implementation of alien-signals
 version: 0.0.1
 repository: https://github.com/medz/alien_signals
 

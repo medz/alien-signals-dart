@@ -49,7 +49,7 @@ class EffectScope implements Subscriber, Notifiable {
   /// re-run its effects.
   @override
   void notify() {
-    if (flags & SubscriberFlags.runInnerEffects != SubscriberFlags.none) {
+    if (flags & SubscriberFlags.runInnerEffects != 0) {
       flags &= ~SubscriberFlags.runInnerEffects;
       for (var link = deps; link != null; link = link.nextDep) {
         final notifiable = switch (link.dep) {

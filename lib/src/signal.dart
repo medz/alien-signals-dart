@@ -48,11 +48,11 @@ class Signal<T> implements Dependency, IWritableSignal<T> {
   /// Returns the current value stored in the signal.
   @override
   T get() {
-    if (activeTrackId != 0 && activeTrackId != lastTrackedId) {
-      lastTrackedId = activeTrackId;
+    if (activeTrackId != 0 && lastTrackedId != activeTrackId) {
+      final trackId = activeTrackId; // 保存当前的 trackId
+      lastTrackedId = trackId;
       link(this, activeSub!);
     }
-
     return currentValue;
   }
 
@@ -65,11 +65,21 @@ class Signal<T> implements Dependency, IWritableSignal<T> {
   ///   [value] - The new value to set
   @override
   set(T value) {
+    print('Signal set: current=$currentValue, new=$value');
+    print('Signal subs: $subs'); // 检查是否有订阅者
+
     if (currentValue != (currentValue = value)) {
+      print('Value changed'); // 确认值确实改变了
+
       final subs = this.subs;
       if (subs != null) {
+        print('Has subscribers, calling propagate');
         propagate(subs);
+      } else {
+        print('No subscribers');
       }
+    } else {
+      print('Value not changed');
     }
   }
 }

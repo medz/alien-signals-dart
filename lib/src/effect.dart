@@ -39,8 +39,11 @@ int nextTrackId() => ++lastTrackId;
 /// effect(() => print(counter())); // Prints when counter changes
 /// ```
 Effect effect<T>(T Function() fn) {
+  print('Creating effect');
   final e = Effect(fn);
+  print('Effect created, running initial effect');
   e.run();
+  print('Initial effect complete');
 
   return e;
 }
@@ -106,30 +109,30 @@ class Effect<T> implements IEffect, Dependency {
   /// state flags.
   @override
   void notify() {
-    final f = flags;
-    if (f & SubscriberFlags.dirty != SubscriberFlags.none) {
-      run();
+    final flags = this.flags;
+    if ((flags & SubscriberFlags.dirty) != 0) {
+      this.run();
       return;
     }
-
-    if (f & SubscriberFlags.toCheckDirty != SubscriberFlags.none) {
-      if (deps != null && checkDirty(deps!)) {
-        run();
+    if ((flags & SubscriberFlags.toCheckDirty) != 0) {
+      if (checkDirty(this.deps!)) {
+        this.run();
         return;
       } else {
-        flags &= ~SubscriberFlags.toCheckDirty;
+        this.flags &= ~SubscriberFlags.toCheckDirty;
       }
     }
+    if ((flags & SubscriberFlags.runInnerEffects) != 0) {
+      this.flags &= ~SubscriberFlags.runInnerEffects;
+      var link = this.deps;
+      do {
+        final dep = link?.dep;
+        if (dep is Notifiable) {
+          (dep as Notifiable).notify();
+        }
 
-    if (f & SubscriberFlags.runInnerEffects != SubscriberFlags.none) {
-      flags &= ~SubscriberFlags.runInnerEffects;
-      for (var link = deps; link != null; link = link.nextDep) {
-        final effect = switch (link.dep) {
-          IEffect effect => effect,
-          _ => null,
-        };
-        effect?.notify();
-      }
+        link = link?.nextDep;
+      } while (link != null);
     }
   }
 
@@ -141,15 +144,20 @@ class Effect<T> implements IEffect, Dependency {
   /// Returns the value returned by the effect function.
   T run() {
     final prevSub = activeSub, prevTrackId = activeTrackId;
+    print('Effect run: prevSub=$prevSub, prevTrackId=$prevTrackId');
 
-    setActiveSub(this, nextTrackId());
+    final currentTrackId = nextTrackId();
+    setActiveSub(this, currentTrackId);
+    print('New trackId: $currentTrackId');
     startTrack(this);
 
     try {
       return fn();
     } finally {
-      setActiveSub(prevSub, prevTrackId);
       endTrack(this);
+      print('Effect tracking complete');
+      // 最后才重置 tracking 状态
+      setActiveSub(prevSub, prevTrackId);
     }
   }
 

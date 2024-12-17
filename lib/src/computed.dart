@@ -71,23 +71,21 @@ class Computed<T> implements IComputed, ISignal<T> {
   /// Returns the current computed value.
   @override
   T get() {
-    final f = flags;
-    if (f & SubscriberFlags.dirty != SubscriberFlags.none) {
-      update();
-    } else if (f & SubscriberFlags.toCheckDirty != SubscriberFlags.none) {
-      if (deps != null && checkDirty(deps!)) {
-        update();
+    final flags = this.flags;
+    if ((flags & SubscriberFlags.dirty) != 0) {
+      this.update();
+    } else if ((flags & SubscriberFlags.toCheckDirty) != 0) {
+      if (checkDirty(this.deps!)) {
+        this.update();
       } else {
-        flags &= ~SubscriberFlags.toCheckDirty;
+        this.flags &= ~SubscriberFlags.toCheckDirty;
       }
     }
-
-    if (activeTrackId != 0 && lastTrackedId != activeTrackId) {
-      lastTrackedId = activeTrackId;
-      link(this, activeSub!).version = version;
+    if (activeTrackId != 0 && this.lastTrackedId != activeTrackId) {
+      this.lastTrackedId = activeTrackId;
+      link(this, activeSub!).version = this.version;
     }
-
-    return cachedValue!;
+    return this.cachedValue!;
   }
 
   /// Updates the computed value by running the getter function.
@@ -98,26 +96,23 @@ class Computed<T> implements IComputed, ISignal<T> {
   /// Returns true if the value actually changed, false otherwise.
   @override
   bool update() {
-    final prevSub = activeSub, prevTrackId = activeTrackId;
+    final prevSub = activeSub;
+    final prevTrackId = activeTrackId;
     setActiveSub(this, nextTrackId());
     startTrack(this);
-
-    final oldValue = cachedValue;
-    late final T newValue;
-
+    final oldValue = this.cachedValue;
+    late T newValue;
     try {
-      newValue = getter(oldValue);
+      newValue = this.getter(oldValue);
     } finally {
       setActiveSub(prevSub, prevTrackId);
       endTrack(this);
     }
-
-    if (!identical(oldValue, newValue)) {
-      cachedValue = newValue;
-      version++;
+    if (oldValue != newValue) {
+      this.cachedValue = newValue;
+      this.version++;
       return true;
     }
-
     return false;
   }
 }

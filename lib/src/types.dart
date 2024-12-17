@@ -20,7 +20,7 @@ abstract interface class ISignal<T> {
 /// A writable signal extends [ISignal] to also allow setting new values.
 /// When a new value is set, all dependent computations and effects will be automatically
 /// re-executed.
-abstract interface class IWritableSignal<T> implements ISignal<T> {
+abstract interface class IWritableSignal<T> extends ISignal<T> {
   /// Sets a new value for the signal.
   ///
   /// When [value] is different from the current value, all dependent

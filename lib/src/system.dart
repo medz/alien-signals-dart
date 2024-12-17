@@ -1,47 +1,115 @@
-abstract interface class IEffect implements Subscriber {
+import 'types.dart';
+
+/// An interface for effect subscribers that can be notified of changes.
+///
+/// Effects are side-effects that run when their dependencies change.
+/// They implement the [Subscriber] interface to participate in the dependency tracking system.
+abstract interface class IEffect implements Subscriber, Notifiable {
+  /// Notifies this effect that one of its dependencies has changed.
+  ///
+  /// This causes the effect to re-execute.
+  @override
   void notify();
+
+  /// Reference to the next effect in the notification queue.
+  ///
+  /// Used to maintain a linked list of effects that need to be re-run.
   IEffect? nextNotify;
 }
 
+/// An interface for computed values that can derive from other reactive values.
+///
+/// Computed values implement both [Dependency] and [Subscriber] interfaces since they
+/// can both depend on other values and be depended upon.
 abstract interface class IComputed implements Dependency, Subscriber {
+  /// The version number of this computed value.
+  ///
+  /// Incremented whenever the computed value changes.
   abstract int version;
+
+  /// Updates the computed value if necessary.
+  ///
+  /// Returns true if the value actually changed.
   bool update();
 }
 
+/// An interface representing a value that can be depended upon by subscribers.
+///
+/// Dependencies maintain a list of subscribers that need to be notified when they change.
 abstract interface class Dependency {
+  /// The head of the linked list of subscribers.
   Link? subs;
+
+  /// The tail of the linked list of subscribers.
   Link? subsTail;
+
+  /// The ID of the last tracking operation that accessed this dependency.
   int? lastTrackedId;
 }
 
+/// Flags representing different states of a subscriber.
+///
+/// Used for tracking the state and behavior of subscribers in the reactivity system.
 extension type const SubscriberFlags._(int value) implements int {
+  /// No flags set
   static const none = SubscriberFlags._(0);
+
+  /// Currently tracking dependencies
   static const tracking = SubscriberFlags._(1 << 0);
+
+  /// Can propagate changes to dependents
   static const canPropagate = SubscriberFlags._(1 << 1);
+
+  /// Need to run inner effects
   static const runInnerEffects = SubscriberFlags._(1 << 2);
+
+  /// Need to check if dirty
   static const toCheckDirty = SubscriberFlags._(1 << 3);
+
+  /// Is dirty and needs update
   static const dirty = SubscriberFlags._(1 << 4);
 
+  /// Bitwise NOT operator for flags
   SubscriberFlags operator ~() {
     return SubscriberFlags._(~value);
   }
 
+  /// Bitwise AND operator for flags
   SubscriberFlags operator &(int other) {
     return SubscriberFlags._(value & other);
   }
 
+  /// Bitwise OR operator for flags
   SubscriberFlags operator |(int other) {
     return SubscriberFlags._(value | other);
   }
 }
 
+/// An interface for objects that can subscribe to dependencies.
+///
+/// Subscribers maintain a list of dependencies they're tracking and flags
+/// for their current state.
 abstract interface class Subscriber {
+  /// The current state flags of this subscriber
   abstract SubscriberFlags flags;
+
+  /// The head of the linked list of dependencies
   Link? deps;
+
+  /// The tail of the linked list of dependencies
   Link? depsTail;
 }
 
+/// Represents a bi-directional link in the dependency graph.
+///
+/// Links form a doubly-linked list between dependencies and their subscribers,
+/// allowing efficient traversal and updates of the dependency graph.
 class Link {
+  /// Creates a new link in the dependency graph.
+  ///
+  /// [dep] is the dependency being linked to
+  /// [sub] is the subscriber being linked to
+  /// [version] is the version number of the dependency at link time
   Link({
     required this.dep,
     required this.sub,
@@ -51,29 +119,54 @@ class Link {
     this.nextDep,
   });
 
+  /// The dependency this link connects to
   Dependency dep;
+
+  /// The subscriber this link connects to
   Subscriber sub;
+
+  /// The version of the dependency when this link was created
   int version;
+
+  /// Previous subscriber in the linked list
   Link? prevSub;
+
+  /// Next subscriber in the linked list
   Link? nextSub;
+
+  /// Next dependency in the linked list
   Link? nextDep;
 }
 
+/// Current batch operation depth
 int _batchDepth = 0;
+
+/// Head of the queued effects list
 IEffect? _queuedEffects;
+
+/// Tail of the queued effects list
 IEffect? _queuedEffectsTail;
+
+/// Pool of unused Link objects for reuse
 Link? _linkPool;
 
+/// Starts a batch of updates.
+///
+/// Batching prevents immediate execution of effects until the batch ends.
 void startBatch() {
   ++_batchDepth;
 }
 
+/// Ends a batch of updates.
+///
+/// When the last batch ends, queued effects are executed.
 void endBatch() {
   if (--_batchDepth == 0) {
     _drainQueuedEffects();
   }
 }
 
+/// Executes all queued effects.
 void _drainQueuedEffects() {
   while (_queuedEffects != null) {
     final effect = _queuedEffects!, queuedNext = effect.nextNotify;
@@ -89,6 +182,9 @@ void _drainQueuedEffects() {
   }
 }
 
+/// Creates a link between a dependency and subscriber.
+///
+/// Returns an existing link if one exists, otherwise creates a new one.
 Link link(Dependency dep, Subscriber sub) {
   final currentDep = sub.depsTail, nextDep = currentDep?.nextDep ?? sub.deps;
   if (nextDep != null && nextDep.dep == dep) {
@@ -99,6 +195,7 @@ Link link(Dependency dep, Subscriber sub) {
   return _linkNewDep(dep, sub, nextDep, currentDep);
 }
 
+/// Creates a new link between a dependency and subscriber.
 Link _linkNewDep(
     Dependency dep, Subscriber sub, Link? nextDep, Link? depsTail) {
   late final Link newLink;
@@ -137,6 +234,7 @@ Link _linkNewDep(
   return newLink;
 }
 
+/// Propagates changes through the dependency graph.
 void propagate(Link subs) {
   SubscriberFlags targetFlag = SubscriberFlags.dirty;
   Link link = subs;
@@ -169,7 +267,7 @@ void propagate(Link subs) {
             ++stack;
           } else {
             link = subSubs;
-            targetFlag = sub is IEffect
+            targetFlag = sub is Notifiable
                 ? SubscriberFlags.runInnerEffects
                 : SubscriberFlags.toCheckDirty;
           }
@@ -203,7 +301,7 @@ void propagate(Link subs) {
             ++stack;
           } else {
             link = subSubs;
-            targetFlag = sub is IEffect
+            targetFlag = sub is Notifiable
                 ? SubscriberFlags.runInnerEffects
                 : SubscriberFlags.toCheckDirty;
           }
@@ -257,6 +355,7 @@ void propagate(Link subs) {
   }
 }
 
+/// Checks if a link is still valid for a subscriber.
 bool _isValidLink(Link subLink, Subscriber sub) {
   final depsTail = sub.depsTail;
   if (depsTail != null) {
@@ -276,6 +375,7 @@ bool _isValidLink(Link subLink, Subscriber sub) {
   return false;
 }
 
+/// Checks if dependencies are dirty and need updating.
 bool checkDirty(Link deps) {
   int stack = 0;
   Link? nextDep;
@@ -340,11 +440,13 @@ bool checkDirty(Link deps) {
   } while (true);
 }
 
+/// Starts tracking dependencies for a subscriber.
 void startTrack(Subscriber sub) {
   sub.depsTail = null;
   sub.flags = SubscriberFlags.tracking;
 }
 
+/// Ends tracking dependencies for a subscriber.
 void endTrack(Subscriber sub) {
   final depsTail = sub.depsTail;
   if (depsTail != null) {
@@ -360,6 +462,7 @@ void endTrack(Subscriber sub) {
   sub.flags &= ~SubscriberFlags.tracking;
 }
 
+/// Clears tracked dependencies starting from a given link.
 void _clearTrack(Link link) {
   Link? current = link;
   do {

@@ -118,40 +118,38 @@ Link link(Dependency dep, Subscriber sub) {
 }
 
 Link _linkNewDep(
-  dep: Dependency,
-  sub: Subscriber,
-  nextDep: Link | null,
-  depsTail: Link | null,
-): Link {
-  let newLink: Link;
+  Dependency dep,
+  Subscriber sub,
+  Link? nextDep,
+  Link? depsTail,
+) {
+  late Link newLink;
 
-  if (linkPool !== null) {
-    newLink = linkPool;
-    linkPool = newLink.nextDep;
+  if (_linkPool != null) {
+    newLink = _linkPool!;
+    _linkPool = newLink.nextDep;
     newLink.nextDep = nextDep;
     newLink.dep = dep;
     newLink.sub = sub;
   } else {
-    newLink = {
-      dep,
-      sub,
+    newLink = Link(
+      dep: dep,
+      sub: sub,
       version: 0,
-      nextDep,
-      prevSub: null,
-      nextSub: null,
-    };
+      nextDep: nextDep,
+    );
   }
 
-  if (depsTail === null) {
+  if (depsTail == null) {
     sub.deps = newLink;
   } else {
     depsTail.nextDep = newLink;
   }
 
-  if (dep.subs === null) {
+  if (dep.subs == null) {
     dep.subs = newLink;
   } else {
-    const oldTail = dep.subsTail!;
+    final oldTail = dep.subsTail!;
     newLink.prevSub = oldTail;
     oldTail.nextSub = newLink;
   }

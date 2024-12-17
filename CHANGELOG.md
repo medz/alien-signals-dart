@@ -1,3 +1,8 @@
+## v0.0.4
+
+- docs: add doc comments
+- fix: fix repo link
+
 ## v0.0.3
 
 - docs: update readme

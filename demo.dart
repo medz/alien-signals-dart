@@ -1,14 +1,17 @@
 import 'package:alien_signals/alien_signals.dart';
 
 main() {
-  final count = signal(0);
-  final scope = effectScope();
+  final a = signal(1);
+  final b = signal(1);
 
-  scope.run(() {
-    effect(() {
-      print(count.get());
-    });
+  effect(() {
+    if (a.get() > 0) {
+      effect(() {
+        b.get();
+        if (a.get() == 0) {
+          throw Error();
+        }
+      });
+    }
   });
-
-  count.set(2);
 }

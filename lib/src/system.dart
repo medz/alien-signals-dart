@@ -4,18 +4,7 @@ import 'types.dart';
 ///
 /// Effects are side-effects that run when their dependencies change.
 /// They implement the [Subscriber] interface to participate in the dependency tracking system.
-abstract interface class IEffect implements Subscriber, Notifiable {
-  /// Notifies this effect that one of its dependencies has changed.
-  ///
-  /// This causes the effect to re-execute.
-  @override
-  void notify();
-
-  /// Reference to the next effect in the notification queue.
-  ///
-  /// Used to maintain a linked list of effects that need to be re-run.
-  IEffect? nextNotify;
-}
+abstract interface class IEffect implements Subscriber, Notifiable {}
 
 /// An interface for computed values that can derive from other reactive values.
 ///
@@ -120,10 +109,10 @@ class Link {
   });
 
   /// The dependency this link connects to
-  Dependency dep;
+  final Dependency dep;
 
   /// The subscriber this link connects to
-  Subscriber sub;
+  final Subscriber sub;
 
   /// The version of the dependency when this link was created
   int version;
@@ -142,13 +131,10 @@ class Link {
 int _batchDepth = 0;
 
 /// Head of the queued effects list
-IEffect? _queuedEffects;
+Notifiable? _queuedEffects;
 
 /// Tail of the queued effects list
-IEffect? _queuedEffectsTail;
-
-/// Pool of unused Link objects for reuse
-Link? _linkPool;
+Notifiable? _queuedEffectsTail;
 
 /// Starts a batch of updates.
 ///
@@ -169,9 +155,14 @@ void endBatch() {
 /// Executes all queued effects.
 void _drainQueuedEffects() {
   while (_queuedEffects != null) {
-    final effect = _queuedEffects!, queuedNext = effect.nextNotify;
+    final effect = _queuedEffects!,
+        queuedNext = switch (effect) {
+          IEffect(:final nextNotify) => nextNotify,
+          _ => null,
+        };
+
     if (queuedNext != null) {
-      effect.nextNotify = null;
+      (effect as IEffect).nextNotify = null;
       _queuedEffects = queuedNext;
     } else {
       _queuedEffects = null;
@@ -198,21 +189,12 @@ Link link(Dependency dep, Subscriber sub) {
 /// Creates a new link between a dependency and subscriber.
 Link _linkNewDep(
     Dependency dep, Subscriber sub, Link? nextDep, Link? depsTail) {
-  late final Link newLink;
-  if (_linkPool != null) {
-    newLink = _linkPool!;
-    _linkPool = newLink.nextDep;
-    newLink.nextDep = nextDep;
-    newLink.dep = dep;
-    newLink.sub = sub;
-  } else {
-    newLink = Link(
-      dep: dep,
-      sub: sub,
-      version: 0,
-      nextDep: nextDep,
-    );
-  }
+  late final Link newLink = Link(
+    dep: dep,
+    sub: sub,
+    version: 0,
+    nextDep: nextDep,
+  );
 
   if (depsTail == null) {
     sub.deps = newLink;
@@ -242,8 +224,7 @@ void propagate(Link subs) {
   Link? nextSub;
 
   do {
-    final sub = link.sub;
-    final subFlags = sub.flags;
+    final sub = link.sub, subFlags = sub.flags;
 
     if (subFlags & SubscriberFlags.tracking == SubscriberFlags.none) {
       bool canPropagate = subFlags >> 2 == SubscriberFlags.none;
@@ -274,14 +255,14 @@ void propagate(Link subs) {
           continue;
         }
 
-        if (sub is IEffect) {
+        if (sub is Notifiable) {
           if (_queuedEffectsTail != null) {
-            _queuedEffectsTail!.nextNotify = sub;
+            _queuedEffectsTail!.nextNotify = sub as Notifiable;
           } else {
-            _queuedEffects = sub;
+            _queuedEffects = sub as Notifiable;
           }
 
-          _queuedEffectsTail = sub;
+          _queuedEffectsTail = sub as Notifiable;
         }
       } else if (sub.flags & targetFlag == SubscriberFlags.none) {
         sub.flags |= targetFlag;
@@ -313,8 +294,7 @@ void propagate(Link subs) {
       }
     }
 
-    nextSub = subs.nextSub;
-    if (nextSub == null) {
+    if ((nextSub = subs.nextSub) == null) {
       if (stack > 0) {
         Dependency dep = subs.dep;
         bool shouldContinue = false;
@@ -339,6 +319,7 @@ void propagate(Link subs) {
         } while (stack > 0);
         if (shouldContinue) continue;
       }
+
       break;
     }
 
@@ -347,7 +328,7 @@ void propagate(Link subs) {
           stack > 0 ? SubscriberFlags.toCheckDirty : SubscriberFlags.dirty;
     }
 
-    link = subs = nextSub;
+    link = subs = nextSub!;
   } while (true);
 
   if (_batchDepth == 0) {
@@ -465,11 +446,13 @@ void endTrack(Subscriber sub) {
 /// Clears tracked dependencies starting from a given link.
 void _clearTrack(Link link) {
   Link? current = link;
+
   do {
     final dep = current!.dep,
         nextDep = current.nextDep,
         nextSub = current.nextSub,
         prevSub = current.prevSub;
+    current.nextDep = null;
 
     if (nextSub != null) {
       nextSub.prevSub = prevSub;
@@ -486,12 +469,9 @@ void _clearTrack(Link link) {
       dep.subs = nextSub;
     }
 
-    current.nextDep = _linkPool;
-    _linkPool = current;
-
     if (dep.subs == null && dep is Subscriber) {
-      if (dep is IEffect) {
-        (dep as IEffect).flags = SubscriberFlags.none;
+      if (dep is Notifiable) {
+        (dep as Subscriber).flags = SubscriberFlags.none;
       } else {
         (dep as Subscriber).flags |= SubscriberFlags.dirty;
       }

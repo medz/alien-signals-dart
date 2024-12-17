@@ -22,7 +22,7 @@ Computed<T> computed<T>(T Function(T? value) getter) => Computed(getter);
 ///
 /// Implements both [IComputed] to participate in the dependency graph and [ISignal] to
 /// be usable as a dependency for other computed values and effects.
-class Computed<T> implements IComputed, ISignal {
+class Computed<T> implements IComputed, ISignal<T> {
   /// Creates a new computed value with the given [getter] function.
   Computed(this.getter);
 
@@ -70,7 +70,7 @@ class Computed<T> implements IComputed, ISignal {
   ///
   /// Returns the current computed value.
   @override
-  get() {
+  T get() {
     final f = flags;
     if (f & SubscriberFlags.dirty != SubscriberFlags.none) {
       update();

@@ -40,6 +40,9 @@ class EffectScope implements Subscriber, Notifiable {
   @override
   SubscriberFlags flags = SubscriberFlags.none;
 
+  @override
+  Notifiable? nextNotify;
+
   /// Notifies all effects in this scope to run if they are marked for execution.
   ///
   /// This is called when dependencies change and the scope needs to
@@ -49,11 +52,11 @@ class EffectScope implements Subscriber, Notifiable {
     if (flags & SubscriberFlags.runInnerEffects != SubscriberFlags.none) {
       flags &= ~SubscriberFlags.runInnerEffects;
       for (var link = deps; link != null; link = link.nextDep) {
-        final effect = switch (link.dep) {
-          IEffect effect => effect,
+        final notifiable = switch (link.dep) {
+          Notifiable notifiable => notifiable,
           _ => null,
         };
-        effect?.notify();
+        notifiable?.notify();
       }
     }
   }

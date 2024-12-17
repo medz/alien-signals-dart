@@ -30,6 +30,23 @@ abstract interface class IWritableSignal<T> implements ISignal<T> {
   set(T value);
 }
 
+/// Represents an object that can be notified of changes and participate in a
+/// notification chain.
+///
+/// This interface defines the contract for objects that need to receive
+/// notifications and can be linked together in a chain of notifications,
+/// typically used in reactive programming patterns.
 abstract interface class Notifiable {
+  /// Notifies this object that a change has occurred.
+  ///
+  /// This method is called when the object needs to be informed of a change
+  /// and should handle the notification appropriately.
   void notify();
+
+  /// Reference to the next object in the notification chain.
+  ///
+  /// When notifications need to be propagated through a series of objects,
+  /// this property points to the next object that should receive the
+  /// notification. May be null if this is the last object in the chain.
+  Notifiable? nextNotify;
 }

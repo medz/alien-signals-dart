@@ -1,5 +1,6 @@
 import 'effect_scope.dart';
 import 'system.dart';
+import 'types.dart';
 
 /// The currently active subscriber during tracking
 Subscriber? activeSub;
@@ -89,7 +90,7 @@ class Effect<T> implements IEffect, Dependency {
 
   /// Reference to the next effect to notify in the notification queue
   @override
-  IEffect? nextNotify;
+  Notifiable? nextNotify;
 
   /// The head of the subscriber list for this effect
   @override
@@ -150,5 +151,10 @@ class Effect<T> implements IEffect, Dependency {
       setActiveSub(prevSub, prevTrackId);
       endTrack(this);
     }
+  }
+
+  void stop() {
+    startTrack(this);
+    endTrack(this);
   }
 }

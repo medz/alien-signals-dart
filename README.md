@@ -12,8 +12,6 @@
 
 The lightest signal library for Dart, ported from [stackblitz/alien-signals](https://github.com/stackblitz/alien-signals).
 
-- Project Status: WIP
-
 ## Installation
 
 Add to your `pubspec.yaml`:

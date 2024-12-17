@@ -56,10 +56,6 @@ print(name.get()); // Get value using call `get` fn.
 name.set('Bob');   //Set value using call `set` fn.
 
 // or
-print(name()); // Get value using call syntax
-name('Bob');   // Set value using call syntax
-
-// or
 print(name.value); // Get using property syntax
 name.value = 'Bob'; // Set using property syntax
 ```

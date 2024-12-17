@@ -8,5 +8,6 @@ void main() {
     print('Count: ${count.get()}, D: ${doubled.get()}');
   });
 
-  count.set(3);
+  count.set(1);
+  count.set(2);
 }

@@ -5,6 +5,10 @@ import 'types.dart';
 EffectScope? activeEffectScope;
 int activeScopeTrackId = 0;
 
+EffectScope effectScope() {
+  return EffectScope();
+}
+
 class EffectScope implements Subscriber, Notifiable {
   @override
   Link? deps;

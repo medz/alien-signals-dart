@@ -36,9 +36,9 @@ main() {
       }
     });
 
-    a.value--;
-    a.value--;
-    a.value--;
+    a.set(a.get() - 1);
+    a.set(a.get() - 1);
+    a.set(a.get() - 1);
 
     expect(b.get(), isFalse);
   });

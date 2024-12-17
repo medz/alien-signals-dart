@@ -174,7 +174,10 @@ void propagate(Link? link,
       }
       if (canPropagate) {
         sub.flags |= targetFlag;
-        final subSubs = (sub as Dependency).subs;
+        final subSubs = switch (sub) {
+          Dependency(:final subs) => subs,
+          _ => null,
+        };
         if (subSubs != null) {
           propagate(
               subSubs,
@@ -195,7 +198,10 @@ void propagate(Link? link,
     } else if (_isValidLink(link, sub)) {
       if ((subFlags >> 2) == 0) {
         sub.flags |= targetFlag | SubscriberFlags.canPropagate;
-        final subSubs = (sub as Dependency).subs;
+        final subSubs = switch (sub) {
+          Dependency(:final subs) => subs,
+          _ => null,
+        };
         if (subSubs != null) {
           propagate(
             subSubs,

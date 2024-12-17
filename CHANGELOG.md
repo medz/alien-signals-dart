@@ -1,3 +1,4 @@
-## 0.0.1
+## 0.0.2
 
-- Initial version.
+- feat: Complete implementation
+- feat: Add compatibility feature (`.value` getter/setter prop)

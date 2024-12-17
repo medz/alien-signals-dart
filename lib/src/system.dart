@@ -1,12 +1,19 @@
 import 'types.dart';
 
+/// Interface for reactive effects that can subscribe to dependencies and be notified of changes
 abstract interface class IEffect implements Subscriber, Notifiable {}
 
+/// Interface for computed values that can track dependencies and maintain version state
 abstract interface class IComputed implements Dependency, Subscriber {
+  /// Current version number of the computed value
   abstract int version;
+
+  /// Update the computed value if needed
+  /// Returns true if value changed
   bool update();
 }
 
+/// Interface for values that can be depended on by subscribers
 abstract interface class Dependency {
   Link? subs;
   Link? subsTail;
@@ -48,12 +55,14 @@ extension type const SubscriberFlags._(int value) implements int {
   }
 }
 
+/// Interface for subscribers that can track dependencies
 abstract interface class Subscriber {
   abstract SubscriberFlags flags;
   Link? deps;
   Link? depsTail;
 }
 
+/// Link class representing dependency relationships
 class Link {
   Link({
     required Dependency this.dep,
@@ -80,10 +89,12 @@ Notifiable? _queuedEffects;
 Notifiable? _queuedEffectsTail;
 Link? _linkPool;
 
+/// Start a new batch of updates
 void startBatch() {
   ++_batchDepth;
 }
 
+/// End the current batch of updates
 void endBatch() {
   if ((--_batchDepth) == 0) {
     _drainQueuedEffects();
@@ -105,6 +116,7 @@ void _drainQueuedEffects() {
   }
 }
 
+/// Create or reuse a link between a dependency and subscriber
 Link link(Dependency dep, Subscriber sub) {
   final currentDep = sub.depsTail;
   final nextDep = currentDep != null ? currentDep.nextDep : sub.deps;
@@ -160,6 +172,7 @@ Link _linkNewDep(
   return newLink;
 }
 
+/// Propagate changes through the dependency graph
 void propagate(Link? link,
     [SubscriberFlags targetFlag = SubscriberFlags.dirty]) {
   do {
@@ -240,6 +253,7 @@ bool _isValidLink(Link subLink, Subscriber sub) {
   return false;
 }
 
+/// Check if any dependencies are dirty and need updates
 bool checkDirty(Link? link) {
   do {
     final dep = link!.dep!;
@@ -268,11 +282,13 @@ bool checkDirty(Link? link) {
   return false;
 }
 
+/// Start tracking dependencies for a subscriber
 void startTrack(Subscriber sub) {
   sub.depsTail = null;
   sub.flags = SubscriberFlags.tracking;
 }
 
+/// End tracking dependencies for a subscriber
 void endTrack(Subscriber sub) {
   final depsTail = sub.depsTail;
   if (depsTail != null) {

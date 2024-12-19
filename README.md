@@ -39,7 +39,7 @@ void main() {
   });
 
   // Update the signal
-  count.value = 1; // Prints: Count: 1, Doubled: 2
+  count.set(1); // Prints: Count: 1, Doubled: 2
 }
 ```
 
@@ -54,10 +54,6 @@ final name = signal('Alice');
 
 print(name.get()); // Get value using call `get` fn.
 name.set('Bob');   //Set value using call `set` fn.
-
-// or
-print(name.value); // Get using property syntax
-name.value = 'Bob'; // Set using property syntax
 ```
 
 ### Computed Values
@@ -69,8 +65,8 @@ final firstName = signal('John');
 final lastName = signal('Doe');
 final fullName = computed((_) => '${firstName.get()} ${lastName.get()}');
 
-effect(() => print(fullName())); // Prints: John Doe
-lastName.value = 'Smith';        // Prints: John Smith
+effect(() => print(fullName.get())); // Prints: John Doe
+lastName.set('Smith'); // Prints: John Smith
 ```
 
 ### Effects
@@ -79,9 +75,8 @@ Effects run automatically when their dependencies change:
 
 ```dart
 final user = signal('guest');
-
 final e = effect(() {
-  print('Current user: ${user()}');
+  print('Current user: ${user.get()}');
 });
 
 // Cleanup when done

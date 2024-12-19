@@ -1,3 +1,10 @@
+## v0.0.5
+
+- docs: update readme
+- perf: no recursive calls, performance improvement **17%**
+- chore: add benchamrk test
+- chore: add scope example
+
 ## v0.0.4
 
 - docs: add doc comments

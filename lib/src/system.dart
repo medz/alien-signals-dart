@@ -310,7 +310,7 @@ bool checkDirty(Link? deps) {
         } else if ((depFlags & SubscriberFlags.toCheckDirty) != 0) {
           final depSubs = dep.subs!;
           if (depSubs.nextSub != null) {
-            dep.subs!.prevSub = deps;
+            depSubs.prevSub = deps;
           }
           deps = dep.deps;
           ++stack;

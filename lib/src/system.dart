@@ -308,7 +308,10 @@ bool checkDirty(Link? deps) {
         if ((depFlags & SubscriberFlags.dirty) != 0) {
           dirty = dep.update();
         } else if ((depFlags & SubscriberFlags.toCheckDirty) != 0) {
-          dep.subs!.prevSub = deps;
+          final depSubs = dep.subs!;
+          if (depSubs.nextSub != null) {
+            dep.subs!.prevSub = deps;
+          }
           deps = dep.deps;
           ++stack;
           continue;
@@ -321,11 +324,15 @@ bool checkDirty(Link? deps) {
         do {
           --stack;
           final subSubs = sub.subs!;
-          final prevLink = subSubs.prevSub!;
-          subSubs.prevSub = null;
+          Link? prevLink = subSubs.prevSub;
+          if (prevLink != null) {
+            subSubs.prevSub = null;
+          } else {
+            prevLink = subSubs;
+          }
           if (dirty) {
             if (sub.update()) {
-              sub = prevLink.sub;
+              sub = prevLink!.sub;
               dirty = true;
               continue;
             }
@@ -333,7 +340,7 @@ bool checkDirty(Link? deps) {
             sub.flags &= ~SubscriberFlags.toCheckDirty;
           }
 
-          deps = prevLink.nextDep;
+          deps = prevLink!.nextDep;
           if (deps != null) {
             continue top;
           }

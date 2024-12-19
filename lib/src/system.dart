@@ -173,8 +173,13 @@ Link _linkNewDep(
 }
 
 /// Propagate changes through the dependency graph
-void propagate(Link? link,
-    [SubscriberFlags targetFlag = SubscriberFlags.dirty]) {
+void propagate(Link? subs) {
+  SubscriberFlags targetFlag = SubscriberFlags.dirty;
+  Link? link = subs;
+  int stack = 0;
+  Link? nextSub;
+
+  top:
   do {
     final sub = link!.sub!;
     final subFlags = sub.flags;
@@ -187,17 +192,22 @@ void propagate(Link? link,
       }
       if (canPropagate) {
         sub.flags |= targetFlag;
-        final subSubs = switch (sub) {
-          Dependency(:final subs) => subs,
-          _ => null,
-        };
+        final subSubs = (sub as Dependency).subs;
         if (subSubs != null) {
-          propagate(
-              subSubs,
-              sub is Notifiable
-                  ? SubscriberFlags.runInnerEffects
-                  : SubscriberFlags.toCheckDirty);
-        } else if (sub is Notifiable) {
+          if (subSubs.nextSub != null) {
+            subSubs.prevSub = subs;
+            link = subs = subSubs;
+            targetFlag = SubscriberFlags.toCheckDirty;
+            ++stack;
+          } else {
+            link = subSubs;
+            targetFlag = sub is Notifiable
+                ? SubscriberFlags.runInnerEffects
+                : SubscriberFlags.toCheckDirty;
+          }
+          continue;
+        }
+        if (sub is Notifiable) {
           if (_queuedEffectsTail != null) {
             _queuedEffectsTail!.nextNotify = sub as Notifiable;
           } else {
@@ -211,27 +221,54 @@ void propagate(Link? link,
     } else if (_isValidLink(link, sub)) {
       if ((subFlags >> 2) == 0) {
         sub.flags |= targetFlag | SubscriberFlags.canPropagate;
-        final subSubs = switch (sub) {
-          Dependency(:final subs) => subs,
-          _ => null,
-        };
+        final subSubs = (sub as Dependency).subs;
         if (subSubs != null) {
-          propagate(
-            subSubs,
-            sub is Notifiable
+          if (subSubs.nextSub != null) {
+            subSubs.prevSub = subs;
+            link = subs = subSubs;
+            targetFlag = SubscriberFlags.toCheckDirty;
+            ++stack;
+          } else {
+            link = subSubs;
+            targetFlag = sub is Notifiable
                 ? SubscriberFlags.runInnerEffects
-                : SubscriberFlags.toCheckDirty,
-          );
+                : SubscriberFlags.toCheckDirty;
+          }
+          continue;
         }
       } else if ((sub.flags & targetFlag) == 0) {
         sub.flags |= targetFlag;
       }
     }
 
-    link = link.nextSub;
-  } while (link != null);
+    if ((nextSub = subs!.nextSub) == null) {
+      if (stack > 0) {
+        Dependency dep = subs.dep!;
+        do {
+          --stack;
+          final depSubs = dep.subs!;
+          final prevLink = depSubs.prevSub!;
+          depSubs.prevSub = null;
+          link = subs = prevLink.nextSub;
+          if (subs != null) {
+            targetFlag = stack > 0
+                ? SubscriberFlags.toCheckDirty
+                : SubscriberFlags.dirty;
+            continue top;
+          }
+          dep = prevLink.dep!;
+        } while (stack > 0);
+      }
+      break;
+    }
+    if (link != subs) {
+      targetFlag =
+          stack > 0 ? SubscriberFlags.toCheckDirty : SubscriberFlags.dirty;
+    }
+    link = subs = nextSub;
+  } while (true);
 
-  if (targetFlag == SubscriberFlags.dirty && _batchDepth == 0) {
+  if (_batchDepth == 0) {
     _drainQueuedEffects();
   }
 }
@@ -254,32 +291,62 @@ bool _isValidLink(Link subLink, Subscriber sub) {
 }
 
 /// Check if any dependencies are dirty and need updates
-bool checkDirty(Link? link) {
+bool checkDirty(Link? deps) {
+  int stack = 0;
+  late bool dirty;
+  Link? nextDep;
+
+  top:
   do {
-    final dep = link!.dep!;
+    dirty = false;
+    final dep = deps!.dep;
     if (dep is IComputed) {
-      if (dep.version != link.version) {
-        return true;
-      }
-      final depFlags = dep.flags;
-      if ((depFlags & SubscriberFlags.dirty) != 0) {
-        if (dep.update()) {
-          return true;
-        }
-      } else if ((depFlags & SubscriberFlags.toCheckDirty) != 0) {
-        if (checkDirty(dep.deps!)) {
-          if (dep.update()) {
-            return true;
-          }
-        } else {
-          dep.flags &= ~SubscriberFlags.toCheckDirty;
+      if (dep.version != deps.version) {
+        dirty = true;
+      } else {
+        final depFlags = dep.flags;
+        if ((depFlags & SubscriberFlags.dirty) != 0) {
+          dirty = dep.update();
+        } else if ((depFlags & SubscriberFlags.toCheckDirty) != 0) {
+          dep.subs!.prevSub = deps;
+          deps = dep.deps;
+          ++stack;
+          continue;
         }
       }
     }
-    link = link.nextDep;
-  } while (link != null);
+    if (dirty || (nextDep = deps.nextDep) == null) {
+      if (stack > 0) {
+        dynamic sub = deps.sub;
+        do {
+          --stack;
+          final subSubs = sub.subs!;
+          final prevLink = subSubs.prevSub!;
+          subSubs.prevSub = null;
+          if (dirty) {
+            if (sub.update()) {
+              sub = prevLink.sub;
+              dirty = true;
+              continue;
+            }
+          } else {
+            sub.flags &= ~SubscriberFlags.toCheckDirty;
+          }
 
-  return false;
+          deps = prevLink.nextDep;
+          if (deps != null) {
+            continue top;
+          }
+
+          sub = prevLink.sub;
+          dirty = false;
+        } while (stack > 0);
+      }
+      return dirty;
+    }
+
+    deps = nextDep;
+  } while (true);
 }
 
 /// Start tracking dependencies for a subscriber

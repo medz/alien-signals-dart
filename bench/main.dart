@@ -39,5 +39,5 @@ final class _AlienSignalReactiveFramework extends ReactiveFramework {
 
 main() {
   final framework = const _AlienSignalReactiveFramework();
-  runFrameworkBench(framework, testPullCounts: true);
+  runFrameworkBench(framework);
 }

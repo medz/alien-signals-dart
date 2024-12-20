@@ -1,3 +1,8 @@
+## v0.0.6
+
+- perf: avoid unnecessary assignment operations in checkDirty
+- perf: reuse depSubs checkDirty
+
 ## v0.0.5
 
 - docs: update readme

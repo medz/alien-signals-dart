@@ -184,7 +184,7 @@ void propagate(Link? subs) {
     final subFlags = sub.flags;
 
     if ((subFlags & SubscriberFlags.tracking) == 0) {
-      bool canPropagate = (subFlags >> SubscriberFlags.canPropagate) == 0;
+      bool canPropagate = (subFlags >> 2) == 0;
       if (!canPropagate && (subFlags & SubscriberFlags.canPropagate) != 0) {
         sub.flags &= ~SubscriberFlags.canPropagate;
         canPropagate = true;
@@ -218,7 +218,7 @@ void propagate(Link? subs) {
         sub.flags |= targetFlag;
       }
     } else if (_isValidLink(link, sub)) {
-      if ((subFlags >> SubscriberFlags.canPropagate) == 0) {
+      if ((subFlags >> 2) == 0) {
         sub.flags |= targetFlag | SubscriberFlags.canPropagate;
         final subSubs = (sub as Dependency).subs;
         if (subSubs != null) {

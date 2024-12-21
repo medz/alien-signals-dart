@@ -28,7 +28,7 @@ class Effect<T> implements IEffect, Dependency {
     if (activeTrackId != 0) {
       link(effect, activeSub!);
     } else if (activeScopeTrackId != 0) {
-      link(effect, activeEffectScope! as dynamic); // TODO
+      link(effect, activeEffectScope!);
     }
 
     return effect;

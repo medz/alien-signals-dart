@@ -1,6 +1,6 @@
 name: alien_signals
 description: The lightest signal library - Dart implementation of alien-signals.
-version: 0.0.6
+version: 0.0.7
 repository: https://github.com/medz/alien-signals-dart
 
 environment:
@@ -11,6 +11,7 @@ topics:
   - signals
   - reactive
   - alien-signals
+  - state
 
 funding:
   - https://github.com/sponsors/medz

@@ -1,3 +1,7 @@
+## v0.0.7
+
+- fix: scope is coerced into type during propagation
+
 ## v0.0.6
 
 - perf: avoid unnecessary assignment operations in checkDirty

@@ -124,9 +124,9 @@ Link link(Dependency dep, Subscriber sub) {
   if (nextDep != null && nextDep.dep == dep) {
     sub.depsTail = nextDep;
     return nextDep;
-  } else {
-    return _linkNewDep(dep, sub, nextDep, currentDep);
   }
+
+  return _linkNewDep(dep, sub, nextDep, currentDep);
 }
 
 Link _linkNewDep(
@@ -135,8 +135,7 @@ Link _linkNewDep(
   Link? nextDep,
   Link? depsTail,
 ) {
-  late Link newLink;
-
+  Link newLink;
   if (_linkPool != null) {
     newLink = _linkPool!;
     _linkPool = newLink.nextDep;
@@ -185,7 +184,7 @@ void propagate(Link? subs) {
     final subFlags = sub.flags;
 
     if ((subFlags & SubscriberFlags.tracking) == 0) {
-      bool canPropagate = (subFlags >> 2) == 0;
+      bool canPropagate = (subFlags >> SubscriberFlags.canPropagate) == 0;
       if (!canPropagate && (subFlags & SubscriberFlags.canPropagate) != 0) {
         sub.flags &= ~SubscriberFlags.canPropagate;
         canPropagate = true;
@@ -219,7 +218,7 @@ void propagate(Link? subs) {
         sub.flags |= targetFlag;
       }
     } else if (_isValidLink(link, sub)) {
-      if ((subFlags >> 2) == 0) {
+      if ((subFlags >> SubscriberFlags.canPropagate) == 0) {
         sub.flags |= targetFlag | SubscriberFlags.canPropagate;
         final subSubs = (sub as Dependency).subs;
         if (subSubs != null) {
@@ -323,7 +322,7 @@ bool checkDirty(Link? deps) {
         dynamic sub = deps.sub;
         do {
           --stack;
-          final subSubs = sub.subs!;
+          final subSubs = sub.subs;
           Link? prevLink = subSubs.prevSub;
           if (prevLink != null) {
             subSubs.prevSub = null;
@@ -378,11 +377,11 @@ void endTrack(Subscriber sub) {
 }
 
 void _clearTrack(Link? link) {
-  do {
-    final dep = link!.dep!;
-    final nextDep = link.nextDep;
-    final nextSub = link.nextSub;
-    final prevSub = link.prevSub;
+  while (link != null) {
+    final dep = link.dep!,
+        nextDep = link.nextDep,
+        nextSub = link.nextSub,
+        prevSub = link.prevSub;
 
     if (nextSub != null) {
       nextSub.prevSub = prevSub;
@@ -399,8 +398,7 @@ void _clearTrack(Link? link) {
       dep.subs = nextSub;
     }
 
-    link.dep = null;
-    link.sub = null;
+    link.dep = link.sub = null;
     link.nextDep = _linkPool;
     _linkPool = link;
 
@@ -419,6 +417,7 @@ void _clearTrack(Link? link) {
         continue;
       }
     }
+
     link = nextDep;
-  } while (link != null);
+  }
 }

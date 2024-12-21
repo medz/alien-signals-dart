@@ -332,7 +332,6 @@ bool checkDirty(Link? deps) {
           if (dirty) {
             if (sub.update()) {
               sub = prevLink!.sub;
-              dirty = true;
               continue;
             }
           } else {

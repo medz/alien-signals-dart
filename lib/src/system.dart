@@ -192,7 +192,7 @@ void propagate(Link? subs) {
       }
       if (canPropagate) {
         sub.flags |= targetFlag;
-        final subSubs = (sub as Dependency).subs;
+        final subSubs = sub is Dependency ? (sub as Dependency).subs : null;
         if (subSubs != null) {
           if (subSubs.nextSub != null) {
             subSubs.prevSub = subs;

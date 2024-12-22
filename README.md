@@ -104,22 +104,6 @@ scope.run(() {
 scope.stop();
 ```
 
-### Compat
-
-Allows you to manipulate signals using the `.value` property:
-
-```dart
-import 'package:alien_signals/alien_signals.dart';
-import 'package:alien_signals/compat.dart';
-
-void main() {
-  final count = signal(0);
-  effect(() => print(count.value); // print 0
-
-  count.value++; // print 1
-}
-```
-
 ## API Reference
 
 See the [API documentation](https://pub.dev/documentation/alien_signals/latest/) for detailed information about all available APIs.

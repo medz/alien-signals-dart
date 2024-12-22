@@ -6,9 +6,10 @@ Signal<T> signal<T>(T value) {
   return Signal(value);
 }
 
-class Signal<T> implements Dependency, IWritableSignal<T> {
+class Signal<T> implements Dependency<T>, IWritableSignal<T> {
   Signal(this.currentValue);
 
+  @override
   T currentValue;
 
   @override

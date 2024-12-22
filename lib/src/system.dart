@@ -4,20 +4,16 @@ import 'types.dart';
 abstract interface class IEffect implements Subscriber, Notifiable {}
 
 /// Interface for computed values that can track dependencies and maintain version state
-abstract interface class IComputed implements Dependency, Subscriber {
-  /// Current version number of the computed value
-  abstract int version;
-
-  /// Update the computed value if needed
-  /// Returns true if value changed
-  bool update();
+abstract interface class IComputed<T> implements Dependency<T>, Subscriber {
+  T update();
 }
 
 /// Interface for values that can be depended on by subscribers
-abstract interface class Dependency {
+abstract interface class Dependency<T> {
   Link? subs;
   Link? subsTail;
   int? lastTrackedId;
+  abstract T currentValue;
 }
 
 extension type const SubscriberFlags._(int value) implements int {
@@ -67,7 +63,7 @@ class Link {
   Link({
     required Dependency this.dep,
     required Subscriber this.sub,
-    required this.version,
+    required this.value,
     this.prevSub,
     this.nextSub,
     this.nextDep,
@@ -75,8 +71,7 @@ class Link {
 
   Dependency? dep;
   Subscriber? sub;
-
-  int version;
+  Object? value;
 
   Link? prevSub;
   Link? nextSub;
@@ -146,7 +141,7 @@ Link _linkNewDep(
     newLink = Link(
       dep: dep,
       sub: sub,
-      version: 0,
+      value: null,
       nextDep: nextDep,
     );
   }
@@ -290,7 +285,7 @@ bool _isValidLink(Link subLink, Subscriber sub) {
 }
 
 /// Check if any dependencies are dirty and need updates
-bool checkDirty(Link? deps) {
+bool checkDirty(Link? link) {
   int stack = 0;
   late bool dirty;
   Link? nextDep;
@@ -298,48 +293,44 @@ bool checkDirty(Link? deps) {
   top:
   do {
     dirty = false;
-    final dep = deps!.dep;
+    final dep = link!.dep;
     if (dep is IComputed) {
-      if (dep.version != deps.version) {
-        dirty = true;
-      } else {
-        final depFlags = dep.flags;
-        if ((depFlags & SubscriberFlags.dirty) != 0) {
-          dirty = dep.update();
-        } else if ((depFlags & SubscriberFlags.toCheckDirty) != 0) {
-          final depSubs = dep.subs!;
-          if (depSubs.nextSub != null) {
-            depSubs.prevSub = deps;
-          }
-          deps = dep.deps;
-          ++stack;
-          continue;
+      final depFlags = dep.flags;
+      if ((depFlags & SubscriberFlags.dirty) != 0) {
+        if (dep.update() != link.value) {
+          dirty = true;
         }
+      } else if ((depFlags & SubscriberFlags.toCheckDirty) != 0) {
+        dep.subs!.prevSub = link;
+        link = dep.deps;
+        ++stack;
+        continue;
+      } else if (dep.currentValue != link.value) {
+        dirty = true;
       }
+    } else if (dep != null && dep.currentValue != link.value) {
+      dirty = true;
     }
-    if (dirty || (nextDep = deps.nextDep) == null) {
+    if (dirty || (nextDep = link.nextDep) == null) {
       if (stack > 0) {
-        dynamic sub = deps.sub;
+        dynamic sub = link.sub;
         do {
           --stack;
-          final subSubs = sub.subs;
-          Link? prevLink = subSubs.prevSub;
-          if (prevLink != null) {
-            subSubs.prevSub = null;
-          } else {
-            prevLink = subSubs;
-          }
+          final Link subSubs = sub.subs;
+          final prevLink = subSubs.prevSub!;
+          subSubs.prevSub = null;
+
           if (dirty) {
-            if (sub.update()) {
-              sub = prevLink!.sub;
+            if (sub.update() != prevLink.value) {
+              sub = prevLink.sub;
               continue;
             }
           } else {
             sub.flags &= ~SubscriberFlags.toCheckDirty;
           }
 
-          deps = prevLink!.nextDep;
-          if (deps != null) {
+          link = prevLink.nextDep;
+          if (link != null) {
             continue top;
           }
 
@@ -350,7 +341,7 @@ bool checkDirty(Link? deps) {
       return dirty;
     }
 
-    deps = nextDep;
+    link = nextDep;
   } while (true);
 }
 

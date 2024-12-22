@@ -7,11 +7,13 @@ Computed<T> computed<T>(T Function(T? oldValue) getter) {
   return Computed<T>(getter);
 }
 
-class Computed<T> implements IComputed, ISignal<T> {
+class Computed<T> implements IComputed<T?>, ISignal<T> {
   Computed(this.getter);
 
   final T Function(T? oldValue) getter;
-  T? cachedValue;
+
+  @override
+  T? currentValue;
 
   @override
   Link? deps;
@@ -32,9 +34,6 @@ class Computed<T> implements IComputed, ISignal<T> {
   Link? subsTail;
 
   @override
-  int version = 0;
-
-  @override
   T get() {
     if ((flags & SubscriberFlags.dirty) != 0) {
       update();
@@ -48,36 +47,30 @@ class Computed<T> implements IComputed, ISignal<T> {
     if (activeTrackId != 0) {
       if (lastTrackedId != activeTrackId) {
         lastTrackedId = activeTrackId;
-        link(this, activeSub!).version = version;
+        link(this, activeSub!).value = currentValue;
       }
     } else if (activeScopeTrackId != 0) {
       if (lastTrackedId != activeScopeTrackId) {
         lastTrackedId = activeScopeTrackId;
-        link(this, activeEffectScope!).version = this.version;
+        link(this, activeEffectScope!).value = currentValue;
       }
     }
-    return cachedValue!;
+
+    return currentValue!;
   }
 
   @override
-  bool update() {
+  T update() {
     final prevSub = activeSub;
     final prevTrackId = activeTrackId;
     setActiveSub(this, nextTrackId());
     startTrack(this);
-    final oldValue = cachedValue;
-    late T newValue;
+
     try {
-      newValue = getter(oldValue);
+      return currentValue = getter(currentValue);
     } finally {
       setActiveSub(prevSub, prevTrackId);
       endTrack(this);
     }
-    if (oldValue != newValue) {
-      cachedValue = newValue;
-      version++;
-      return true;
-    }
-    return false;
   }
 }

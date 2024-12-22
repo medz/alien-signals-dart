@@ -312,8 +312,6 @@ bool checkDirty(Link? link) {
       } else if (dep.currentValue != link.value) {
         dirty = true;
       }
-    } else if (dep != null && dep.currentValue != link.value) {
-      dirty = true;
     }
     if (dirty || (nextDep = link.nextDep) == null) {
       if (stack > 0) {
@@ -331,6 +329,11 @@ bool checkDirty(Link? link) {
             }
           } else {
             sub.flags &= ~SubscriberFlags.toCheckDirty;
+            if (sub.currentValue != prevLink.value) {
+              dirty = true;
+              sub = prevLink.sub;
+              continue;
+            }
           }
 
           link = prevLink.nextDep;

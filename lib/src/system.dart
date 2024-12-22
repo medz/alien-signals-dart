@@ -181,16 +181,16 @@ void propagate(Link? subs) {
   top:
   do {
     final sub = link!.sub!;
-    final subFlags = sub.flags;
+    SubscriberFlags subFlags = sub.flags;
 
     if ((subFlags & SubscriberFlags.tracking) == 0) {
       bool canPropagate = (subFlags >> 2) == 0;
       if (!canPropagate && (subFlags & SubscriberFlags.canPropagate) != 0) {
-        sub.flags &= ~SubscriberFlags.canPropagate;
+        sub.flags = subFlags &= ~SubscriberFlags.canPropagate;
         canPropagate = true;
       }
       if (canPropagate) {
-        sub.flags |= targetFlag;
+        sub.flags = subFlags | targetFlag;
         final subSubs = sub is Dependency ? (sub as Dependency).subs : null;
         if (subSubs != null) {
           if (subSubs.nextSub != null) {
@@ -214,12 +214,12 @@ void propagate(Link? subs) {
           }
           _queuedEffectsTail = sub as Notifiable;
         }
-      } else if ((sub.flags & targetFlag) == 0) {
-        sub.flags |= targetFlag;
+      } else if ((subFlags & targetFlag) == 0) {
+        sub.flags = subFlags | targetFlag;
       }
     } else if (_isValidLink(link, sub)) {
       if ((subFlags >> 2) == 0) {
-        sub.flags |= targetFlag | SubscriberFlags.canPropagate;
+        sub.flags = subFlags | targetFlag | SubscriberFlags.canPropagate;
         final subSubs = (sub as Dependency).subs;
         if (subSubs != null) {
           if (subSubs.nextSub != null) {
@@ -235,8 +235,8 @@ void propagate(Link? subs) {
           }
           continue;
         }
-      } else if ((sub.flags & targetFlag) == 0) {
-        sub.flags |= targetFlag;
+      } else if ((subFlags & targetFlag) == 0) {
+        sub.flags = subFlags | targetFlag;
       }
     }
 

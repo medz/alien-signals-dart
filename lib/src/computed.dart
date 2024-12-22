@@ -36,28 +36,27 @@ class Computed<T> implements IComputed, ISignal<T> {
 
   @override
   T get() {
-    final flags = this.flags;
     if ((flags & SubscriberFlags.dirty) != 0) {
-      this.update();
+      update();
     } else if ((flags & SubscriberFlags.toCheckDirty) != 0) {
-      if (checkDirty(this.deps)) {
-        this.update();
+      if (checkDirty(deps)) {
+        update();
       } else {
-        this.flags &= ~SubscriberFlags.toCheckDirty;
+        flags &= ~SubscriberFlags.toCheckDirty;
       }
     }
     if (activeTrackId != 0) {
-      if (this.lastTrackedId != activeTrackId) {
-        this.lastTrackedId = activeTrackId;
-        link(this, activeSub!).version = this.version;
+      if (lastTrackedId != activeTrackId) {
+        lastTrackedId = activeTrackId;
+        link(this, activeSub!).version = version;
       }
     } else if (activeScopeTrackId != 0) {
-      if (this.lastTrackedId != activeScopeTrackId) {
-        this.lastTrackedId = activeScopeTrackId;
+      if (lastTrackedId != activeScopeTrackId) {
+        lastTrackedId = activeScopeTrackId;
         link(this, activeEffectScope!).version = this.version;
       }
     }
-    return this.cachedValue!;
+    return cachedValue!;
   }
 
   @override
@@ -66,17 +65,17 @@ class Computed<T> implements IComputed, ISignal<T> {
     final prevTrackId = activeTrackId;
     setActiveSub(this, nextTrackId());
     startTrack(this);
-    final oldValue = this.cachedValue;
+    final oldValue = cachedValue;
     late T newValue;
     try {
-      newValue = this.getter(oldValue);
+      newValue = getter(oldValue);
     } finally {
       setActiveSub(prevSub, prevTrackId);
       endTrack(this);
     }
     if (oldValue != newValue) {
-      this.cachedValue = newValue;
-      this.version++;
+      cachedValue = newValue;
+      version++;
       return true;
     }
     return false;

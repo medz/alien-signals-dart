@@ -21,17 +21,12 @@ Effect<T> effect<T>(T Function() fn) {
 }
 
 class Effect<T> implements IEffect, Dependency {
-  Effect._(this.fn);
-
-  factory Effect(T Function() fn) {
-    final effect = Effect._(fn);
+  Effect(this.fn) {
     if (activeTrackId != 0) {
-      link(effect, activeSub!);
+      link(this, activeSub!);
     } else if (activeScopeTrackId != 0) {
-      link(effect, activeEffectScope!);
+      link(this, activeEffectScope!);
     }
-
-    return effect;
   }
 
   final T Function() fn;
@@ -59,21 +54,20 @@ class Effect<T> implements IEffect, Dependency {
 
   @override
   void notify() {
-    final flags = this.flags;
     if ((flags & SubscriberFlags.dirty) != 0) {
-      this.run();
+      run();
       return;
     }
     if ((flags & SubscriberFlags.toCheckDirty) != 0) {
       if (checkDirty(this.deps!)) {
-        this.run();
+        run();
         return;
       } else {
-        this.flags &= ~SubscriberFlags.toCheckDirty;
+        flags &= ~SubscriberFlags.toCheckDirty;
       }
     }
     if ((flags & SubscriberFlags.runInnerEffects) != 0) {
-      this.flags &= ~SubscriberFlags.runInnerEffects;
+      flags &= ~SubscriberFlags.runInnerEffects;
       Link? link = this.deps;
       do {
         final dep = link!.dep;
@@ -92,7 +86,7 @@ class Effect<T> implements IEffect, Dependency {
     setActiveSub(this, nextTrackId());
     startTrack(this);
     try {
-      return this.fn();
+      return fn();
     } finally {
       setActiveSub(prevSub, prevTrackId);
       endTrack(this);

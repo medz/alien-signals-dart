@@ -1,3 +1,10 @@
+## v0.0.8
+
+- perf: Remove the redundant else
+- perf: remove unnecessary dirty variable updates
+- perf: avoid unnecessary property access
+- perf: store value instead of version number in Link for dirty check
+
 ## v0.0.7
 
 - fix: scope is coerced into type during propagation

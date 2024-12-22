@@ -1,3 +1,7 @@
+## v0.0.9
+
+- perf: avoid meaningless setting of flags by subscribers
+
 ## v0.0.8
 
 - perf: Remove the redundant else

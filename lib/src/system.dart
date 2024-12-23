@@ -203,8 +203,8 @@ void propagate(Link? subs) {
       // Worst case: beforte: 8 operations, after: 10 operations
       //
       // Only in the best case can it be improved.
-      if (((subFlags >> 2) == 0 &&
-              _alwaysTrue(sub.flags = subFlags | targetFlag)) ||
+      sub.flags = subFlags | targetFlag;
+      if ((subFlags >> 2) == 0 ||
           ((subFlags & SubscriberFlags.recursed) != 0 &&
               _alwaysTrue((sub.flags = subFlags & ~SubscriberFlags.recursed) |
                   targetFlag))) {
@@ -231,12 +231,11 @@ void propagate(Link? subs) {
           }
           _queuedEffectsTail = sub as Notifiable;
         }
-      } else {
-        sub.flags = subFlags | targetFlag;
       }
     } else if (_isValidLink(link, sub)) {
+      sub.flags = targetFlag = subFlags | targetFlag;
       if ((subFlags >> 2) == 0) {
-        sub.flags = subFlags | targetFlag | SubscriberFlags.recursed;
+        sub.flags = targetFlag | SubscriberFlags.recursed;
         final subSubs = (sub as Dependency).subs;
         if (subSubs != null) {
           if (subSubs.nextSub != null) {
@@ -252,8 +251,6 @@ void propagate(Link? subs) {
           }
           continue;
         }
-      } else if ((subFlags & targetFlag) == 0) {
-        sub.flags = subFlags | targetFlag;
       }
     }
 

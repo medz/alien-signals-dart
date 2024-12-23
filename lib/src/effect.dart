@@ -69,8 +69,8 @@ class Effect<T> implements IEffect, Dependency<void> {
         flags &= ~SubscriberFlags.toCheckDirty;
       }
     }
-    if ((flags & SubscriberFlags.runInnerEffects) != 0) {
-      flags &= ~SubscriberFlags.runInnerEffects;
+    if ((flags & SubscriberFlags.innerEffectsPending) != 0) {
+      flags &= ~SubscriberFlags.innerEffectsPending;
       Link? link = this.deps;
       do {
         final dep = link!.dep;

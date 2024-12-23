@@ -27,7 +27,11 @@ extension type const SubscriberFlags._(int value) implements int {
   static const recursed = SubscriberFlags._(1 << 1);
 
   /// Need to run inner effects
+  @Deprecated('Use The `innerEffectsPending`, Remove in 0.1 version.')
   static const runInnerEffects = SubscriberFlags._(1 << 2);
+
+  /// Inner effects are pending and need to be processed
+  static const innerEffectsPending = SubscriberFlags._(1 << 2);
 
   /// Need to check if dirty
   static const toCheckDirty = SubscriberFlags._(1 << 3);
@@ -222,7 +226,7 @@ void propagate(Link? subs) {
           } else {
             link = subSubs;
             targetFlag = sub is Notifiable
-                ? SubscriberFlags.runInnerEffects
+                ? SubscriberFlags.innerEffectsPending
                 : SubscriberFlags.toCheckDirty;
           }
           continue;
@@ -251,7 +255,7 @@ void propagate(Link? subs) {
           } else {
             link = subSubs;
             targetFlag = sub is Notifiable
-                ? SubscriberFlags.runInnerEffects
+                ? SubscriberFlags.innerEffectsPending
                 : SubscriberFlags.toCheckDirty;
           }
           continue;

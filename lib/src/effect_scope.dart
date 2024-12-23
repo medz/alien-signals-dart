@@ -26,8 +26,8 @@ class EffectScope implements Subscriber, Notifiable {
 
   @override
   void notify() {
-    if ((flags & SubscriberFlags.runInnerEffects) != 0) {
-      flags &= ~SubscriberFlags.runInnerEffects;
+    if ((flags & SubscriberFlags.innerEffectsPending) != 0) {
+      flags &= ~SubscriberFlags.innerEffectsPending;
       Link? link = deps;
       do {
         final dep = link!.dep;

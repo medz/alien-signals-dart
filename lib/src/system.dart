@@ -162,8 +162,6 @@ Link _linkNewDep(
   return newLink;
 }
 
-bool _alwaysTrue(_) => true;
-
 /// Propagate changes through the dependency graph
 void propagate(Link? subs) {
   SubscriberFlags targetFlag = SubscriberFlags.dirty;
@@ -194,20 +192,17 @@ void propagate(Link? subs) {
       // ## Note
       // This is to synchronize https://github.com/stackblitz/alien-signals/commit/78aa79f5ea8926f5b8ca0daaffb3d0b9387f9140#diff-6fe6a66d9e19964283ad8fcf5ad1a9bf0e8a32a22124ef6f28474d92fda574edR145
       // In Dart, removing redundant variables has almost no improvement.
-      // Instead, it does not support JS-like (code, value) operations and
-      // introduces an additional _alwaysTrue function, which is essentially
-      // the same as the above code.
       //
       // Theoretically, whether the performance is improved is as follows:
-      // Best case: before: 8 operations, after: 5 operations
+      // Best case: before: 8 operations, after: 4 operations
       // Worst case: beforte: 8 operations, after: 10 operations
       //
       // Only in the best case can it be improved.
-      if (((subFlags >> 2) == 0 &&
-              _alwaysTrue(sub.flags = subFlags | targetFlag)) ||
+      if (((subFlags >> 2) == 0 && (sub.flags = subFlags | targetFlag) != 0) ||
           ((subFlags & SubscriberFlags.recursed) != 0 &&
-              _alwaysTrue((sub.flags = subFlags & ~SubscriberFlags.recursed) |
-                  targetFlag))) {
+              ((sub.flags = subFlags & ~SubscriberFlags.recursed) |
+                      targetFlag) !=
+                  0)) {
         final subSubs = sub is Dependency ? (sub as Dependency).subs : null;
         if (subSubs != null) {
           if (subSubs.nextSub != null) {

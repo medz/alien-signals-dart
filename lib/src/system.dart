@@ -294,7 +294,9 @@ void shallowPropagate(Link? link) {
   do {
     final updateSub = link!.sub!;
     final updateSubFlags = updateSub.flags;
-    if ((updateSubFlags & SubscriberFlags.toCheckDirty) != 0) {
+    if ((updateSubFlags &
+            (SubscriberFlags.toCheckDirty | SubscriberFlags.dirty)) ==
+        SubscriberFlags.toCheckDirty) {
       updateSub.flags = updateSubFlags | SubscriberFlags.dirty;
     }
 

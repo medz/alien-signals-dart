@@ -1,3 +1,8 @@
+## v0.0.11
+
+- refactor: enhance condition check in shallowPropagate for SubscriberFlags
+- perf: remove all unnecessary flags assignments
+
 ## v0.0.10
 
 - feat: sync upstream push-pull model

@@ -23,8 +23,8 @@ extension type const SubscriberFlags._(int value) implements int {
   /// Currently tracking dependencies
   static const tracking = SubscriberFlags._(1 << 0);
 
-  /// Can propagate changes to dependents
-  static const canPropagate = SubscriberFlags._(1 << 1);
+  /// Recursed flag for indicating recursive operations
+  static const recursed = SubscriberFlags._(1 << 1);
 
   /// Need to run inner effects
   static const runInnerEffects = SubscriberFlags._(1 << 2);
@@ -181,10 +181,10 @@ void propagate(Link? subs) {
     final subFlags = sub.flags;
 
     if ((subFlags & SubscriberFlags.tracking) == 0) {
-      // bool canPropagate = (subFlags >> 2) == 0;
-      // if (!canPropagate) {
-      //   if ((subFlags & SubscriberFlags.canPropagate) != 0) {
-      //     sub.flags = (subFlags & ~SubscriberFlags.canPropagate) | targetFlag;
+      // bool recursed = (subFlags >> 2) == 0;
+      // if (!recursed) {
+      //   if ((subFlags & SubscriberFlags.recursed) != 0) {
+      //     sub.flags = (subFlags & ~SubscriberFlags.recursed) | targetFlag;
       //     canPropagate = true;
       //   } else if ((subFlags & targetFlag) == 0) {
       //     sub.flags = subFlags | targetFlag;
@@ -193,7 +193,7 @@ void propagate(Link? subs) {
       //   sub.flags = subFlags | targetFlag;
       // }
 
-      // if (canPropagate) {
+      // if (recursed) {
       //
       // ## Note
       // This is to synchronize https://github.com/stackblitz/alien-signals/commit/78aa79f5ea8926f5b8ca0daaffb3d0b9387f9140#diff-6fe6a66d9e19964283ad8fcf5ad1a9bf0e8a32a22124ef6f28474d92fda574edR145
@@ -209,9 +209,8 @@ void propagate(Link? subs) {
       // Only in the best case can it be improved.
       if (((subFlags >> 2) == 0 &&
               _alwaysTrue(sub.flags = subFlags | targetFlag)) ||
-          ((subFlags & SubscriberFlags.canPropagate) != 0 &&
-              _alwaysTrue((sub.flags =
-                      subFlags & ~SubscriberFlags.canPropagate) |
+          ((subFlags & SubscriberFlags.recursed) != 0 &&
+              _alwaysTrue((sub.flags = subFlags & ~SubscriberFlags.recursed) |
                   targetFlag))) {
         final subSubs = sub is Dependency ? (sub as Dependency).subs : null;
         if (subSubs != null) {
@@ -241,7 +240,7 @@ void propagate(Link? subs) {
       }
     } else if (_isValidLink(link, sub)) {
       if ((subFlags >> 2) == 0) {
-        sub.flags = subFlags | targetFlag | SubscriberFlags.canPropagate;
+        sub.flags = subFlags | targetFlag | SubscriberFlags.recursed;
         final subSubs = (sub as Dependency).subs;
         if (subSubs != null) {
           if (subSubs.nextSub != null) {

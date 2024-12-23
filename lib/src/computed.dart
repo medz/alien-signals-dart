@@ -72,7 +72,13 @@ class Computed<T> implements IComputed, ISignal<T> {
 
     try {
       final oldValue = currentValue;
-      return currentValue != (currentValue = getter(oldValue));
+      final newValue = getter(oldValue);
+      if (oldValue != newValue) {
+        this.currentValue = newValue;
+        return true;
+      }
+
+      return false;
     } finally {
       setActiveSub(prevSub, prevTrackId);
       endTrack(this);

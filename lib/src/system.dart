@@ -203,8 +203,8 @@ void propagate(Link? subs) {
       // Worst case: beforte: 8 operations, after: 10 operations
       //
       // Only in the best case can it be improved.
-      sub.flags = subFlags | targetFlag;
-      if ((subFlags >> 2) == 0 ||
+      if (((subFlags >> 2) == 0 &&
+              _alwaysTrue(sub.flags = subFlags | targetFlag)) ||
           ((subFlags & SubscriberFlags.recursed) != 0 &&
               _alwaysTrue((sub.flags = subFlags & ~SubscriberFlags.recursed) |
                   targetFlag))) {
@@ -231,11 +231,12 @@ void propagate(Link? subs) {
           }
           _queuedEffectsTail = sub as Notifiable;
         }
+      } else if (subFlags & targetFlag == 0) {
+        sub.flags = subFlags | targetFlag;
       }
     } else if (_isValidLink(link, sub)) {
-      sub.flags = targetFlag = subFlags | targetFlag;
       if ((subFlags >> 2) == 0) {
-        sub.flags = targetFlag | SubscriberFlags.recursed;
+        sub.flags = subFlags | targetFlag | SubscriberFlags.recursed;
         final subSubs = (sub as Dependency).subs;
         if (subSubs != null) {
           if (subSubs.nextSub != null) {
@@ -251,9 +252,10 @@ void propagate(Link? subs) {
           }
           continue;
         }
+      } else if ((subFlags & targetFlag) == 0) {
+        sub.flags = subFlags | targetFlag;
       }
     }
-
     if ((nextSub = subs!.nextSub) == null) {
       if (stack > 0) {
         Dependency dep = subs.dep!;
@@ -449,7 +451,10 @@ void _clearTrack(Link? link) {
       if (dep is Notifiable) {
         (dep as Subscriber).flags = SubscriberFlags.none;
       } else {
-        (dep as Subscriber).flags |= SubscriberFlags.dirty;
+        final depFlags = (dep as Subscriber).flags;
+        if ((depFlags & SubscriberFlags.dirty) == 0) {
+          (dep as Subscriber).flags = depFlags | SubscriberFlags.dirty;
+        }
       }
       final depDeps = (dep as Subscriber).deps;
       if (depDeps != null) {

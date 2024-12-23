@@ -162,8 +162,6 @@ Link _linkNewDep(
   return newLink;
 }
 
-bool _alwaysTrue(_) => true;
-
 /// Propagate changes through the dependency graph
 void propagate(Link? subs) {
   SubscriberFlags targetFlag = SubscriberFlags.dirty;
@@ -203,11 +201,11 @@ void propagate(Link? subs) {
       // Worst case: beforte: 8 operations, after: 10 operations
       //
       // Only in the best case can it be improved.
-      if (((subFlags >> 2) == 0 &&
-              _alwaysTrue(sub.flags = subFlags | targetFlag)) ||
+      if (((subFlags >> 2) == 0 && (sub.flags = subFlags | targetFlag) != 0) ||
           ((subFlags & SubscriberFlags.recursed) != 0 &&
-              _alwaysTrue((sub.flags = subFlags & ~SubscriberFlags.recursed) |
-                  targetFlag))) {
+              ((sub.flags = subFlags & ~SubscriberFlags.recursed) |
+                      targetFlag) !=
+                  0)) {
         final subSubs = sub is Dependency ? (sub as Dependency).subs : null;
         if (subSubs != null) {
           if (subSubs.nextSub != null) {

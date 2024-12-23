@@ -1,3 +1,11 @@
+## v0.0.10
+
+- feat: sync upstream push-pull model
+- refactor: update condition in shallowPropagate to use ToCheckDirty flag
+- refactor: rename RunInnerEffects flag to InnerEffectsPending in SubscriberFlags
+- refactor: rename CanPropagate flag to Recursed in SubscriberFlags
+- pref: remove canPropagate intermediate variable
+
 ## v0.0.9
 
 - perf: avoid meaningless setting of flags by subscribers

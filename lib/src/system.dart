@@ -194,7 +194,7 @@ void propagate(Link? subs) {
       // In Dart, removing redundant variables has almost no improvement.
       //
       // Theoretically, whether the performance is improved is as follows:
-      // Best case: before: 8 operations, after: 4 operations
+      // Best case: before: 8 operations, after: 5 operations
       // Worst case: beforte: 8 operations, after: 10 operations
       //
       // Only in the best case can it be improved.

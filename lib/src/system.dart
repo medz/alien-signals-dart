@@ -4,16 +4,15 @@ import 'types.dart';
 abstract interface class IEffect implements Subscriber, Notifiable {}
 
 /// Interface for computed values that can track dependencies and maintain version state
-abstract interface class IComputed<T> implements Dependency<T>, Subscriber {
-  T update();
+abstract interface class IComputed implements Dependency, Subscriber {
+  bool update();
 }
 
 /// Interface for values that can be depended on by subscribers
-abstract interface class Dependency<T> {
+abstract interface class Dependency {
   Link? subs;
   Link? subsTail;
   int? lastTrackedId;
-  abstract T currentValue;
 }
 
 extension type const SubscriberFlags._(int value) implements int {
@@ -25,10 +24,6 @@ extension type const SubscriberFlags._(int value) implements int {
 
   /// Recursed flag for indicating recursive operations
   static const recursed = SubscriberFlags._(1 << 1);
-
-  /// Need to run inner effects
-  @Deprecated('Use The `innerEffectsPending`, Remove in 0.1 version.')
-  static const runInnerEffects = SubscriberFlags._(1 << 2);
 
   /// Inner effects are pending and need to be processed
   static const innerEffectsPending = SubscriberFlags._(1 << 2);
@@ -67,7 +62,6 @@ class Link {
   Link({
     required Dependency this.dep,
     required Subscriber this.sub,
-    required this.value,
     this.prevSub,
     this.nextSub,
     this.nextDep,
@@ -75,7 +69,6 @@ class Link {
 
   Dependency? dep;
   Subscriber? sub;
-  Object? value;
 
   Link? prevSub;
   Link? nextSub;
@@ -145,7 +138,6 @@ Link _linkNewDep(
     newLink = Link(
       dep: dep,
       sub: sub,
-      value: null,
       nextDep: nextDep,
     );
   }
@@ -297,6 +289,20 @@ void propagate(Link? subs) {
   }
 }
 
+void shallowPropagate(Link? link) {
+  assert(link != null);
+  do {
+    final updateSub = link!.sub!;
+    final updateSubFlags = updateSub.flags;
+    if ((updateSubFlags & (SubscriberFlags.dirty | SubscriberFlags.tracking)) ==
+        0) {
+      updateSub.flags = updateSubFlags | SubscriberFlags.dirty;
+    }
+
+    link = link.nextSub;
+  } while (link != null);
+}
+
 bool _isValidLink(Link subLink, Subscriber sub) {
   final depsTail = sub.depsTail;
   if (depsTail != null) {
@@ -327,16 +333,23 @@ bool checkDirty(Link? link) {
     if (dep is IComputed) {
       final depFlags = dep.flags;
       if ((depFlags & SubscriberFlags.dirty) != 0) {
-        if (dep.update() != link.value) {
+        if (dep.update()) {
+          final subs = dep.subs!;
+          if (subs.nextSub != null) {
+            shallowPropagate(subs);
+          }
+
           dirty = true;
         }
       } else if ((depFlags & SubscriberFlags.toCheckDirty) != 0) {
-        dep.subs!.prevSub = link;
+        final depSubs = dep.subs!;
+        if (depSubs.nextSub != null) {
+          depSubs.prevSub = link;
+        }
+
         link = dep.deps;
         ++stack;
         continue;
-      } else if (dep.currentValue != link.value) {
-        dirty = true;
       }
     }
     if (dirty || (nextDep = link.nextDep) == null) {
@@ -345,21 +358,30 @@ bool checkDirty(Link? link) {
         do {
           --stack;
           final Link subSubs = sub.subs;
-          final prevLink = subSubs.prevSub!;
-          subSubs.prevSub = null;
+          var prevLink = subSubs.prevSub;
 
-          if (dirty) {
-            if (sub.update() != prevLink.value) {
-              sub = prevLink.sub;
-              continue;
+          if (prevLink != null) {
+            subSubs.prevSub = null;
+            if (dirty) {
+              if (sub.update()) {
+                shallowPropagate(sub.subs);
+                sub = prevLink.sub;
+                continue;
+              } else {
+                sub.flags &= ~SubscriberFlags.toCheckDirty;
+              }
             }
           } else {
-            sub.flags &= ~SubscriberFlags.toCheckDirty;
-            if (sub.currentValue != prevLink.value) {
-              dirty = true;
-              sub = prevLink.sub;
-              continue;
+            if (dirty) {
+              if (sub.update()) {
+                sub = subSubs.sub;
+                continue;
+              }
+            } else {
+              sub.flags &= ~SubscriberFlags.toCheckDirty;
             }
+
+            prevLink = subSubs;
           }
 
           link = prevLink.nextDep;

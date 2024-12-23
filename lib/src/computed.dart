@@ -7,12 +7,11 @@ Computed<T> computed<T>(T Function(T? oldValue) getter) {
   return Computed<T>(getter);
 }
 
-class Computed<T> implements IComputed<T?>, ISignal<T> {
+class Computed<T> implements IComputed, ISignal<T> {
   Computed(this.getter);
 
   final T Function(T? oldValue) getter;
 
-  @override
   T? currentValue;
 
   @override
@@ -36,23 +35,28 @@ class Computed<T> implements IComputed<T?>, ISignal<T> {
   @override
   T get() {
     if ((flags & SubscriberFlags.dirty) != 0) {
-      update();
+      if (update() && subs != null) {
+        shallowPropagate(subs);
+      }
     } else if ((flags & SubscriberFlags.toCheckDirty) != 0) {
       if (checkDirty(deps)) {
-        update();
+        if (update() && subs != null) {
+          shallowPropagate(subs);
+        }
       } else {
         flags &= ~SubscriberFlags.toCheckDirty;
       }
     }
+
     if (activeTrackId != 0) {
       if (lastTrackedId != activeTrackId) {
         lastTrackedId = activeTrackId;
-        link(this, activeSub!).value = currentValue;
+        link(this, activeSub!);
       }
     } else if (activeScopeTrackId != 0) {
       if (lastTrackedId != activeScopeTrackId) {
         lastTrackedId = activeScopeTrackId;
-        link(this, activeEffectScope!).value = currentValue;
+        link(this, activeEffectScope!);
       }
     }
 
@@ -60,14 +64,15 @@ class Computed<T> implements IComputed<T?>, ISignal<T> {
   }
 
   @override
-  T update() {
+  bool update() {
     final prevSub = activeSub;
     final prevTrackId = activeTrackId;
     setActiveSub(this, nextTrackId());
     startTrack(this);
 
+    final oldValue = currentValue;
     try {
-      return currentValue = getter(currentValue);
+      return (currentValue = getter(oldValue)) != oldValue;
     } finally {
       setActiveSub(prevSub, prevTrackId);
       endTrack(this);

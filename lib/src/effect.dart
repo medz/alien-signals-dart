@@ -20,7 +20,7 @@ Effect<T> effect<T>(T Function() fn) {
   return Effect(fn)..run();
 }
 
-class Effect<T> implements IEffect, Dependency<void> {
+class Effect<T> implements IEffect, Dependency {
   Effect(this.fn) {
     if (activeTrackId != 0) {
       link(this, activeSub!);
@@ -51,9 +51,6 @@ class Effect<T> implements IEffect, Dependency<void> {
 
   @override
   Link? subsTail;
-
-  @override
-  void currentValue;
 
   @override
   void notify() {

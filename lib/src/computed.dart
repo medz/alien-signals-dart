@@ -60,7 +60,7 @@ class Computed<T> implements IComputed, ISignal<T> {
       }
     }
 
-    return currentValue!;
+    return currentValue as T;
   }
 
   @override

@@ -5,6 +5,11 @@ import 'types.dart';
 EffectScope? activeEffectScope;
 int activeScopeTrackId = 0;
 
+void setActiveScope(EffectScope? scope, int trackId) {
+  activeEffectScope = scope;
+  activeScopeTrackId = trackId;
+}
+
 EffectScope effectScope() {
   return EffectScope();
 }

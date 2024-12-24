@@ -1,6 +1,8 @@
 import 'package:alien_signals/alien_signals.dart';
 import 'package:test/test.dart';
 
+import 'src/batch_effect.dart';
+
 main() {
   test('should clear subscriptions when untracked by all subscribers', () {
     int bRunTimes = 0;
@@ -62,5 +64,34 @@ main() {
     b.set(0);
     a.set(0);
     endBatch();
+  });
+
+  test('should custom effect support batch', () {
+    final logs = <String>[];
+    final a = signal(0);
+    final b = signal(0);
+
+    final aa = computed<void>((_) {
+      logs.add('aa-0');
+      if (a.get() == 0) {
+        b.set(1);
+      }
+      logs.add('aa-1');
+    });
+
+    final bb = computed((_) {
+      logs.add('bb');
+      return b.get();
+    });
+
+    BatchEffect(() {
+      bb.get();
+    }).run();
+
+    BatchEffect(() {
+      aa.get();
+    }).run();
+
+    expect(logs, ['bb', 'aa-0', 'aa-1', 'bb']);
   });
 }

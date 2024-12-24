@@ -21,7 +21,7 @@ void main() {
   test('should custom computed support recursion', () {
     final logs = <String>[];
     final a = signal(0);
-    final b = RecursiveComputed<Null>((_) {
+    final b = RecursiveComputed<void>((_) {
       if (a.get() == 0) {
         logs.add('b-0');
         a.set(100);

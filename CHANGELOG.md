@@ -1,3 +1,12 @@
+## v0.0.12
+
+- refactor: remove _alwaysTrue
+- refactor: repalce >> 2 for readability
+- fix: Null check operator used on a null value
+- feat: add setActiveScope
+- feat: add untrack
+- feat: add untrackScope
+
 ## v0.0.11
 
 - refactor: enhance condition check in shallowPropagate for SubscriberFlags

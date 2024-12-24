@@ -198,7 +198,12 @@ void propagate(Link? subs) {
       // Worst case: beforte: 8 operations, after: 10 operations
       //
       // Only in the best case can it be improved.
-      if (((subFlags >> 2) == 0 && (sub.flags = subFlags | targetFlag) != 0) ||
+      if (((subFlags &
+                      (SubscriberFlags.innerEffectsPending |
+                          SubscriberFlags.toCheckDirty |
+                          SubscriberFlags.dirty)) ==
+                  0 &&
+              (sub.flags = subFlags | targetFlag) != 0) ||
           ((subFlags & SubscriberFlags.recursed) != 0 &&
               ((sub.flags = subFlags & ~SubscriberFlags.recursed) |
                       targetFlag) !=
@@ -230,7 +235,11 @@ void propagate(Link? subs) {
         sub.flags = subFlags | targetFlag;
       }
     } else if (_isValidLink(link, sub)) {
-      if ((subFlags >> 2) == 0) {
+      if ((subFlags &
+              (SubscriberFlags.innerEffectsPending |
+                  SubscriberFlags.toCheckDirty |
+                  SubscriberFlags.dirty)) ==
+          0) {
         sub.flags = subFlags | targetFlag | SubscriberFlags.recursed;
         final subSubs = (sub as Dependency).subs;
         if (subSubs != null) {

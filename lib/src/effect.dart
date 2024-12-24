@@ -16,6 +16,17 @@ int nextTrackId() {
   return ++lastTrackId;
 }
 
+T untrack<T>(T Function() fn) {
+  final prevSub = activeSub;
+  final prevTrackId = activeTrackId;
+  setActiveSub(null, 0);
+  try {
+    return fn();
+  } finally {
+    setActiveSub(prevSub, prevTrackId);
+  }
+}
+
 Effect<T> effect<T>(T Function() fn) {
   return Effect(fn)..run();
 }

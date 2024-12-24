@@ -10,6 +10,17 @@ void setActiveScope(EffectScope? scope, int trackId) {
   activeScopeTrackId = trackId;
 }
 
+T untrackScope<T>(T Function() fn) {
+  final prevSub = activeEffectScope;
+  final prevTrackId = activeScopeTrackId;
+  setActiveScope(null, 0);
+  try {
+    return fn();
+  } finally {
+    setActiveScope(prevSub, prevTrackId);
+  }
+}
+
 EffectScope effectScope() {
   return EffectScope();
 }

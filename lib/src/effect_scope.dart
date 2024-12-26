@@ -46,12 +46,12 @@ class EffectScope implements Subscriber, Notifiable {
       flags &= ~SubscriberFlags.innerEffectsPending;
       Link? link = deps;
       do {
-        final dep = link!.dep;
+        final dep = link?.dep;
         if (dep is Notifiable) {
           (dep as Notifiable).notify();
         }
 
-        link = link.nextDep;
+        link = link?.nextDep;
       } while (link != null);
     }
   }

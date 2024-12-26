@@ -32,7 +32,8 @@ class Signal<T> implements Dependency, IWritableSignal<T> {
 
   @override
   set(T value) {
-    if (this.currentValue != (this.currentValue = value)) {
+    if (currentValue != value) {
+      currentValue = value;
       final subs = this.subs;
       if (subs != null) {
         propagate(subs);

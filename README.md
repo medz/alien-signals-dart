@@ -4,7 +4,7 @@
 
 <p align="center">
 	<a href="https://pub.dev/packages/alien_signals">
-	   <img src="https://img.shields.io/pub/v/alien_signals" alt="Alien Signals on pub.dev" />
+		<img src="https://img.shields.io/pub/v/alien_signals" alt="Alien Signals on pub.dev" />
 	</a>
 </p>
 
@@ -13,17 +13,21 @@
 The lightest signal library for Dart, ported from [stackblitz/alien-signals](https://github.com/stackblitz/alien-signals).
 
 > [!TIP]
-> Alien Signals is the fastest signal library currently, experimental results come from 👉 [dart-reactivity-benchmark](https://github.com/medz/dart-reactivity-benchmark#score-ranking).
-> > [!NOTE]
-> > [`alien-signals`](https://github.com/stackblitz/alien-signals) is also the fastest signal library in the JS world, see 👉 [js-reactivity-benchmark](https://github.com/transitive-bullshit/js-reactivity-benchmark).
+> Alien Signals is the fastest signal library currently, as shown by experimental results from 👉 [dart-reactivity-benchmark](https://github.com/medz/dart-reactivity-benchmark#score-ranking).
 
 ## Installation
 
-Add to your `pubspec.yaml`:
+To install Alien Signals, add the following to your `pubspec.yaml`:
 
 ```yaml
 dependencies:
-  alien_signals: latest
+		alien_signals: latest
+```
+
+Alternatively, you can run the following command:
+
+```bash
+dart pub add alien_signals
 ```
 
 ## Basic Usage
@@ -32,19 +36,19 @@ dependencies:
 import 'package:alien_signals/alien_signals.dart';
 
 void main() {
-  // Create a signal
-  final count = signal(0);
+		// Create a signal
+		final count = signal(0);
 
-  // Create a computed value
-  final doubled = computed((_) => count.get() * 2);
+		// Create a computed value
+		final doubled = computed((_) => count.get() * 2);
 
-  // Create an effect
-  effect(() {
-    print('Count: ${count.get()}, Doubled: ${doubled.get()}');
-  });
+		// Create an effect
+		effect(() {
+				print('Count: ${count.get()}, Doubled: ${doubled.get()}');
+		});
 
-  // Update the signal
-  count.set(1); // Prints: Count: 1, Doubled: 2
+		// Update the signal
+		count.set(1); // Prints: Count: 1, Doubled: 2
 }
 ```
 
@@ -57,8 +61,8 @@ Signals are reactive values that notify subscribers when they change:
 ```dart
 final name = signal('Alice');
 
-print(name.get()); // Get value using call `get` fn.
-name.set('Bob');   //Set value using call `set` fn.
+print(name.get()); // Get value using `get` method.
+name.set('Bob');   // Set value using `set` method.
 ```
 
 ### Computed Values
@@ -81,7 +85,7 @@ Effects run automatically when their dependencies change:
 ```dart
 final user = signal('guest');
 final e = effect(() {
-  print('Current user: ${user.get()}');
+		print('Current user: ${user.get()}');
 });
 
 // Cleanup when done
@@ -95,9 +99,9 @@ Group and manage related effects:
 ```dart
 final scope = effectScope();
 scope.run(() {
-  // Effects created here are grouped
-  effect(() => print('Effect 1'));
-  effect(() => print('Effect 2'));
+		// Effects created here are grouped
+		effect(() => print('Effect 1'));
+		effect(() => print('Effect 2'));
 });
 
 // Clean up all effects in scope

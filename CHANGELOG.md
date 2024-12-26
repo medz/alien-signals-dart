@@ -1,3 +1,8 @@
+## v0.0.13
+
+- refactor: avoid meaningless interface constraints
+- refactor: avoid unnecessary casts
+
 ## v0.0.12
 
 - refactor: remove _alwaysTrue

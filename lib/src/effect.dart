@@ -1,5 +1,3 @@
-import 'package:alien_signals/src/types.dart';
-
 import 'effect_scope.dart';
 import 'system.dart';
 
@@ -55,7 +53,7 @@ class Effect<T> implements IEffect, Dependency {
   int? lastTrackedId;
 
   @override
-  Notifiable? nextNotify;
+  IEffect? nextNotify;
 
   @override
   Link? subs;
@@ -82,8 +80,8 @@ class Effect<T> implements IEffect, Dependency {
       Link? link = this.deps;
       do {
         final dep = link?.dep;
-        if (dep is Notifiable) {
-          (dep as Notifiable).notify();
+        if (dep is IEffect) {
+          (dep as IEffect).notify();
         }
 
         link = link?.nextDep;

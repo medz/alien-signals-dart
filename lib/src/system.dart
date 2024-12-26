@@ -1,7 +1,8 @@
-import 'types.dart';
-
 /// Interface for reactive effects that can subscribe to dependencies and be notified of changes
-abstract interface class IEffect implements Subscriber, Notifiable {}
+abstract interface class IEffect implements Subscriber {
+  void notify();
+  IEffect? nextNotify;
+}
 
 /// Interface for computed values that can track dependencies and maintain version state
 abstract interface class IComputed implements Dependency, Subscriber {
@@ -77,8 +78,8 @@ class Link {
 }
 
 int _batchDepth = 0;
-Notifiable? _queuedEffects;
-Notifiable? _queuedEffectsTail;
+IEffect? _queuedEffects;
+IEffect? _queuedEffectsTail;
 Link? _linkPool;
 
 /// Start a new batch of updates
@@ -217,19 +218,19 @@ void propagate(Link? subs) {
             ++stack;
           } else {
             link = subSubs;
-            targetFlag = sub is Notifiable
+            targetFlag = sub is IEffect
                 ? SubscriberFlags.innerEffectsPending
                 : SubscriberFlags.toCheckDirty;
           }
           continue;
         }
-        if (sub is Notifiable) {
+        if (sub is IEffect) {
           if (_queuedEffectsTail != null) {
-            _queuedEffectsTail!.nextNotify = sub as Notifiable;
+            _queuedEffectsTail!.nextNotify = sub;
           } else {
-            _queuedEffects = sub as Notifiable;
+            _queuedEffects = sub;
           }
-          _queuedEffectsTail = sub as Notifiable;
+          _queuedEffectsTail = sub;
         }
       } else if (subFlags & targetFlag == 0) {
         sub.flags = subFlags | targetFlag;
@@ -250,7 +251,7 @@ void propagate(Link? subs) {
             ++stack;
           } else {
             link = subSubs;
-            targetFlag = sub is Notifiable
+            targetFlag = sub is IEffect
                 ? SubscriberFlags.innerEffectsPending
                 : SubscriberFlags.toCheckDirty;
           }
@@ -452,7 +453,7 @@ void _clearTrack(Link? link) {
     _linkPool = link;
 
     if (dep.subs == null && dep is Subscriber) {
-      if (dep is Notifiable) {
+      if (dep is IEffect) {
         (dep as Subscriber).flags = SubscriberFlags.none;
       } else {
         final depFlags = (dep as Subscriber).flags;

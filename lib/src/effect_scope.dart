@@ -1,6 +1,5 @@
 import 'effect.dart';
 import 'system.dart';
-import 'types.dart';
 
 EffectScope? activeEffectScope;
 int activeScopeTrackId = 0;
@@ -25,7 +24,7 @@ EffectScope effectScope() {
   return EffectScope();
 }
 
-class EffectScope implements Subscriber, Notifiable {
+class EffectScope implements IEffect {
   @override
   Link? deps;
 
@@ -36,7 +35,7 @@ class EffectScope implements Subscriber, Notifiable {
   SubscriberFlags flags = SubscriberFlags.none;
 
   @override
-  Notifiable? nextNotify;
+  IEffect? nextNotify;
 
   int trackId = nextTrackId();
 
@@ -47,8 +46,8 @@ class EffectScope implements Subscriber, Notifiable {
       Link? link = deps;
       do {
         final dep = link?.dep;
-        if (dep is Notifiable) {
-          (dep as Notifiable).notify();
+        if (dep is IEffect) {
+          (dep as IEffect).notify();
         }
 
         link = link?.nextDep;

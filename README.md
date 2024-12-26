@@ -1,11 +1,11 @@
 <p align="center">
-	<img src="https://github.com/stackblitz/alien-signals/raw/master/assets/logo.png" width="250"><br>
+  <img src="https://github.com/stackblitz/alien-signals/raw/master/assets/logo.png" width="250"><br>
 <p>
 
 <p align="center">
-	<a href="https://pub.dev/packages/alien_signals">
-		<img src="https://img.shields.io/pub/v/alien_signals" alt="Alien Signals on pub.dev" />
-	</a>
+  <a href="https://pub.dev/packages/alien_signals">
+    <img src="https://img.shields.io/pub/v/alien_signals" alt="Alien Signals on pub.dev" />
+  </a>
 </p>
 
 # Alien Signals for Dart
@@ -21,7 +21,7 @@ To install Alien Signals, add the following to your `pubspec.yaml`:
 
 ```yaml
 dependencies:
-		alien_signals: latest
+  alien_signals: latest
 ```
 
 Alternatively, you can run the following command:
@@ -36,19 +36,19 @@ dart pub add alien_signals
 import 'package:alien_signals/alien_signals.dart';
 
 void main() {
-		// Create a signal
-		final count = signal(0);
+  // Create a signal
+  final count = signal(0);
 
-		// Create a computed value
-		final doubled = computed((_) => count.get() * 2);
+  // Create a computed value
+  final doubled = computed((_) => count.get() * 2);
 
-		// Create an effect
-		effect(() {
-				print('Count: ${count.get()}, Doubled: ${doubled.get()}');
-		});
+  // Create an effect
+  effect(() {
+    print('Count: ${count.get()}, Doubled: ${doubled.get()}');
+  });
 
-		// Update the signal
-		count.set(1); // Prints: Count: 1, Doubled: 2
+  // Update the signal
+  count.set(1); // Prints: Count: 1, Doubled: 2
 }
 ```
 
@@ -85,7 +85,7 @@ Effects run automatically when their dependencies change:
 ```dart
 final user = signal('guest');
 final e = effect(() {
-		print('Current user: ${user.get()}');
+  print('Current user: ${user.get()}');
 });
 
 // Cleanup when done
@@ -99,9 +99,9 @@ Group and manage related effects:
 ```dart
 final scope = effectScope();
 scope.run(() {
-		// Effects created here are grouped
-		effect(() => print('Effect 1'));
-		effect(() => print('Effect 2'));
+  // Effects created here are grouped
+  effect(() => print('Effect 1'));
+  effect(() => print('Effect 2'));
 });
 
 // Clean up all effects in scope

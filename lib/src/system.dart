@@ -1,51 +1,69 @@
 /// Interface for reactive effects that can subscribe to dependencies and be notified of changes
 abstract interface class IEffect implements Subscriber {
+  /// Notify the effect of a change in its dependencies.
   void notify();
+
+  /// The next effect to be notified in the queue.
   IEffect? nextNotify;
 }
 
 /// Interface for computed values that can track dependencies and maintain version state
 abstract interface class IComputed implements Dependency, Subscriber {
+  /// Update the computed value if its dependencies have changed.
+  ///
+  /// Returns `true` if the value was updated, otherwise `false`.
   bool update();
 }
 
 /// Interface for values that can be depended on by subscribers
 abstract interface class Dependency {
+  /// The head of the linked list of subscribers.
   Link? subs;
+
+  /// The tail of the linked list of subscribers.
   Link? subsTail;
+
+  /// The ID of the last tracked dependency.
   int? lastTrackedId;
 }
 
+/// [Subscriber] flags type def.
 extension type const SubscriberFlags._(int value) implements int {
-  /// No flags set
+  /// No flags set.
   static const none = SubscriberFlags._(0);
 
-  /// Currently tracking dependencies
+  /// Currently tracking dependencies.
   static const tracking = SubscriberFlags._(1 << 0);
 
-  /// Recursed flag for indicating recursive operations
+  /// Recursed flag for indicating recursive operations.
   static const recursed = SubscriberFlags._(1 << 1);
 
-  /// Inner effects are pending and need to be processed
+  /// Inner effects are pending and need to be processed.
   static const innerEffectsPending = SubscriberFlags._(1 << 2);
 
-  /// Need to check if dirty
+  /// Need to check if dirty.
   static const toCheckDirty = SubscriberFlags._(1 << 3);
 
-  /// Is dirty and needs update
+  /// Is dirty and needs update.
   static const dirty = SubscriberFlags._(1 << 4);
 
-  /// Bitwise NOT operator for flags
+  /// Bitwise NOT operator for flags.
+  ///
+  /// Returns a new [SubscriberFlags] with the bitwise NOT of the current value.
   SubscriberFlags operator ~() {
     return SubscriberFlags._(~value);
   }
 
-  /// Bitwise AND operator for flags
+  /// Bitwise AND operator for flags.
+  ///
+  /// Takes an [int] [other] and returns a new [SubscriberFlags] with the bitwise AND of the current value and [other].
   SubscriberFlags operator &(int other) {
     return SubscriberFlags._(value & other);
   }
 
-  /// Bitwise OR operator for flags
+  /// Bitwise OR operator for flags.
+  ///
+  /// Takes an [int] [other] and returns a new [SubscriberFlags] with the bitwise OR of the current value and [other].
   SubscriberFlags operator |(int other) {
     return SubscriberFlags._(value | other);
   }
@@ -60,6 +78,13 @@ abstract interface class Subscriber {
 
 /// Link class representing dependency relationships
 class Link {
+  /// Creates a new link between a dependency and a subscriber.
+  ///
+  /// The [dep] parameter is the dependency that the subscriber depends on.
+  /// The [sub] parameter is the subscriber that depends on the dependency.
+  /// The [prevSub] parameter is the previous subscriber in the linked list.
+  /// The [nextSub] parameter is the next subscriber in the linked list.
+  /// The [nextDep] parameter is the next dependency in the linked list.
   Link({
     required Dependency this.dep,
     required Subscriber this.sub,
@@ -68,12 +93,19 @@ class Link {
     this.nextDep,
   });
 
+  /// The dependency that the subscriber depends on.
   Dependency? dep;
+
+  /// The subscriber that depends on the dependency.
   Subscriber? sub;
 
+  /// The previous subscriber in the linked list.
   Link? prevSub;
+
+  /// The next subscriber in the linked list.
   Link? nextSub;
 
+  /// The next dependency in the linked list.
   Link? nextDep;
 }
 
@@ -82,12 +114,36 @@ IEffect? _queuedEffects;
 IEffect? _queuedEffectsTail;
 Link? _linkPool;
 
-/// Start a new batch of updates
+/// Start a new batch of updates.
+///
+/// This function increments the batch depth counter, indicating the start of a new batch of updates.
+/// Batching updates can help optimize performance by reducing the number of times the system processes changes.
+///
+/// {@template alien_signals.batch.example}
+/// ```Example
+/// final a = signal(0);
+/// final b = signal(0);
+///
+/// effect(() {
+///   print('effect run');
+/// });
+///
+/// startBatch();
+/// a.set(1);
+/// b.set(1);
+/// endBatch();
+/// ```
+/// {@endtemplate}
 void startBatch() {
   ++_batchDepth;
 }
 
-/// End the current batch of updates
+/// End the current batch of updates.
+///
+/// This function decrements the batch depth counter. If the batch depth reaches zero, it triggers the processing
+/// of any queued effects that were accumulated during the batch.
+///
+/// {@macro alien_signals.batch.example}
 void endBatch() {
   if ((--_batchDepth) == 0) {
     _drainQueuedEffects();
@@ -293,6 +349,12 @@ void propagate(Link? subs) {
   }
 }
 
+/// Propagate changes through the dependency graph shallowly
+///
+/// This function marks subscribers as dirty if they need updates, but does not
+/// recursively propagate changes through the entire dependency graph.
+///
+/// [link] is the starting point in the linked list of subscribers.
 void shallowPropagate(Link? link) {
   assert(link != null);
   do {

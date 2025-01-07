@@ -1,11 +1,8 @@
-## v0.0.16
-
-- fix: handle recursed effects correctly
-
 ## v0.0.15
 
 - pref: flatten`if` branches in propagate function
 - refactor: change `link` returns void
+- fix: handle recursed effects correctly
 
 ## v0.0.14
 

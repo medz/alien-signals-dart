@@ -41,6 +41,8 @@ mixin SignalsElement on ComponentElement {
 
   @override
   void unmount() {
+    signals.clear();
+    subs.clear();
     scope.stop();
     super.unmount();
   }

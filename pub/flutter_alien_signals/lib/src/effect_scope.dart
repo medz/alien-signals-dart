@@ -3,15 +3,15 @@ import 'package:alien_signals/alien_signals.dart' as alien;
 import '_internal/callonce.dart';
 import '_internal/signals_element.dart';
 
-alien.Computed<T> computed<T>(T Function(T? oldValue) getter) {
+alien.EffectScope effectScope() {
   if (currentElement == null) {
-    return alien.computed(getter);
+    return alien.effectScope();
   }
 
   final element = currentElement!, subs = element.subs;
   try {
     return callonce(
-      factory: () => alien.computed(getter),
+      factory: alien.effectScope,
       container: subs,
       index: element.subCounter,
     );

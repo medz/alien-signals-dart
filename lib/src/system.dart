@@ -166,19 +166,18 @@ void _drainQueuedEffects() {
 }
 
 /// Create or reuse a link between a dependency and subscriber
-Link link(Dependency dep, Subscriber sub) {
+void link(Dependency dep, Subscriber sub) {
   final currentDep = sub.depsTail;
   final nextDep = currentDep != null ? currentDep.nextDep : sub.deps;
 
   if (nextDep != null && nextDep.dep == dep) {
     sub.depsTail = nextDep;
-    return nextDep;
+  } else {
+    _linkNewDep(dep, sub, nextDep, currentDep);
   }
-
-  return _linkNewDep(dep, sub, nextDep, currentDep);
 }
 
-Link _linkNewDep(
+void _linkNewDep(
   Dependency dep,
   Subscriber sub,
   Link? nextDep,
@@ -215,8 +214,6 @@ Link _linkNewDep(
 
   sub.depsTail = newLink;
   dep.subsTail = newLink;
-
-  return newLink;
 }
 
 /// Propagate changes through the dependency graph

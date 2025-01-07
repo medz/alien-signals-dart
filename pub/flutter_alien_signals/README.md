@@ -10,7 +10,7 @@
 
 # Flutter Alien Signals
 
-Flutter Alien Signals is a Flutter binding based on [Alien Signals](../alien_signals/). It seamlessly integrates with Flutter Widgets, providing elegant usage methods and intuitive state management.
+Flutter Alien Signals is a Flutter binding based on [Alien Signals](https://github.com/medz/alien-signals-dart). It seamlessly integrates with Flutter Widgets, providing elegant usage methods and intuitive state management.
 
 ## Installation
 

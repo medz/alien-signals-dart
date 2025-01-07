@@ -16,8 +16,8 @@ The lightest signal library for Dart, ported from [stackblitz/alien-signals](htt
 > Alien Signals is the fastest signal library currently, as shown by experimental results from 👉 [dart-reactivity-benchmark](https://github.com/medz/dart-reactivity-benchmark#score-ranking).
 >
 > **Using in Flutter:**
-> - [ ] [solidart](https://github.com/nank1ro/solidart) - WIP 2.0
-> - [x] [flutter_alien_signals](https://github.com/medz/alien-signals-dart/tree/main/pub/flutter_alien_signals)
+> - [ ] [flutter_solidart](https://github.com/nank1ro/solidart) - [![Flutter Alien Signals on pub.dev](https://img.shields.io/pub/v/flutter_solidart?include_prereleases)](https://pub.dev/packages/flutter_solidart) **WIP 2.0**
+> - [x] [flutter_alien_signals](https://github.com/medz/alien-signals-dart/tree/main/pub/flutter_alien_signals) - [![Flutter Alien Signals on pub.dev](https://img.shields.io/pub/v/flutter_alien_signals)](https://pub.dev/packages/flutter_alien_signals)
 
 ## Installation
 

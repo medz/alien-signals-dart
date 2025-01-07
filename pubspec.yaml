@@ -1,23 +1,12 @@
-name: alien_signals
-description: The lightest signal library - Dart implementation of alien-signals.
-version: 0.0.15
-repository: https://github.com/medz/alien-signals-dart
+name: _
+publish_to: none
 
 environment:
   sdk: ^3.5.0
 
-topics:
-  - signal
-  - signals
-  - reactive
-  - alien-signals
-  - state
-
-funding:
-  - https://github.com/sponsors/medz
-  - https://opencollective.com/openodroe
+workspace:
+  - pub/alien_signals
+  - pub/flutter_alien_signals
 
 dev_dependencies:
-  lints: ^5.1.0
-  test: ^1.25.12
   reactivity_benchmark: ^0.0.1

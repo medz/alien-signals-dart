@@ -290,8 +290,19 @@ void propagate(Link? subs) {
       }
     } else if ( //
         (subFlags & (SubscriberFlags.tracking | targetFlag)) == 0 || //
-            ((subFlags & targetFlag) == 0 && _isValidLink(link, sub)) //
+            ( //
+                (subFlags & targetFlag) == 0 && //
+                    (subFlags &
+                            (SubscriberFlags.innerEffectsPending | //
+                                SubscriberFlags.toCheckDirty | //
+                                SubscriberFlags.dirty //
+                            ) //
+                        ) !=
+                        0 && //
+                    _isValidLink(link, sub) //
+            ) //
         ) {
+      //
       sub.flags = subFlags | targetFlag;
     }
     // dart format on

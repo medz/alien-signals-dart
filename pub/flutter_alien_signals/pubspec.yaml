@@ -22,6 +22,7 @@ environment:
 dependencies:
   flutter:
     sdk: flutter
+  alien_signals: ^0.0.14
 
 dev_dependencies:
   flutter_test:

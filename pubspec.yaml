@@ -7,7 +7,6 @@ environment:
 workspace:
   - pub/alien_signals
   - pub/flutter_alien_signals
-  - pub/flutter_alien_signals/example
 
 dev_dependencies:
   reactivity_benchmark: ^0.0.1

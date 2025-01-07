@@ -1,5 +1,6 @@
 name: flutter_alien_signals
-description: "A new Flutter package project."
+description: >-
+  Flutter Alien Signals is a Flutter binding based on Alien Signals.
 version: 0.0.1
 repository: https://github.com/medz/alien-signals-dart
 
@@ -16,7 +17,7 @@ funding:
 
 resolution: workspace
 environment:
-  sdk: ^3.6.0
+  sdk: ^3.5.0
   flutter: ">=1.17.0"
 
 dependencies:

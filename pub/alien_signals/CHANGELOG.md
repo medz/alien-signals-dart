@@ -1,3 +1,8 @@
+## v0.0.15
+
+- pref: flatten`if` branches in propagate function
+- refactor: change `link` returns void
+
 ## v0.0.14
 
 - avoid invalid doc comments

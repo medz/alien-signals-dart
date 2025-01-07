@@ -231,92 +231,74 @@ void propagate(Link? subs) {
     final sub = link!.sub!;
     final subFlags = sub.flags;
 
-    if ((subFlags & SubscriberFlags.tracking) == 0) {
-      // bool recursed = (subFlags >> 2) == 0;
-      // if (!recursed) {
-      //   if ((subFlags & SubscriberFlags.recursed) != 0) {
-      //     sub.flags = (subFlags & ~SubscriberFlags.recursed) | targetFlag;
-      //     canPropagate = true;
-      //   } else if ((subFlags & targetFlag) == 0) {
-      //     sub.flags = subFlags | targetFlag;
-      //   }
-      // } else {
-      //   sub.flags = subFlags | targetFlag;
-      // }
+    // Enable for dart 3.7 version.
+    // dart format off
+    if ( //
+        ( //
+                (subFlags &
+                            (SubscriberFlags.tracking |
+                                SubscriberFlags.recursed |
+                                SubscriberFlags.innerEffectsPending |
+                                SubscriberFlags.toCheckDirty |
+                                SubscriberFlags.dirty)) ==
+                        0 && //
+                    (sub.flags = subFlags | targetFlag) != 0 //
+            ) || //
+            ( //
+                (subFlags &
+                            (SubscriberFlags.tracking |
+                                SubscriberFlags.recursed)) ==
+                        SubscriberFlags.recursed && //
+                    (sub.flags = (subFlags & ~SubscriberFlags.recursed) |
+                            targetFlag) !=
+                        0 //
+            ) || //
+            ( //
+                (subFlags &
+                            (SubscriberFlags.innerEffectsPending |
+                                SubscriberFlags.toCheckDirty |
+                                SubscriberFlags.dirty)) ==
+                        0 && //
+                    _isValidLink(link, sub) && //
+                    (sub.flags =
+                            subFlags | SubscriberFlags.recursed | targetFlag) !=
+                        0 && //
+                    sub is Dependency && //
+                    (sub as Dependency).subs != null //
+            ) //
+        ) {
+      final subSubs = sub is Dependency ? (sub as Dependency).subs : null;
+      if (subSubs != null) {
+        if (subSubs.nextSub != null) {
+          subSubs.prevSub = subs;
+          link = subs = subSubs;
+          targetFlag = SubscriberFlags.toCheckDirty;
+          ++stack;
+        } else {
+          link = subSubs;
+          targetFlag = sub is IEffect
+              ? SubscriberFlags.innerEffectsPending
+              : SubscriberFlags.toCheckDirty;
+        }
+        continue;
+      }
 
-      // if (recursed) {
-      //
-      // ## Note
-      // This is to synchronize https://github.com/stackblitz/alien-signals/commit/78aa79f5ea8926f5b8ca0daaffb3d0b9387f9140#diff-6fe6a66d9e19964283ad8fcf5ad1a9bf0e8a32a22124ef6f28474d92fda574edR145
-      // In Dart, removing redundant variables has almost no improvement.
-      //
-      // Theoretically, whether the performance is improved is as follows:
-      // Best case: before: 8 operations, after: 5 operations
-      // Worst case: beforte: 8 operations, after: 10 operations
-      //
-      // Only in the best case can it be improved.
-      if (((subFlags &
-                      (SubscriberFlags.innerEffectsPending |
-                          SubscriberFlags.toCheckDirty |
-                          SubscriberFlags.dirty)) ==
-                  0 &&
-              (sub.flags = subFlags | targetFlag) != 0) ||
-          ((subFlags & SubscriberFlags.recursed) != 0 &&
-              ((sub.flags = subFlags & ~SubscriberFlags.recursed) |
-                      targetFlag) !=
-                  0)) {
-        final subSubs = sub is Dependency ? (sub as Dependency).subs : null;
-        if (subSubs != null) {
-          if (subSubs.nextSub != null) {
-            subSubs.prevSub = subs;
-            link = subs = subSubs;
-            targetFlag = SubscriberFlags.toCheckDirty;
-            ++stack;
-          } else {
-            link = subSubs;
-            targetFlag = sub is IEffect
-                ? SubscriberFlags.innerEffectsPending
-                : SubscriberFlags.toCheckDirty;
-          }
-          continue;
+      if (sub is IEffect) {
+        if (_queuedEffectsTail != null) {
+          _queuedEffectsTail!.nextNotify = sub;
+        } else {
+          _queuedEffects = sub;
         }
-        if (sub is IEffect) {
-          if (_queuedEffectsTail != null) {
-            _queuedEffectsTail!.nextNotify = sub;
-          } else {
-            _queuedEffects = sub;
-          }
-          _queuedEffectsTail = sub;
-        }
-      } else if (subFlags & targetFlag == 0) {
-        sub.flags = subFlags | targetFlag;
+        _queuedEffectsTail = sub;
       }
-    } else if (_isValidLink(link, sub)) {
-      if ((subFlags &
-              (SubscriberFlags.innerEffectsPending |
-                  SubscriberFlags.toCheckDirty |
-                  SubscriberFlags.dirty)) ==
-          0) {
-        sub.flags = subFlags | targetFlag | SubscriberFlags.recursed;
-        final subSubs = (sub as Dependency).subs;
-        if (subSubs != null) {
-          if (subSubs.nextSub != null) {
-            subSubs.prevSub = subs;
-            link = subs = subSubs;
-            targetFlag = SubscriberFlags.toCheckDirty;
-            ++stack;
-          } else {
-            link = subSubs;
-            targetFlag = sub is IEffect
-                ? SubscriberFlags.innerEffectsPending
-                : SubscriberFlags.toCheckDirty;
-          }
-          continue;
-        }
-      } else if ((subFlags & targetFlag) == 0) {
-        sub.flags = subFlags | targetFlag;
-      }
+    } else if ( //
+        (subFlags & (SubscriberFlags.tracking | targetFlag)) == 0 || //
+            ((subFlags & targetFlag) == 0 && _isValidLink(link, sub)) //
+        ) {
+      sub.flags = subFlags | targetFlag;
     }
+    // dart format on
+
     if ((nextSub = subs!.nextSub) == null) {
       if (stack > 0) {
         Dependency dep = subs.dep!;

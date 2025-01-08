@@ -1,3 +1,8 @@
+## v0.0.16
+
+- refactor: streamline propagate function and remove nextSub intermediate variable
+- fix: newLink with late final
+
 ## v0.0.15
 
 - pref: flatten`if` branches in propagate function

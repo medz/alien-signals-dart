@@ -221,7 +221,6 @@ void propagate(Link? subs) {
   SubscriberFlags targetFlag = SubscriberFlags.dirty;
   Link? link = subs;
   int stack = 0;
-  Link? nextSub;
 
   top:
   do {
@@ -307,7 +306,7 @@ void propagate(Link? subs) {
     }
     // dart format on
 
-    if ((nextSub = subs!.nextSub) == null) {
+    if ((link = subs!.nextSub) == null) {
       if (stack > 0) {
         Dependency dep = subs.dep!;
         do {
@@ -315,8 +314,9 @@ void propagate(Link? subs) {
           final depSubs = dep.subs!;
           final prevLink = depSubs.prevSub!;
           depSubs.prevSub = null;
-          link = subs = prevLink.nextSub;
-          if (subs != null) {
+          link = prevLink.nextSub;
+          if (link != null) {
+            subs = link;
             targetFlag = stack > 0
                 ? SubscriberFlags.toCheckDirty
                 : SubscriberFlags.dirty;
@@ -327,11 +327,10 @@ void propagate(Link? subs) {
       }
       break;
     }
-    if (link != subs) {
-      targetFlag =
-          stack > 0 ? SubscriberFlags.toCheckDirty : SubscriberFlags.dirty;
-    }
-    link = subs = nextSub;
+
+    subs = link;
+    targetFlag =
+        stack > 0 ? SubscriberFlags.toCheckDirty : SubscriberFlags.dirty;
   } while (true);
 
   if (_batchDepth == 0) {

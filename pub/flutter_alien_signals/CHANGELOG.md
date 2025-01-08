@@ -1,3 +1,7 @@
+## v0.0.3
+
+- Sync upstream (alien_signals v0.0.16)
+
 ## v0.0.2
 
 - Sync upstream (alien_signals v0.0.15)

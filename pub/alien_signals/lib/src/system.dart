@@ -183,7 +183,7 @@ void _linkNewDep(
   Link? nextDep,
   Link? depsTail,
 ) {
-  Link newLink;
+  late final Link newLink;
   if (_linkPool != null) {
     newLink = _linkPool!;
     _linkPool = newLink.nextDep;

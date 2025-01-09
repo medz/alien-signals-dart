@@ -1,3 +1,7 @@
+## v0.0.17
+
+- refactor: sync upstream
+
 ## v0.0.16
 
 - refactor: streamline propagate function and remove nextSub intermediate variable

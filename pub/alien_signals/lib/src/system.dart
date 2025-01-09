@@ -217,9 +217,9 @@ void _linkNewDep(
 }
 
 /// Propagate changes through the dependency graph
-void propagate(Link? subs) {
+void propagate(Link? link) {
   SubscriberFlags targetFlag = SubscriberFlags.dirty;
-  Link? link = subs;
+  Link? subs = link;
   int stack = 0;
 
   top:
@@ -306,31 +306,27 @@ void propagate(Link? subs) {
     }
     // dart format on
 
-    if ((link = subs!.nextSub) == null) {
-      if (stack > 0) {
-        Dependency dep = subs.dep!;
-        do {
-          --stack;
-          final depSubs = dep.subs!;
-          final prevLink = depSubs.prevSub!;
-          depSubs.prevSub = null;
-          link = prevLink.nextSub;
-          if (link != null) {
-            subs = link;
-            targetFlag = stack > 0
-                ? SubscriberFlags.toCheckDirty
-                : SubscriberFlags.dirty;
-            continue top;
-          }
-          dep = prevLink.dep!;
-        } while (stack > 0);
-      }
-      break;
+    if ((link = subs!.nextSub) != null) {
+      subs = link;
+      targetFlag =
+          stack > 0 ? SubscriberFlags.toCheckDirty : SubscriberFlags.dirty;
+      continue;
     }
 
-    subs = link;
-    targetFlag =
-        stack > 0 ? SubscriberFlags.toCheckDirty : SubscriberFlags.dirty;
+    while (stack > 0) {
+      --stack;
+      final dep = subs!.dep!, depSubs = dep.subs!;
+      subs = depSubs.prevSub!;
+      depSubs.prevSub = null;
+      if ((link = subs.nextSub) != null) {
+        subs = link;
+        targetFlag =
+            stack > 0 ? SubscriberFlags.toCheckDirty : SubscriberFlags.dirty;
+        continue top;
+      }
+    }
+
+    break;
   } while (true);
 
   if (_batchDepth == 0) {
@@ -345,7 +341,6 @@ void propagate(Link? subs) {
 ///
 /// [link] is the starting point in the linked list of subscribers.
 void shallowPropagate(Link? link) {
-  assert(link != null);
   do {
     final updateSub = link!.sub!;
     final updateSubFlags = updateSub.flags;
@@ -380,12 +375,12 @@ bool _isValidLink(Link subLink, Subscriber sub) {
 bool checkDirty(Link? link) {
   int stack = 0;
   late bool dirty;
-  Link? nextDep;
 
   top:
   do {
     dirty = false;
     final dep = link!.dep;
+
     if (dep is IComputed) {
       final depFlags = dep.flags;
       if ((depFlags & SubscriberFlags.dirty) != 0) {
@@ -408,51 +403,55 @@ bool checkDirty(Link? link) {
         continue;
       }
     }
-    if (dirty || (nextDep = link.nextDep) == null) {
-      if (stack > 0) {
-        dynamic sub = link.sub;
-        do {
-          --stack;
-          final Link subSubs = sub.subs;
-          var prevLink = subSubs.prevSub;
 
-          if (prevLink != null) {
-            subSubs.prevSub = null;
-            if (dirty) {
-              if (sub.update()) {
-                shallowPropagate(sub.subs);
-                sub = prevLink.sub;
-                continue;
-              } else {
-                sub.flags &= ~SubscriberFlags.toCheckDirty;
-              }
-            }
-          } else {
-            if (dirty) {
-              if (sub.update()) {
-                sub = subSubs.sub;
-                continue;
-              }
+    if (!dirty && link.nextDep != null) {
+      link = link.nextDep;
+      continue;
+    }
+
+    if (stack > 0) {
+      // Dart not support union type
+      dynamic /* IComputed | Effect */ sub = link.sub;
+      do {
+        --stack;
+        final Link subSubs = sub.subs!;
+
+        if (dirty) {
+          if (sub.update()) {
+            if ((link = subSubs.prevSub) != null) {
+              subSubs.prevSub = null;
+              shallowPropagate(sub.subs);
+              sub = link!.sub;
             } else {
-              sub.flags &= ~SubscriberFlags.toCheckDirty;
+              sub = subSubs.sub;
             }
-
-            prevLink = subSubs;
+            continue;
           }
+        } else {
+          sub.flags &= ~SubscriberFlags.toCheckDirty;
+        }
 
-          link = prevLink.nextDep;
-          if (link != null) {
+        if ((link = subSubs.prevSub) != null) {
+          subSubs.prevSub = null;
+          if (link?.nextDep != null) {
+            link = link!.nextDep;
             continue top;
           }
 
-          sub = prevLink.sub;
-          dirty = false;
-        } while (stack > 0);
-      }
-      return dirty;
+          sub = link!.sub;
+        } else {
+          if ((link = subSubs.nextDep) != null) {
+            continue top;
+          }
+
+          sub = subSubs.sub;
+        }
+
+        dirty = false;
+      } while (stack > 0);
     }
 
-    link = nextDep;
+    return dirty;
   } while (true);
 }
 

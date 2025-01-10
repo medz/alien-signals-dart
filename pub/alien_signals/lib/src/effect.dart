@@ -4,31 +4,13 @@ import 'system.dart';
 /// The currently active subscriber.
 Subscriber? activeSub;
 
-/// The ID of the currently active track.
-int activeTrackId = 0;
-
-/// The ID of the last track that was used.
-int lastTrackId = 0;
-
-/// Sets the currently active subscriber and track ID.
+/// Sets the currently active subscriber.
 ///
-/// This function updates the global `activeSub` and `activeTrackId` variables
-/// to the provided `sub` and `trackId` respectively.
+/// This function updates the global `activeSub` variable to the provided `sub`.
 ///
 /// @param sub The subscriber to set as active.
-/// @param trackId The track ID to set as active.
-void setActiveSub(Subscriber? sub, int trackId) {
+void setActiveSub(Subscriber? sub) {
   activeSub = sub;
-  activeTrackId = trackId;
-}
-
-/// Generates the next track ID.
-///
-/// This function increments the global `lastTrackId` by one and returns the new value.
-///
-/// @returns The next track ID.
-int nextTrackId() {
-  return ++lastTrackId;
 }
 
 /// Executes a function without tracking dependencies.
@@ -48,12 +30,11 @@ int nextTrackId() {
 /// ```
 T untrack<T>(T Function() fn) {
   final prevSub = activeSub;
-  final prevTrackId = activeTrackId;
-  setActiveSub(null, 0);
+  setActiveSub(null);
   try {
     return fn();
   } finally {
-    setActiveSub(prevSub, prevTrackId);
+    setActiveSub(prevSub);
   }
 }
 
@@ -87,9 +68,9 @@ Effect<T> effect<T>(T Function() fn) {
 class Effect<T> implements IEffect, Dependency {
   /// {@macro alien_signals.effect}
   Effect(this.fn) {
-    if (activeTrackId != 0) {
+    if (activeSub != null) {
       link(this, activeSub!);
-    } else if (activeScopeTrackId != 0) {
+    } else if (activeEffectScope != null) {
       link(this, activeEffectScope!);
     }
   }
@@ -105,9 +86,6 @@ class Effect<T> implements IEffect, Dependency {
 
   @override
   SubscriberFlags flags = SubscriberFlags.dirty;
-
-  @override
-  int? lastTrackedId;
 
   @override
   IEffect? nextNotify;
@@ -142,13 +120,12 @@ class Effect<T> implements IEffect, Dependency {
   /// @returns The result of the effect function.
   T run() {
     final prevSub = activeSub;
-    final prevTrackId = activeTrackId;
-    setActiveSub(this, nextTrackId());
+    setActiveSub(this);
     startTrack(this);
     try {
       return fn();
     } finally {
-      setActiveSub(prevSub, prevTrackId);
+      setActiveSub(prevSub);
       endTrack(this);
     }
   }

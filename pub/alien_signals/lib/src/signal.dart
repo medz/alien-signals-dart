@@ -32,9 +32,6 @@ class Signal<T> implements Dependency, IWritableSignal<T> {
   T currentValue;
 
   @override
-  int? lastTrackedId = 0;
-
-  @override
   Link? subs;
 
   @override
@@ -42,8 +39,7 @@ class Signal<T> implements Dependency, IWritableSignal<T> {
 
   @override
   T get() {
-    if (activeTrackId != 0 && lastTrackedId != activeTrackId) {
-      lastTrackedId = activeTrackId;
+    if (activeSub != null) {
       link(this, activeSub!);
     }
 

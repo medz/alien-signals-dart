@@ -22,9 +22,6 @@ abstract interface class Dependency {
 
   /// The tail of the linked list of subscribers.
   Link? subsTail;
-
-  /// The ID of the last tracked dependency.
-  int? lastTrackedId;
 }
 
 /// [Subscriber] flags type def.
@@ -174,13 +171,24 @@ void _drainQueuedEffects() {
 /// Create or reuse a link between a dependency and subscriber
 void link(Dependency dep, Subscriber sub) {
   final currentDep = sub.depsTail;
-  final nextDep = currentDep != null ? currentDep.nextDep : sub.deps;
+  if (currentDep != null && currentDep.dep == dep) {
+    return;
+  }
 
+  final nextDep = currentDep != null ? currentDep.nextDep : sub.deps;
   if (nextDep != null && nextDep.dep == dep) {
     sub.depsTail = nextDep;
-  } else {
-    _linkNewDep(dep, sub, nextDep, currentDep);
+    return;
   }
+
+  final depLastSub = dep.subsTail;
+  if (depLastSub != null &&
+      depLastSub.sub == sub &&
+      _isValidLink(depLastSub, sub)) {
+    return;
+  }
+
+  _linkNewDep(dep, sub, nextDep, currentDep);
 }
 
 void _linkNewDep(
@@ -451,21 +459,25 @@ bool checkDirty(Link? link) {
 /// Start tracking dependencies for a subscriber
 void startTrack(Subscriber sub) {
   sub.depsTail = null;
-  sub.flags = SubscriberFlags.tracking;
+  sub.flags =
+      (sub.flags & ~(SubscriberFlags.recursed | SubscriberFlags.notified)) |
+          SubscriberFlags.tracking;
 }
 
 /// End tracking dependencies for a subscriber
 void endTrack(Subscriber sub) {
   final depsTail = sub.depsTail;
   if (depsTail != null) {
-    if (depsTail.nextDep != null) {
-      _clearTrack(depsTail.nextDep);
+    final nextDep = depsTail.nextDep;
+    if (nextDep != null) {
+      _clearTrack(nextDep);
       depsTail.nextDep = null;
     }
   } else if (sub.deps != null) {
     _clearTrack(sub.deps);
     sub.deps = null;
   }
+
   sub.flags &= ~SubscriberFlags.tracking;
 }
 
@@ -481,7 +493,6 @@ void _clearTrack(Link? link) {
       link.nextSub = null;
     } else {
       dep.subsTail = prevSub;
-      dep.lastTrackedId = 0;
     }
 
     if (prevSub != null) {
@@ -496,14 +507,11 @@ void _clearTrack(Link? link) {
     _linkPool = link;
 
     if (dep.subs == null && dep is Subscriber) {
-      if (dep is IEffect) {
-        (dep as Subscriber).flags = SubscriberFlags.none;
-      } else {
-        final depFlags = (dep as Subscriber).flags;
-        if ((depFlags & SubscriberFlags.dirty) == 0) {
-          (dep as Subscriber).flags = depFlags | SubscriberFlags.dirty;
-        }
+      final depFlags = (dep as Subscriber).flags;
+      if (depFlags & SubscriberFlags.dirty == 0) {
+        (dep as Subscriber).flags = depFlags | SubscriberFlags.dirty;
       }
+
       final depDeps = (dep as Subscriber).deps;
       if (depDeps != null) {
         link = depDeps;

@@ -4,38 +4,30 @@ import 'system.dart';
 /// The currently active effect scope, if any.
 EffectScope? activeEffectScope;
 
-/// The track ID associated with the currently active effect scope.
-int activeScopeTrackId = 0;
-
-/// Sets the currently active effect scope and its associated track ID.
+/// Sets the currently active effect scope.
 ///
-/// This function updates the global variables [activeEffectScope] and
-/// [activeScopeTrackId] with the provided [scope] and [trackId] respectively.
+/// This function updates the global variable [activeEffectScope] with the provided [scope].
 ///
-/// - Parameters:
-///   - scope: The effect scope to set as active.
-///   - trackId: The track ID associated with the effect scope.
-void setActiveScope(EffectScope? scope, int trackId) {
+/// - Parameter scope: The effect scope to set as active.
+void setActiveScope(EffectScope? scope) {
   activeEffectScope = scope;
-  activeScopeTrackId = trackId;
 }
 
 /// Executes a function without tracking the current effect scope.
 ///
-/// This function temporarily sets the [activeEffectScope] and [activeScopeTrackId]
-/// to `null` and `0` respectively, executes the provided function [fn], and then
-/// restores the previous values of [activeEffectScope] and [activeScopeTrackId].
+/// This function temporarily disables scope tracking by setting [activeEffectScope]
+/// to `null`, executes the provided function [fn], and restores the previous
+/// effect scope afterwards.
 ///
-/// - Parameter fn: The function to execute without tracking the current effect scope.
+/// - Parameter [fn]: The function to execute without tracking the current effect scope.
 /// - Returns: The result of the executed function [fn].
 T untrackScope<T>(T Function() fn) {
   final prevSub = activeEffectScope;
-  final prevTrackId = activeScopeTrackId;
-  setActiveScope(null, 0);
+  setActiveScope(null);
   try {
     return fn();
   } finally {
-    setActiveScope(prevSub, prevTrackId);
+    setActiveScope(prevSub);
   }
 }
 
@@ -80,11 +72,6 @@ class EffectScope implements IEffect {
   @override
   IEffect? nextNotify;
 
-  /// The track ID associated with this effect scope.
-  ///
-  /// This ID is used to uniquely identify the effect scope within the system.
-  int trackId = nextTrackId();
-
   @override
   void notify() {
     if ((flags & SubscriberFlags.innerEffectsPending) != 0) {
@@ -95,14 +82,12 @@ class EffectScope implements IEffect {
 
   T run<T>(T Function() fn) {
     final prevSub = activeEffectScope;
-    final prevTrackId = activeScopeTrackId;
     activeEffectScope = this;
-    activeScopeTrackId = trackId;
+
     try {
       return fn();
     } finally {
       activeEffectScope = prevSub;
-      activeScopeTrackId = prevTrackId;
     }
   }
 

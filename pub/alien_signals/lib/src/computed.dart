@@ -42,9 +42,6 @@ class Computed<T> implements IComputed, ISignal<T> {
   SubscriberFlags flags = SubscriberFlags.dirty;
 
   @override
-  int? lastTrackedId = 0;
-
-  @override
   Link? subs;
 
   @override
@@ -60,13 +57,9 @@ class Computed<T> implements IComputed, ISignal<T> {
       shallowPropagate(subs);
     }
 
-    if (activeTrackId != 0) {
-      if (lastTrackedId != activeTrackId) {
-        lastTrackedId = activeTrackId;
-        link(this, activeSub!);
-      }
-    } else if (activeScopeTrackId != 0 && lastTrackedId != activeScopeTrackId) {
-      lastTrackedId = activeScopeTrackId;
+    if (activeSub != null) {
+      link(this, activeSub!);
+    } else if (activeEffectScope != null) {
       link(this, activeEffectScope!);
     }
 
@@ -76,8 +69,8 @@ class Computed<T> implements IComputed, ISignal<T> {
   @override
   bool update() {
     final prevSub = activeSub;
-    final prevTrackId = activeTrackId;
-    setActiveSub(this, nextTrackId());
+
+    setActiveSub(this);
     startTrack(this);
 
     try {
@@ -90,7 +83,7 @@ class Computed<T> implements IComputed, ISignal<T> {
 
       return false;
     } finally {
-      setActiveSub(prevSub, prevTrackId);
+      setActiveSub(prevSub);
       endTrack(this);
     }
   }

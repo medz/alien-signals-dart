@@ -47,6 +47,12 @@ extension type const SubscriberFlags._(int value) implements int {
   /// Is dirty and needs update.
   static const dirty = SubscriberFlags._(1 << 4);
 
+  /// Combined flags for a subscriber in a notified state.
+  ///
+  /// This represents the union of flags for [innerEffectsPending], [toCheckDirty], and [dirty]
+  /// indicating the subscriber needs to be notified of pending effects or updates.
+  static final notified = innerEffectsPending | toCheckDirty | dirty;
+
   /// Bitwise NOT operator for flags.
   ///
   /// Returns a new [SubscriberFlags] with the bitwise NOT of the current value.
@@ -234,9 +240,7 @@ void propagate(Link? link) {
                 (subFlags &
                             (SubscriberFlags.tracking |
                                 SubscriberFlags.recursed |
-                                SubscriberFlags.innerEffectsPending |
-                                SubscriberFlags.toCheckDirty |
-                                SubscriberFlags.dirty)) ==
+                                SubscriberFlags.notified)) ==
                         0 && //
                     (sub.flags = subFlags | targetFlag) != 0 //
             ) || //
@@ -249,11 +253,7 @@ void propagate(Link? link) {
                         0 //
             ) || //
             ( //
-                (subFlags &
-                            (SubscriberFlags.innerEffectsPending |
-                                SubscriberFlags.toCheckDirty |
-                                SubscriberFlags.dirty)) ==
-                        0 && //
+                (subFlags & SubscriberFlags.notified) == 0 && //
                     _isValidLink(link, sub) && //
                     (sub.flags =
                             subFlags | SubscriberFlags.recursed | targetFlag) !=
@@ -290,13 +290,7 @@ void propagate(Link? link) {
         (subFlags & (SubscriberFlags.tracking | targetFlag)) == 0 || //
             ( //
                 (subFlags & targetFlag) == 0 && //
-                    (subFlags &
-                            (SubscriberFlags.innerEffectsPending | //
-                                SubscriberFlags.toCheckDirty | //
-                                SubscriberFlags.dirty //
-                            ) //
-                        ) !=
-                        0 && //
+                    (subFlags & SubscriberFlags.notified) != 0 && //
                     _isValidLink(link, sub) //
             ) //
         ) {

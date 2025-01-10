@@ -1,3 +1,12 @@
+## v0.1.0
+
+- feat: add `isDirty` and `runInnerEffects` utils
+- perf: exit edge case condition early in propagate if possible
+- refactor: combined flags for a subscriber in a notified state
+- refactor: reduce if branch
+- refactor: no longer use activeTrackId, activeScopeTrackId
+- refactor: move batch logic out of system
+
 ## v0.0.17
 
 - refactor: sync upstream

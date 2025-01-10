@@ -1,3 +1,4 @@
+import 'batch.dart';
 import 'effect.dart';
 import 'system.dart';
 import 'types.dart';
@@ -52,6 +53,9 @@ class Signal<T> implements Dependency, IWritableSignal<T> {
       currentValue = value;
       if (subs != null) {
         propagate(subs);
+        if (batchDepth == 0) {
+          drainQueuedEffects();
+        }
       }
     }
   }

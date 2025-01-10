@@ -1,3 +1,4 @@
+export 'src/batch.dart';
 export 'src/computed.dart';
 export 'src/effect.dart';
 export 'src/effect_scope.dart';

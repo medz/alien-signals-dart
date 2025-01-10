@@ -241,10 +241,9 @@ void propagate(Link? link) {
                     (sub.flags = subFlags | targetFlag) != 0 //
             ) || //
             ( //
-                (subFlags &
-                            (SubscriberFlags.tracking |
-                                SubscriberFlags.recursed)) ==
-                        SubscriberFlags.recursed && //
+
+                (subFlags & SubscriberFlags.recursed) != 0 && //
+                    (subFlags & SubscriberFlags.tracking) == 0 && //
                     (sub.flags = (subFlags & ~SubscriberFlags.recursed) |
                             targetFlag) !=
                         0 //

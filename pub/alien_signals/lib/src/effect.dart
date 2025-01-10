@@ -120,29 +120,16 @@ class Effect<T> implements IEffect, Dependency {
 
   @override
   void notify() {
-    if ((flags & SubscriberFlags.dirty) != 0) {
+    final flags = this.flags;
+    if (flags & (SubscriberFlags.toCheckDirty | SubscriberFlags.dirty) != 0 &&
+        isDirty(this, flags)) {
       run();
       return;
     }
-    if ((flags & SubscriberFlags.toCheckDirty) != 0) {
-      if (checkDirty(this.deps!)) {
-        run();
-        return;
-      } else {
-        flags &= ~SubscriberFlags.toCheckDirty;
-      }
-    }
-    if ((flags & SubscriberFlags.innerEffectsPending) != 0) {
-      flags &= ~SubscriberFlags.innerEffectsPending;
-      Link? link = this.deps;
-      do {
-        final dep = link?.dep;
-        if (dep is IEffect) {
-          (dep as IEffect).notify();
-        }
 
-        link = link?.nextDep;
-      } while (link != null);
+    if ((flags & SubscriberFlags.innerEffectsPending) != 0) {
+      this.flags = flags & ~SubscriberFlags.innerEffectsPending;
+      runInnerEffects(deps);
     }
   }
 

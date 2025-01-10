@@ -89,15 +89,7 @@ class EffectScope implements IEffect {
   void notify() {
     if ((flags & SubscriberFlags.innerEffectsPending) != 0) {
       flags &= ~SubscriberFlags.innerEffectsPending;
-      Link? link = deps;
-      do {
-        final dep = link?.dep;
-        if (dep is IEffect) {
-          (dep as IEffect).notify();
-        }
-
-        link = link?.nextDep;
-      } while (link != null);
+      runInnerEffects(deps);
     }
   }
 

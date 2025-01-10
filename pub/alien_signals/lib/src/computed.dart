@@ -52,17 +52,11 @@ class Computed<T> implements IComputed, ISignal<T> {
 
   @override
   T get() {
-    if ((flags & SubscriberFlags.dirty) != 0) {
+    final flags = this.flags;
+    if (flags & (SubscriberFlags.toCheckDirty | SubscriberFlags.dirty) != 0 &&
+        isDirty(this, flags)) {
       if (update() && subs != null) {
         shallowPropagate(subs);
-      }
-    } else if ((flags & SubscriberFlags.toCheckDirty) != 0) {
-      if (checkDirty(deps)) {
-        if (update() && subs != null) {
-          shallowPropagate(subs);
-        }
-      } else {
-        flags &= ~SubscriberFlags.toCheckDirty;
       }
     }
 

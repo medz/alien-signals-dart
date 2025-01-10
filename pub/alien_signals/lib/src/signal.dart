@@ -42,8 +42,8 @@ class Signal<T> implements Dependency, IWritableSignal<T> {
 
   @override
   T get() {
-    if (activeTrackId != 0 && this.lastTrackedId != activeTrackId) {
-      this.lastTrackedId = activeTrackId;
+    if (activeTrackId != 0 && lastTrackedId != activeTrackId) {
+      lastTrackedId = activeTrackId;
       link(this, activeSub!);
     }
 
@@ -54,7 +54,6 @@ class Signal<T> implements Dependency, IWritableSignal<T> {
   set(T value) {
     if (currentValue != value) {
       currentValue = value;
-      final subs = this.subs;
       if (subs != null) {
         propagate(subs);
       }

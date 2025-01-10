@@ -54,10 +54,10 @@ class Computed<T> implements IComputed, ISignal<T> {
   T get() {
     final flags = this.flags;
     if (flags & (SubscriberFlags.toCheckDirty | SubscriberFlags.dirty) != 0 &&
-        isDirty(this, flags)) {
-      if (update() && subs != null) {
-        shallowPropagate(subs);
-      }
+        isDirty(this, flags) &&
+        update() &&
+        subs != null) {
+      shallowPropagate(subs);
     }
 
     if (activeTrackId != 0) {
@@ -65,11 +65,9 @@ class Computed<T> implements IComputed, ISignal<T> {
         lastTrackedId = activeTrackId;
         link(this, activeSub!);
       }
-    } else if (activeScopeTrackId != 0) {
-      if (lastTrackedId != activeScopeTrackId) {
-        lastTrackedId = activeScopeTrackId;
-        link(this, activeEffectScope!);
-      }
+    } else if (activeScopeTrackId != 0 && lastTrackedId != activeScopeTrackId) {
+      lastTrackedId = activeScopeTrackId;
+      link(this, activeEffectScope!);
     }
 
     return currentValue as T;

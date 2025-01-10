@@ -5,22 +5,16 @@ class RecursiveComputed<T> extends Computed<T> {
 
   @override
   T get() {
-    if ((flags & SubscriberFlags.dirty) != 0) {
-      if (update() && subs != null) {
-        shallowPropagate(subs);
-      }
-    } else if ((flags & SubscriberFlags.toCheckDirty) != 0) {
-      if (checkDirty(deps)) {
-        if (update() && subs != null) {
-          shallowPropagate(subs);
-        }
-      } else {
-        flags &= ~SubscriberFlags.toCheckDirty;
-      }
+    final flags = this.flags;
+    if (flags & (SubscriberFlags.toCheckDirty | SubscriberFlags.dirty) != 0 &&
+        isDirty(this, flags) &&
+        update() &&
+        subs != null) {
+      shallowPropagate(subs);
     }
 
     if ((flags & SubscriberFlags.recursed) != 0) {
-      flags &= ~SubscriberFlags.recursed;
+      this.flags = flags & ~SubscriberFlags.recursed;
       return get();
     }
 

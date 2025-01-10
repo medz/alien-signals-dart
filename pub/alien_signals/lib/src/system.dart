@@ -1,5 +1,3 @@
-import 'package:alien_signals/src/effect.dart';
-
 /// Interface for reactive effects that can subscribe to dependencies and be notified of changes
 abstract interface class IEffect implements Subscriber {
   /// Notify the effect of a change in its dependencies.
@@ -538,8 +536,8 @@ bool isDirty(Subscriber sub, SubscriberFlags flags) {
 void runInnerEffects(Link? link) {
   for (; link != null; link = link.nextDep) {
     final dep = link.dep;
-    if (dep is Effect) {
-      dep.notify();
+    if (dep is IEffect) {
+      (dep as IEffect).notify();
     }
   }
 }

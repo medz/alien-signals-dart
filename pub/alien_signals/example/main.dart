@@ -1,13 +1,13 @@
-import 'package:alien_signals/alien_signals.dart';
+import 'package:alien_signals/preset.dart';
 
 void main() {
   final count = signal(0);
-  final doubled = computed((_) => count.get() * 2);
+  final doubled = computed((_) => count() * 2);
 
   effect(() {
-    print('Count: ${count.get()}, D: ${doubled.get()}');
+    print('Count: ${count()}, D: ${doubled()}');
   });
 
-  count.set(1);
-  count.set(2);
+  count(1);
+  count(2);
 }

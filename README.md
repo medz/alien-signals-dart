@@ -34,83 +34,38 @@ Alternatively, you can run the following command:
 dart pub add alien_signals
 ```
 
+## Adoption
+
+- [flutter_alien_signals](https://github.com/medz/alien-signals-dart/tree/main/pub/flutter_alien_signals) - Flutter binding of `alien_signals` preset
+- [solidart](https://github.com/nank1ro/solidart) - [WIP] Signals in Dart and Flutter, inspired by SolidJS
+
 ## Basic Usage
 
 ```dart
-import 'package:alien_signals/alien_signals.dart';
+import 'package:alien_signals/preset.dart';
 
 void main() {
   // Create a signal
   final count = signal(0);
 
   // Create a computed value
-  final doubled = computed((_) => count.get() * 2);
+  final doubled = computed((_) => count() * 2);
 
   // Create an effect
   effect(() {
-    print('Count: ${count.get()}, Doubled: ${doubled.get()}');
+    print('Count: ${count()}, Doubled: ${doubled()}');
   });
 
   // Update the signal
-  count.set(1); // Prints: Count: 1, Doubled: 2
+  count(1); // Prints: Count: 1, Doubled: 2
 }
 ```
 
-## Core Concepts
+## Creating Your Own Public API
 
-### Signals
+You can reuse `alien_signals` core algorithm via `ReactiveSystem` to build your own signal API. For implementation examples, see:
 
-Signals are reactive values that notify subscribers when they change:
-
-```dart
-final name = signal('Alice');
-
-print(name.get()); // Get value using `get` method.
-name.set('Bob');   // Set value using `set` method.
-```
-
-### Computed Values
-
-Computed values automatically derive from other reactive values:
-
-```dart
-final firstName = signal('John');
-final lastName = signal('Doe');
-final fullName = computed((_) => '${firstName.get()} ${lastName.get()}');
-
-effect(() => print(fullName.get())); // Prints: John Doe
-lastName.set('Smith'); // Prints: John Smith
-```
-
-### Effects
-
-Effects run automatically when their dependencies change:
-
-```dart
-final user = signal('guest');
-final e = effect(() {
-  print('Current user: ${user.get()}');
-});
-
-// Cleanup when done
-e.stop();
-```
-
-### Effect Scopes
-
-Group and manage related effects:
-
-```dart
-final scope = effectScope();
-scope.run(() {
-  // Effects created here are grouped
-  effect(() => print('Effect 1'));
-  effect(() => print('Effect 2'));
-});
-
-// Clean up all effects in scope
-scope.stop();
-```
+* [alien_signals preset](https://github.com/medz/alien-signals-dart/tree/main/pub/alien_signals/lib/src/preset)
 
 ## API Reference
 

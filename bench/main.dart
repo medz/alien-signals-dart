@@ -1,4 +1,4 @@
-import 'package:alien_signals/alien_signals.dart' as alien_signals;
+import 'package:alien_signals/preset.dart' as alien_signals;
 import 'package:reactivity_benchmark/reactive_framework.dart';
 import 'package:reactivity_benchmark/run_framework_bench.dart';
 import 'package:reactivity_benchmark/utils/create_computed.dart';
@@ -10,7 +10,7 @@ final class _AlienSignalReactiveFramework extends ReactiveFramework {
   @override
   Computed<T> computed<T>(T Function() fn) {
     final computed = alien_signals.computed<T>((_) => fn());
-    return createComputed(computed.get);
+    return createComputed(computed);
   }
 
   @override
@@ -21,7 +21,7 @@ final class _AlienSignalReactiveFramework extends ReactiveFramework {
   @override
   Signal<T> signal<T>(T value) {
     final signal = alien_signals.signal(value);
-    return createSignal(signal.get, signal.set);
+    return createSignal(signal, signal);
   }
 
   @override

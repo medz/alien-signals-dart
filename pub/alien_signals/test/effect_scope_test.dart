@@ -1,26 +1,22 @@
-import 'package:alien_signals/alien_signals.dart';
+import 'package:alien_signals/preset.dart';
 import 'package:test/test.dart';
 
 main() {
   test('should not trigger after stop', () {
-    final count = signal(0);
-    final scope = effectScope();
-
+    final count = signal(1);
     int triggers = 0;
-    scope.run(() {
+    final stopScope = effectScope(() {
       effect(() {
         triggers++;
-        count.get();
+        count();
       });
     });
 
     expect(triggers, equals(1));
-
-    count.set(2);
+    count(2);
     expect(triggers, equals(2));
-
-    scope.stop();
-    count.set(3);
+    stopScope();
+    count(3);
     expect(triggers, equals(2));
   });
 }

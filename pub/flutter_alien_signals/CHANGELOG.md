@@ -1,3 +1,8 @@
+## v0.2.0
+
+- refactor: Upgrade `alien_signals` to `v0.2.0`
+- refactor: API sync `alien_signals`
+
 ## v0.1.0
 
 - deps: Upgrade `alien_signals` to `v0.1.0`

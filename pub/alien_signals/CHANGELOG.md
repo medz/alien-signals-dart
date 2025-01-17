@@ -1,3 +1,7 @@
+## v0.2.0
+
+- refactor: Independent reactive system to avoid pollution conflicts
+
 ## v0.1.0
 
 - feat: add `isDirty` and `runInnerEffects` utils

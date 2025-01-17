@@ -1,20 +1,21 @@
-import 'package:alien_signals/alien_signals.dart' as alien;
+import 'package:alien_signals/preset.dart' as alien;
 
 import '_internal/callonce.dart';
 import '_internal/signals_element.dart';
 
-alien.EffectScope effectScope() {
+alien.EffectStop<alien.EffectScope> effectScope(void Function() fn) {
   if (currentElement == null) {
-    return alien.effectScope();
+    return alien.effectScope(fn);
   }
 
   final element = currentElement!, subs = element.subs;
   try {
-    return callonce(
-      factory: alien.effectScope,
+    final scope = callonce(
+      factory: () => alien.effectScope(fn).sub,
       container: subs,
       index: element.subCounter,
     );
+    return alien.EffectStop(scope);
   } finally {
     element.subCounter++;
   }

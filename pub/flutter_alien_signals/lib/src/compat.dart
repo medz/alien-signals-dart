@@ -1,10 +1,10 @@
 import 'upstream.dart';
 
-extension ValueSignal<T> on ISignal<T> {
-  T get value => get();
+extension ValueSignal<T> on Signal<T> {
+  T get value => this();
 }
 
-extension ValueWritableSignal<T> on IWritableSignal<T> {
-  T get value => get();
-  set value(T value) => set(value);
+extension ValueWritableSignal<T> on WriteableSignal<T> {
+  T get value => this();
+  set value(T value) => this(value);
 }

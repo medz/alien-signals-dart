@@ -1,23 +1,28 @@
-import 'package:alien_signals/alien_signals.dart';
+import 'package:alien_signals/preset.dart';
+
+void loop() {}
 
 extension EffectScopeUtils on EffectScope {
   void Function() on() {
-    final prevScope = activeEffectScope;
-    setActiveScope(this);
-    return () => setActiveScope(prevScope);
+    final prevScope = system.activeScope;
+    system.activeScope = this;
+    return () {
+      system.activeScope = prevScope;
+    };
   }
 }
 
 extension EffectUtils on Effect {
   void Function() on([EffectScope? scope]) {
     final reset = scope?.on();
-    final prevSub = activeSub;
-    setActiveSub(this);
-    startTrack(this);
+    final prevSub = system.activeSub;
+
+    system.activeSub = this;
+    system.startTracking(this);
     return () {
       reset?.call();
-      setActiveSub(prevSub);
-      endTrack(this);
+      system.activeSub = prevSub;
+      system.endTracking(this);
     };
   }
 }

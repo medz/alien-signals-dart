@@ -1,4 +1,4 @@
-import 'package:alien_signals/alien_signals.dart';
+import 'package:alien_signals/preset.dart';
 
 T batch<T>(T Function() fn) {
   startBatch();

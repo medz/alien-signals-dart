@@ -1,7 +1,8 @@
-import 'package:alien_signals/alien_signals.dart';
+import 'package:alien_signals/preset.dart';
 import 'package:flutter/widgets.dart';
 
 import '../_internal/signals_element.dart';
+import '../_internal/utils.dart';
 
 mixin Signals on StatelessWidget {
   @override
@@ -11,13 +12,15 @@ mixin Signals on StatelessWidget {
 }
 
 class _StatelessSignalsElement extends StatelessElement with SignalsElement {
-  _StatelessSignalsElement(super.widget) : scope = effectScope() {
-    effect = scope.run(() => Effect(markNeedsBuild));
+  _StatelessSignalsElement(super.widget) : scopeStop = effectScope(loop) {
+    system.runEffectScope(scopeStop.sub, () {
+      effectStop = effect(markNeedsBuild);
+    });
   }
 
   @override
-  final EffectScope scope;
+  final EffectStop<EffectScope> scopeStop;
 
   @override
-  late final Effect effect;
+  late final EffectStop<Effect> effectStop;
 }

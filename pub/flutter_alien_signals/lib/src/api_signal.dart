@@ -1,9 +1,9 @@
-import 'package:alien_signals/alien_signals.dart' as alien;
+import 'package:alien_signals/preset.dart' as alien;
 
 import '_internal/callonce.dart';
 import '_internal/signals_element.dart';
 
-alien.Signal<T> signal<T>(T value) {
+alien.WriteableSignal<T> signal<T>(T value) {
   if (currentElement == null) {
     return alien.signal(value);
   }

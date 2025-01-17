@@ -11,6 +11,6 @@ class SignalObserver<T> extends SignalsWidget {
 
   @override
   Widget build(BuildContext context) {
-    return builder(context, signal.get());
+    return builder(context, signal());
   }
 }

@@ -493,14 +493,12 @@ extension<Computed extends Dependency> on ReactiveSystem<Computed> {
 
       if (nextSub != null) {
         nextSub.prevSub = prevSub;
-        link.nextSub = null;
       } else {
         dep.subsTail = prevSub;
       }
 
       if (prevSub != null) {
         prevSub.nextSub = nextSub;
-        link.prevSub = null;
       } else {
         dep.subs = nextSub;
       }

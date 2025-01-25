@@ -272,18 +272,15 @@ abstract class ReactiveSystem<Computed extends Dependency> {
           shallowPropagate(subs);
         }
       }
-    } else if ((flags & SubscriberFlags.pendingComputed) != 0) {
-      if (checkDirty((computed as Subscriber).deps!)) {
-        if (updateComputed(computed)) {
-          final subs = computed.subs;
-          if (subs != null) {
-            shallowPropagate(subs);
-          }
+    } else if (checkDirty((computed as Subscriber).deps!)) {
+      if (updateComputed(computed)) {
+        final subs = computed.subs;
+        if (subs != null) {
+          shallowPropagate(subs);
         }
-      } else {
-        (computed as Subscriber).flags =
-            flags & ~SubscriberFlags.pendingComputed;
       }
+    } else {
+      (computed as Subscriber).flags = flags & ~SubscriberFlags.pendingComputed;
     }
   }
 

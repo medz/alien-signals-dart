@@ -1,5 +1,4 @@
-final class SubscriberFlags {
-  const SubscriberFlags._();
+abstract final class SubscriberFlags {
   static const computed = 1 << 0;
   static const effect = 1 << 1;
   static const tracking = 1 << 2;

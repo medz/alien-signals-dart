@@ -502,7 +502,7 @@ extension<Computed extends Dependency> on ReactiveSystem<Computed> {
         final depDeps = (dep as Subscriber).deps;
         if (depDeps != null) {
           link = depDeps;
-          (dep as Subscriber).depsTail!.nextDep = nextDep;
+          (dep as Subscriber).depsTail?.nextDep = nextDep;
           (dep as Subscriber).deps = null;
           (dep as Subscriber).depsTail = null;
           continue;

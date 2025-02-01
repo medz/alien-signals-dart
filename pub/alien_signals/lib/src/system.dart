@@ -493,20 +493,22 @@ extension<Computed extends Dependency> on ReactiveSystem<Computed> {
         dep.subs = nextSub;
       }
 
-      if (dep.subs == null && dep is Subscriber) {
-        final depFlags = (dep as Subscriber).flags;
-        if ((depFlags & SubscriberFlags.dirty) == 0) {
-          (dep as Subscriber).flags = depFlags | SubscriberFlags.dirty;
+      if (dep case final Subscriber sub when dep.subs == null) {
+        final flags = sub.flags;
+        if ((flags & SubscriberFlags.dirty) == 0) {
+          sub.flags = flags | SubscriberFlags.dirty;
         }
-        final depDeps = (dep as Subscriber).deps;
-        if (depDeps != null) {
-          link = depDeps;
-          (dep as Subscriber).depsTail?.nextDep = nextDep;
-          (dep as Subscriber).deps = null;
-          (dep as Subscriber).depsTail = null;
+
+        final deps = sub.deps;
+        if (deps != null) {
+          link = deps;
+          sub.depsTail?.nextDep = nextDep;
+          sub.deps = null;
+          sub.depsTail = null;
           continue;
         }
       }
+
       link = nextDep;
     } while (link != null);
   }

@@ -1,3 +1,13 @@
+## v0.2.1
+
+chore: cleanup avoid link setter
+refactor: remove unneeded flags check in processComputedUpdate
+refactor: simplify logic in processComputedUpdate
+refactor: clean SubscriberFlags factory
+fix: safe clean link
+pref: Avoid meaningless type conversions
+
+
 ## v0.2.0
 
 - refactor: Independent reactive system to avoid pollution conflicts

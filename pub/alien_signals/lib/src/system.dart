@@ -265,22 +265,16 @@ abstract class ReactiveSystem<Computed extends Dependency> {
   /// [computed] - The computed subscriber to update.
   /// [flags] - The current flag set for this subscriber.
   void processComputedUpdate(Computed computed, int flags) {
-    if ((flags & SubscriberFlags.dirty) != 0) {
+    if ((flags & SubscriberFlags.dirty) != 0 ||
+        (checkDirty((computed as Subscriber).deps)
+            ? true
+            : ((flags &= ~SubscriberFlags.pendingComputed) == 0))) {
       if (updateComputed(computed)) {
         final subs = computed.subs;
         if (subs != null) {
           shallowPropagate(subs);
         }
       }
-    } else if (checkDirty((computed as Subscriber).deps!)) {
-      if (updateComputed(computed)) {
-        final subs = computed.subs;
-        if (subs != null) {
-          shallowPropagate(subs);
-        }
-      }
-    } else {
-      (computed as Subscriber).flags = flags & ~SubscriberFlags.pendingComputed;
     }
   }
 

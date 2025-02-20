@@ -1,3 +1,8 @@
+## v0.2.2
+
+test: notify duplicate effect in subs
+refactor: remove unneeded subs property access
+
 ## v0.2.1
 
 chore: cleanup avoid link setter

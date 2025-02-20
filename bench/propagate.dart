@@ -84,15 +84,13 @@ void printTable(List<String> headers, List<List<String>> rows) {
     }
   }
 
-  print(headers
-      .map((h) => h.padRight(colWidths[headers.indexOf(h)]))
-      .join(' | '));
-  print(colWidths.map((w) => '-' * w).join(' | '));
+  print(
+      '| ${headers.map((h) => h.padRight(colWidths[headers.indexOf(h)])).join(' | ')} |');
+  print('| ${colWidths.map((w) => '-' * math.max(w, 3)).join(' | ')} |');
 
   for (final row in rows) {
-    print(row
-        .map((cell) => cell.padRight(colWidths[row.indexOf(cell)]))
-        .join(' | '));
+    print(
+        '| ${row.map((cell) => cell.padRight(colWidths[row.indexOf(cell)])).join(' | ')} |');
   }
 }
 

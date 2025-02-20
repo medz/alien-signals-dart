@@ -400,7 +400,7 @@ extension<Computed extends Dependency> on ReactiveSystem<Computed> {
             if (updateComputed(sub as Computed)) {
               if ((link = subSubs?.prevSub) != null) {
                 subSubs!.prevSub = null;
-                shallowPropagate((sub as Computed).subs);
+                shallowPropagate(subSubs);
                 sub = link?.sub;
               } else {
                 sub = subSubs?.sub;

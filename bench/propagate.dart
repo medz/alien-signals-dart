@@ -35,7 +35,7 @@ void runTest(int w, int h) {
   final src = signal(1);
   for (int j = 0; j < w; j++) {
     Signal last = src;
-    for (int k = 0; j < k; k++) {
+    for (int k = 0; k < h; k++) {
       final prev = last;
       last = computed((_) => prev() + 1);
     }

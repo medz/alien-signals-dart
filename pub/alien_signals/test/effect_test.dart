@@ -182,4 +182,37 @@ main() {
 
     expect(logs, ['bb', 'aa-0', 'aa-1', 'bb']);
   });
+
+  test("should duplicate subscribers do not affect the notify order", () {
+    final src1 = signal(0);
+    final src2 = signal(0);
+    final order = <String>[];
+
+    effect(() {
+      order.add("a");
+      pauseTracking();
+
+      final isOne = src2() == 1;
+      resumeTracking();
+
+      if (isOne) {
+        src1();
+      }
+
+      src2();
+      src1();
+    });
+
+    effect(() {
+      order.add("b");
+      src1();
+    });
+
+    src2(1);
+    expect(order, ["a", "b", "a"]);
+
+    order.clear();
+    src1(src1() + 1);
+    expect(order, ['a', 'b']);
+  });
 }

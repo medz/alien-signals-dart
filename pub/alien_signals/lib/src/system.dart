@@ -1,27 +1,85 @@
+/// Defines bit flags for tracking subscriber states in the reactive system.
+///
+/// These flags are used to track various states of subscribers including:
+/// - Whether they are computed values
+/// - If they have effects
+/// - Their tracking status
+/// - Notification status
+/// - Recursion state
+/// - Dirty/pending states
 abstract final class SubscriberFlags {
+  /// Indicates this is a computed value
   static const computed = 1 << 0;
+
+  /// Indicates this is an effect
   static const effect = 1 << 1;
+
+  /// Indicates the subscriber is currently tracking dependencies
   static const tracking = 1 << 2;
+
+  /// Indicates the subscriber has been notified of changes
   static const notified = 1 << 3;
+
+  /// Indicates the subscriber is being processed recursively
   static const recursed = 1 << 4;
+
+  /// Indicates the subscriber's value needs to be recomputed
   static const dirty = 1 << 5;
+
+  /// Indicates a computed value needs to be updated
   static const pendingComputed = 1 << 6;
+
+  /// Indicates an effect needs to be re-run
   static const pendingEffect = 1 << 7;
+
+  /// Combined flags indicating the subscriber needs propagation
   static const propagated = dirty | pendingComputed | pendingEffect;
 }
 
+/// A dependency that can be tracked by subscribers in the reactive system.
+///
+/// Dependencies maintain a doubly-linked list of subscribers that depend on them.
+/// When a dependency's value changes, its subscribers are notified through this list.
 abstract mixin class Dependency {
+  /// The head of the subscriber linked list.
   Link? subs;
+
+  /// The tail of the subscriber linked list.
   Link? subsTail;
 }
 
+/// A subscriber that can depend on dependencies in the reactive system.
+///
+/// Subscribers maintain their own linked list of dependencies they track.
+/// When any dependency changes, the subscriber is notified and can update accordingly.
+/// Subscribers can be either computed values or effects.
 abstract mixin class Subscriber {
+  /// Bit flags indicating the subscriber's current state.
+  /// See [SubscriberFlags] for possible values.
   abstract int flags;
+
+  /// The head of this subscriber's dependency linked list.
   Link? deps;
+
+  /// The tail of this subscriber's dependency linked list.
   Link? depsTail;
 }
 
+/// A node in the linked lists that represent dependency relationships.
+///
+/// Each link forms part of two doubly-linked lists:
+/// 1. A list of subscribers for a dependency (prevSub/nextSub)
+/// 2. A list of dependencies for a subscriber (nextDep)
+///
+/// This allows efficient traversal of both dependency and subscriber relationships.
 class Link {
+  /// Creates a new link between a dependency and subscriber.
+  ///
+  /// * [dep] - The dependency being linked to
+  /// * [sub] - The subscriber being linked to
+  /// * [prevSub] - The previous subscriber in the dependency's subscriber list
+  /// * [nextSub] - The next subscriber in the dependency's subscriber list
+  /// * [nextDep] - The next dependency in the subscriber's dependency list
   Link({
     required this.dep,
     required this.sub,
@@ -30,15 +88,33 @@ class Link {
     this.nextDep,
   });
 
+  /// The dependency this link is associated with
   final Dependency dep;
+
+  /// The subscriber this link is associated with
   final Subscriber sub;
 
+  /// Previous subscriber in the dependency's subscriber list
   Link? prevSub;
+
+  /// Next subscriber in the dependency's subscriber list
   Link? nextSub;
+
+  /// Next dependency in the subscriber's dependency list
   Link? nextDep;
 }
 
+/// The core reactive system that manages dependencies and subscribers.
+///
+/// This system handles:
+/// - Dependency tracking between computed values and their subscribers
+/// - Propagation of changes through the dependency graph
+/// - Scheduling and execution of computed values and effects
+/// - Memory management of dependency relationships
+///
+/// [Computed] represents computed values that can also act as dependencies.
 abstract class ReactiveSystem<Computed extends Dependency> {
+  /// Creates a new reactive system instance.
   ReactiveSystem();
 
   Subscriber? _queuedEffects;

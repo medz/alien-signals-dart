@@ -1,3 +1,7 @@
+## v0.2.3
+
+docs: add detailed doc comments
+
 ## v0.2.2
 
 test: notify duplicate effect in subs

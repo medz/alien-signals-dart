@@ -1,3 +1,7 @@
+## v0.2.4
+
+fix: typo
+
 ## v0.2.3
 
 docs: add detailed doc comments

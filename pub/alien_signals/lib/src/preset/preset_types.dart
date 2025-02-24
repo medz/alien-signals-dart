@@ -27,9 +27,9 @@ abstract interface class Signal<T> implements Dependency {
 
 /// A signal that can be read from and written to.
 ///
-/// WriteableSignals extend regular signals by allowing their values
+/// WritableSignals extend regular signals by allowing their values
 /// to be modified through the call operator.
-abstract interface class WriteableSignal<T> extends Signal<T> {
+abstract interface class WritableSignal<T> extends Signal<T> {
   /// Gets or sets the current value of this signal.
   @override
   T call([T value]);

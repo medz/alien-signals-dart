@@ -90,10 +90,10 @@ void resumeTracking() {
 /// });
 /// count(1); // Prints: Count is: 1
 /// ```
-WriteableSignal<T> signal<T>(T value) => _WriteableSignal(value);
+WritableSignal<T> signal<T>(T value) => _WritableSignal(value);
 
-class _WriteableSignal<T> with Dependency implements WriteableSignal<T> {
-  _WriteableSignal(this.currentValue);
+class _WritableSignal<T> with Dependency implements WritableSignal<T> {
+  _WritableSignal(this.currentValue);
 
   @override
   T currentValue;

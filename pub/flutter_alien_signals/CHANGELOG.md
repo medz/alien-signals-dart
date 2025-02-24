@@ -1,3 +1,7 @@
+## v0.2.1
+
+fix: typo
+
 ## v0.2.0
 
 - refactor: Upgrade `alien_signals` to `v0.2.0`

@@ -40,7 +40,7 @@ class Counter extends SignalsWidget {
 
     return Scaffold(
       body: Center(
-        child: Text('Count: ${count.get()}'),
+        child: Text('Count: ${count()}'),
       ),
       floatingActionButton: FloatingActionButton(
         onPressed: increment,

@@ -180,21 +180,14 @@ abstract mixin class ReactiveSystem<Computed extends Dependency> {
 
   /// Updates the computed subscriber if necessary before its value is accessed.
   void processComputedUpdate(Computed computed, int flags) {
-    // dart format off
-    if (
-      (flags & SubscriberFlags.dirty) != 0
-      || (
-        checkDirty((computed as Subscriber).deps)
-          ? true
-          // ignore: unrelated_type_equality_checks
-          : ((computed as Subscriber).flags = flags & ~SubscriberFlags.pendingComputed) == false
-      )
-    ) {
-      // dart format on
+    if ((flags & SubscriberFlags.dirty) != 0 ||
+        checkDirty((computed as Subscriber).deps)) {
       if (updateComputed(computed)) {
         final subs = computed.subs;
         if (subs != null) shallowPropagate(subs);
       }
+    } else {
+      (computed as Subscriber).flags = flags & ~SubscriberFlags.pendingComputed;
     }
   }
 
@@ -262,10 +255,9 @@ extension<Computed extends Dependency> on ReactiveSystem<Computed> {
       final dep = current?.dep;
       if (dep case final Subscriber sub) {
         final depFlags = sub.flags;
-        const computedDirty =
-            SubscriberFlags.dirty | SubscriberFlags.pendingComputed;
 
-        if (depFlags & computedDirty == computedDirty) {
+        if ((depFlags & (SubscriberFlags.computed | SubscriberFlags.dirty)) ==
+            (SubscriberFlags.computed | SubscriberFlags.dirty)) {
           if (updateComputed(dep as Computed)) {
             if (current!.nextSub != null || current.prevSub != null) {
               shallowPropagate(dep.subs);
@@ -335,6 +327,7 @@ extension<Computed extends Dependency> on ReactiveSystem<Computed> {
           }
         }
       }
+      link = link.nextSub;
     }
   }
 

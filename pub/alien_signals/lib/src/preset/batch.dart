@@ -5,13 +5,14 @@ void startBatch() {
 }
 
 void endBatch() {
-  if (--system.batchDepth > 0) return;
-  system.processEffectNotifications();
+  if (--system.batchDepth == 0) {
+    system.processEffectNotifications();
+  }
 }
 
 T batch<T>(T Function() run) {
+  startBatch();
   try {
-    startBatch();
     return run();
   } finally {
     endBatch();

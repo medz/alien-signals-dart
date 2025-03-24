@@ -21,8 +21,8 @@ class Signal<T> with Dependency implements types.WriteableSignal<T> {
           }
         }
       }
-    } else {
-      if (system.activeSub != null) system.link(this, system.activeSub!);
+    } else if (system.activeSub != null) {
+      system.link(this, system.activeSub!);
     }
 
     return untracked;

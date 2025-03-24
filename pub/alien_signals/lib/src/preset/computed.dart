@@ -21,6 +21,7 @@ class Computed<T> with Dependency, Subscriber implements types.Computed<T> {
         0) {
       system.processComputedUpdate(this, flags);
     }
+
     if (system.activeSub != null) {
       system.link(this, system.activeSub!);
     } else if (system.activeScope != null) {
@@ -32,5 +33,5 @@ class Computed<T> with Dependency, Subscriber implements types.Computed<T> {
 }
 
 types.Computed<T> computed<T>(T Function(T? prevValue) getter) {
-  return Computed(getter);
+  return Computed<T>(getter);
 }

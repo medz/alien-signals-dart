@@ -43,13 +43,7 @@ class PresetReactiveSystem extends ReactiveSystem<Computed> {
     startTracking(computed);
 
     try {
-      final oldValue = computed.untracked, newValue = computed.getter(oldValue);
-      if (oldValue != newValue) {
-        computed.untracked = newValue;
-        return true;
-      }
-
-      return false;
+      return computed.notify();
     } finally {
       activeSub = prevSub;
       endTracking(computed);

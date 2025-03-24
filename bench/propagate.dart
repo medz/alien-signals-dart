@@ -34,7 +34,7 @@ Future<void> warmup(int w, int h) async {
 void runTest(int w, int h) {
   final src = signal(1);
   for (int j = 0; j < w; j++) {
-    Signal last = src;
+    Signal<int> last = src;
     for (int k = 0; k < h; k++) {
       final prev = last;
       last = computed((_) => prev() + 1);
@@ -62,14 +62,16 @@ void printResults(Map<String, List<int>> results) {
     stats[entry.key] = calculateStats(entry.value);
   }
 
-  final allRows = results.keys.map((title) => [
-        title,
-        '`${formatElapse(stats[title]!['avg']!.toInt())}/iter`',
-        '`${formatElapse(stats[title]!['min']!.toInt())}`',
-        '`${formatElapse(stats[title]!['max']!.toInt())}`',
-        '`${formatElapse(stats[title]!['p75']!.toInt())}`',
-        '`${formatElapse(stats[title]!['p99']!.toInt())}`',
-      ]);
+  final allRows = results.keys.map(
+    (title) => [
+      title,
+      '`${formatElapse(stats[title]!['avg']!.toInt())}/iter`',
+      '`${formatElapse(stats[title]!['min']!.toInt())}`',
+      '`${formatElapse(stats[title]!['max']!.toInt())}`',
+      '`${formatElapse(stats[title]!['p75']!.toInt())}`',
+      '`${formatElapse(stats[title]!['p99']!.toInt())}`',
+    ],
+  );
 
   printTable(headers, allRows.toList());
 }
@@ -85,12 +87,14 @@ void printTable(List<String> headers, List<List<String>> rows) {
   }
 
   print(
-      '| ${headers.map((h) => h.padRight(colWidths[headers.indexOf(h)])).join(' | ')} |');
+    '| ${headers.map((h) => h.padRight(colWidths[headers.indexOf(h)])).join(' | ')} |',
+  );
   print('| ${colWidths.map((w) => '-' * math.max(w, 3)).join(' | ')} |');
 
   for (final row in rows) {
     print(
-        '| ${row.map((cell) => cell.padRight(colWidths[row.indexOf(cell)])).join(' | ')} |');
+      '| ${row.map((cell) => cell.padRight(colWidths[row.indexOf(cell)])).join(' | ')} |',
+    );
   }
 }
 
@@ -124,8 +128,10 @@ int percentile(List<int> sortedValues, int p) {
     throw ArgumentError('List cannot be empty');
   }
 
-  final count =
-      (sortedValues.length * p / 100).ceil().clamp(1, sortedValues.length);
+  final count = (sortedValues.length * p / 100).ceil().clamp(
+    1,
+    sortedValues.length,
+  );
 
   return sortedValues[count - 1];
 }

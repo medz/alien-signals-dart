@@ -30,6 +30,16 @@ class Computed<T> with Dependency, Subscriber implements types.Computed<T> {
 
     return untracked as T;
   }
+
+  bool notify() {
+    final oldValue = untracked, newValue = getter(oldValue);
+    if (oldValue != newValue) {
+      untracked = newValue;
+      return true;
+    }
+
+    return false;
+  }
 }
 
 types.Computed<T> computed<T>(T Function(T? prevValue) getter) {

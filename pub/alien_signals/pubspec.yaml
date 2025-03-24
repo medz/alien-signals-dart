@@ -17,7 +17,7 @@ funding:
 
 resolution: workspace
 environment:
-  sdk: ^3.7.0
+  sdk: ^3.5.0
 
 dev_dependencies:
   lints: ^5.1.0

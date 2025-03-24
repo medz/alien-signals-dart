@@ -1,3 +1,18 @@
+## v0.3.0
+
+sync `alien-signals` v1.0.7 version
+
+### Bug Fixes
+
+- fix: fix propagation issue in linked dependencies
+- fix: resolve computed reactivity issues in deep hierarchies
+- fix: ensure proper cleanup when effects are stopped
+
+### Performance Improvements
+
+- perf: optimize shallowPropagate implementation
+- perf: improve batch processing efficiency
+
 ## v0.2.4
 
 fix: typo
@@ -19,7 +34,6 @@ refactor: simplify logic in processComputedUpdate
 refactor: clean SubscriberFlags factory
 fix: safe clean link
 pref: Avoid meaningless type conversions
-
 
 ## v0.2.0
 
@@ -60,7 +74,7 @@ pref: Avoid meaningless type conversions
 
 ## v0.0.12
 
-- refactor: remove _alwaysTrue
+- refactor: remove \_alwaysTrue
 - refactor: repalce >> 2 for readability
 - fix: Null check operator used on a null value
 - feat: add setActiveScope

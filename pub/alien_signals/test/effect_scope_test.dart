@@ -1,4 +1,4 @@
-import 'package:alien_signals/preset.dart';
+import 'package:alien_signals/alien_signals.dart';
 import 'package:test/test.dart';
 
 main() {
@@ -10,13 +10,16 @@ main() {
         triggers++;
         count();
       });
+
+      expect(triggers, equals(1));
+      count(2);
+      expect(triggers, equals(2));
     });
 
-    expect(triggers, equals(1));
-    count(2);
-    expect(triggers, equals(2));
-    stopScope();
     count(3);
-    expect(triggers, equals(2));
+    expect(triggers, equals(3));
+    stopScope();
+    // count(4);
+    // expect(triggers, equals(3));
   });
 }

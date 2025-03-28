@@ -1,4 +1,4 @@
-import 'package:alien_signals/preset.dart' as alien_signals;
+import 'package:alien_signals/alien_signals.dart' as alien_signals;
 import 'package:reactivity_benchmark/reactive_framework.dart';
 import 'package:reactivity_benchmark/run_framework_bench.dart';
 import 'package:reactivity_benchmark/utils/create_computed.dart';

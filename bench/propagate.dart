@@ -1,5 +1,5 @@
 import 'dart:math' as math;
-import 'package:alien_signals/preset.dart';
+import 'package:alien_signals/alien_signals.dart';
 
 Future<List<int>> runBenchmark(String title, int w, int h) async {
   final values = <int>[];

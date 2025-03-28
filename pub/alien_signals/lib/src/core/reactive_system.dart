@@ -61,7 +61,7 @@ abstract mixin class ReactiveSystem<Computed extends Dependency> {
             SubscriberFlags.notified;
       } else if ((subFlags & SubscriberFlags.propagated) == 0 &&
           isValidLink(current, sub)) {
-        shouldNotify = (sub as Dependency).subs != null;
+        shouldNotify = sub is Dependency && (sub as Dependency).subs != null;
         sub.flags = subFlags |
             SubscriberFlags.recursed |
             targetFlag |

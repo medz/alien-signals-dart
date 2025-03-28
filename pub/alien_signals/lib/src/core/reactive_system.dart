@@ -44,30 +44,32 @@ abstract mixin class ReactiveSystem<Computed extends Dependency> {
     top:
     do {
       final sub = current.sub, subFlags = sub.flags;
+      bool shouldNotify = false;
+
+      if ((subFlags &
+              (SubscriberFlags.tracking |
+                  SubscriberFlags.recursed |
+                  SubscriberFlags.propagated)) ==
+          0) {
+        shouldNotify = true;
+        sub.flags = subFlags | targetFlag | SubscriberFlags.notified;
+      } else if ((subFlags & SubscriberFlags.recursed) != 0 &&
+          (subFlags & SubscriberFlags.tracking) == 0) {
+        shouldNotify = true;
+        sub.flags = (subFlags & ~SubscriberFlags.recursed) |
+            targetFlag |
+            SubscriberFlags.notified;
+      } else if ((subFlags & SubscriberFlags.propagated) == 0 &&
+          isValidLink(current, sub)) {
+        shouldNotify = (sub as Dependency).subs != null;
+        sub.flags = subFlags |
+            SubscriberFlags.recursed |
+            targetFlag |
+            SubscriberFlags.notified;
+      }
+
       // dart format off
-      if (
-        (
-          (subFlags & (SubscriberFlags.tracking | SubscriberFlags.recursed | SubscriberFlags.propagated)) == 0
-          // ignore: unnecessary_null_comparison
-          && (sub.flags = subFlags | targetFlag | SubscriberFlags.notified) != null
-        )
-        || (
-          (subFlags & SubscriberFlags.recursed) != 0
-          && (subFlags & SubscriberFlags.tracking) == 0
-          // ignore: unnecessary_null_comparison
-          && (sub.flags = (subFlags & ~SubscriberFlags.recursed) | targetFlag | SubscriberFlags.notified) != null
-        )
-        || (
-          (subFlags & SubscriberFlags.propagated) == 0
-          && isValidLink(current, sub)
-          && (
-            // ignore: unnecessary_null_comparison
-            (sub.flags = subFlags | SubscriberFlags.recursed | targetFlag | SubscriberFlags.notified) != null
-            && sub is Dependency
-            && (sub as Dependency).subs != null
-          )
-        ) // dart format on
-          ) {
+      if (shouldNotify) {
         final subSubs = sub is Dependency ? (sub as Dependency).subs : null;
         if (subSubs != null) {
           current = subSubs;
@@ -77,10 +79,9 @@ abstract mixin class ReactiveSystem<Computed extends Dependency> {
             next = current.nextSub;
             targetFlag = SubscriberFlags.pendingComputed;
           } else {
-            targetFlag =
-                (subFlags & SubscriberFlags.effect) != 0
-                    ? SubscriberFlags.pendingEffect
-                    : SubscriberFlags.pendingComputed;
+            targetFlag = (subFlags & SubscriberFlags.effect) != 0
+                ? SubscriberFlags.pendingEffect
+                : SubscriberFlags.pendingComputed;
           }
           continue;
         }
@@ -103,22 +104,21 @@ abstract mixin class ReactiveSystem<Computed extends Dependency> {
           }
         }
       } else if (
-      // dart format off
-        (subFlags & targetFlag) == 0
-        && (subFlags & SubscriberFlags.propagated) != 0
-        && isValidLink(current, sub)
-      // dart format on
-      ) {
+          // dart format off
+          (subFlags & targetFlag) == 0 &&
+              (subFlags & SubscriberFlags.propagated) != 0 &&
+              isValidLink(current, sub)
+          // dart format on
+          ) {
         sub.flags = subFlags | targetFlag;
       }
 
       if (next != null) {
         current = next;
         next = current.nextSub;
-        targetFlag =
-            branchDepth > 0
-                ? SubscriberFlags.pendingComputed
-                : SubscriberFlags.dirty;
+        targetFlag = branchDepth > 0
+            ? SubscriberFlags.pendingComputed
+            : SubscriberFlags.dirty;
         continue;
       }
 
@@ -128,10 +128,9 @@ abstract mixin class ReactiveSystem<Computed extends Dependency> {
         if (target != null) {
           current = target;
           next = current.nextSub;
-          targetFlag =
-              branchDepth > 0
-                  ? SubscriberFlags.pendingComputed
-                  : SubscriberFlags.dirty;
+          targetFlag = branchDepth > 0
+              ? SubscriberFlags.pendingComputed
+              : SubscriberFlags.dirty;
           continue top;
         }
       }
@@ -144,9 +143,11 @@ abstract mixin class ReactiveSystem<Computed extends Dependency> {
   void startTracking(Subscriber sub) {
     sub.depsTail = null;
     // dart format off
-    sub.flags =
-      (sub.flags & ~(SubscriberFlags.notified | SubscriberFlags.recursed | SubscriberFlags.propagated))
-      | SubscriberFlags.tracking;
+    sub.flags = (sub.flags &
+            ~(SubscriberFlags.notified |
+                SubscriberFlags.recursed |
+                SubscriberFlags.propagated)) |
+        SubscriberFlags.tracking;
     // dart format on
   }
 
@@ -226,7 +227,8 @@ abstract mixin class ReactiveSystem<Computed extends Dependency> {
 
 extension<Computed extends Dependency> on ReactiveSystem<Computed> {
   // dart format off
-  Link linkNewDep(Dependency dep, Subscriber sub, Link? nextDep, Link? depsTail) {
+  Link linkNewDep(
+      Dependency dep, Subscriber sub, Link? nextDep, Link? depsTail) {
     // dart format on
     final link = Link(dep, sub, nextDep: nextDep);
 
@@ -293,8 +295,10 @@ extension<Computed extends Dependency> on ReactiveSystem<Computed> {
             return true;
           }
         } else if ( // dart format off
-          depFlags & (SubscriberFlags.pendingComputed | SubscriberFlags.computed) ==
-                     (SubscriberFlags.pendingComputed | SubscriberFlags.computed)) {
+            depFlags &
+                    (SubscriberFlags.pendingComputed |
+                        SubscriberFlags.computed) ==
+                (SubscriberFlags.pendingComputed | SubscriberFlags.computed)) {
           // dart format on
           sub.flags = depFlags & ~SubscriberFlags.pendingComputed;
           if (current!.nextSub != null || current.prevSub != null) {

@@ -1,5 +1,7 @@
+import 'package:alien_signals/src/system/flags.dart';
 import 'package:alien_signals/src/system/link.dart';
 import 'package:alien_signals/src/system/node.dart';
+import 'package:alien_signals/src/system/one_way_link.dart';
 
 abstract class ReactiveSystem {
   const ReactiveSystem();
@@ -10,8 +12,8 @@ abstract class ReactiveSystem {
 
   /// Links a given dependency and subscriber if they are not already linked.
   ///
-  /// - dep - The dependency to be linked.
-  /// - sub - The subscriber that depends on this dependency.
+  /// - [dep] - The dependency to be linked.
+  /// - [sub] - The subscriber that depends on this dependency.
   ///
   /// The newly created link object if the two are not already linked; otherwise null.
   Link? link(Node dep, Node sub) {
@@ -85,7 +87,99 @@ abstract class ReactiveSystem {
   /// It sets flags (e.g., Dirty, Pending) on each subscriber
   /// to indicate which ones require re-computation or effect processing.
   /// This function should be called after a signal's value changes.
-  void propagate() {}
+  ///
+  /// - current - The starting link from which propagation begins.
+  void propagate(Link link) {
+    Link? current = link, next = current.nextSub;
+    OneWayLink<Link?>? branchs;
+    int branchDepth = 0;
+    Flags targetFlag = Flags.dirty;
+
+    top:
+    do {
+      final sub = current!.sub;
+      Flags subFlags = sub.flags;
+
+      if ((subFlags & (Flags.mutable | Flags.watching)) != Flags.none) {
+        // dart format off
+        if ((subFlags & (Flags.running | Flags.recursed | Flags.dirty | Flags.pending)) == Flags.none) {
+          // dart format on
+          sub.flags = subFlags | targetFlag;
+          // dart format off
+        } else if ((subFlags & (Flags.running | Flags.recursed | targetFlag)) == Flags.none) {
+          // dart format on
+          sub.flags = subFlags | targetFlag;
+          subFlags &= Flags.watching;
+          // dart format off
+        } else if ((subFlags & (Flags.running | Flags.recursed)) == Flags.none) {
+          // dart format on
+          subFlags = Flags.none;
+          // dart format off
+        } else if ((subFlags & Flags.running) == Flags.none) {
+          // dart format on
+          sub.flags = (subFlags & ~Flags.recursed) | targetFlag;
+          // dart format off
+        } else if (isValidLink(current, sub)) {
+          // dart format off
+          if ((subFlags & (Flags.dirty | Flags.pending)) == Flags.none) {
+            // dart format on
+            sub.flags = subFlags | Flags.recursed | targetFlag;
+            subFlags &= Flags.mutable;
+            // dart format off
+          } else if ((subFlags & targetFlag) == Flags.none) {
+            // dart format on
+            sub.flags = subFlags | targetFlag;
+            subFlags = Flags.none;
+          } else {
+            subFlags = Flags.none;
+          }
+        } else {
+          subFlags = Flags.none;
+        }
+
+        // dart format on
+        if ((subFlags & Flags.watching) != Flags.none) {
+          notify(sub);
+        }
+
+        if ((subFlags & Flags.mutable) != Flags.none) {
+          final subSubs = sub.subs;
+          if (subSubs != null) {
+            current = subSubs;
+            if (subSubs.nextSub != null) {
+              branchs = OneWayLink(target: next, linked: branchs);
+              ++branchDepth;
+              next = current.nextSub;
+            }
+            targetFlag = Flags.pending;
+            continue;
+          }
+        }
+      }
+
+      if ((current = next) != null) {
+        next = current!.nextSub;
+        if (branchDepth == 0) {
+          targetFlag = Flags.dirty;
+        }
+        continue;
+      }
+
+      while ((branchDepth--) > 0) {
+        current = branchs?.target;
+        branchs = branchs?.linked;
+        if (current != null) {
+          next = current.nextSub;
+          if (branchDepth == 0) {
+            targetFlag = Flags.dirty;
+          }
+          continue top;
+        }
+      }
+
+      break;
+    } while (true);
+  }
 }
 
 extension on ReactiveSystem {

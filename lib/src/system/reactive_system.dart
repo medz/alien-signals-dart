@@ -9,6 +9,11 @@ abstract class ReactiveSystem {
   void unwatched(Node sub);
 
   /// Links a given dependency and subscriber if they are not already linked.
+  ///
+  /// - dep - The dependency to be linked.
+  /// - sub - The subscriber that depends on this dependency.
+  ///
+  /// The newly created link object if the two are not already linked; otherwise null.
   Link? link(Node dep, Node sub) {
     final prevDep = sub.depsTail;
     if (prevDep != null && prevDep.dep == dep) return null;
@@ -42,6 +47,45 @@ abstract class ReactiveSystem {
 
     return newLink;
   }
+
+  Link? unlink(Link link, [Node? sub]) {
+    sub ??= link.sub;
+    final dep = link.dep;
+    final prevDep = link.prevDep,
+        nextDep = link.nextDep,
+        prevSub = link.prevSub,
+        nextSub = link.nextSub;
+    if (nextSub != null) {
+      nextSub.prevSub = prevSub;
+    } else {
+      dep.subsTail = prevSub;
+    }
+    if (prevSub != null) {
+      prevSub.nextSub = nextSub;
+    } else {
+      dep.subs = nextSub;
+    }
+    if (nextDep != null) {
+      nextDep.prevDep = prevDep;
+    } else {
+      sub.depsTail = prevSub;
+    }
+    if (prevDep != null) {
+      prevDep.nextDep = nextDep;
+    } else {
+      sub.deps = nextDep;
+    }
+    if (dep.subs != null) unwatched(dep);
+
+    return nextDep;
+  }
+
+  /// Traverses and marks subscribers starting from the provided link.
+  ///
+  /// It sets flags (e.g., Dirty, Pending) on each subscriber
+  /// to indicate which ones require re-computation or effect processing.
+  /// This function should be called after a signal's value changes.
+  void propagate() {}
 }
 
 extension on ReactiveSystem {

@@ -202,6 +202,116 @@ abstract class ReactiveSystem {
       break;
     } while (true);
   }
+
+  void startTracking(ReactiveNode sub) {
+    sub.depsTail = null;
+    sub.flags =
+        (sub.flags &
+            ~(ReactiveFlags.recursed |
+                ReactiveFlags.dirty |
+                ReactiveFlags.pending)) |
+        ReactiveFlags.recursedCheck;
+  }
+
+  void endTracking(ReactiveNode sub) {
+    final depsTail = sub.depsTail;
+    var toRemove = depsTail != null ? depsTail.nextDep : sub.deps;
+    while (toRemove != null) {
+      toRemove = unlink(toRemove, sub);
+    }
+
+    sub.flags &= ~ReactiveFlags.recursedCheck;
+  }
+
+  bool checkDirty(Link link, ReactiveNode sub) {
+    _Stack<Link>? stack;
+    int checkDepth = 0;
+
+    top:
+    do {
+      final dep = link.dep;
+      final depFlags = dep.flags;
+      bool dirty = false;
+
+      if ((sub.flags & ReactiveFlags.dirty) != ReactiveFlags.none) {
+        dirty = true;
+      } else if ((depFlags & (ReactiveFlags.mutable | ReactiveFlags.dirty)) ==
+          (ReactiveFlags.mutable | ReactiveFlags.dirty)) {
+        if (update(dep)) {
+          final subs = dep.subs;
+          if (subs?.nextSub != null) {
+            shallowPropagate(subs!);
+          }
+          dirty = true;
+        }
+      } else if ((depFlags & (ReactiveFlags.mutable | ReactiveFlags.pending)) ==
+          (ReactiveFlags.mutable | ReactiveFlags.pending)) {
+        if (link.nextSub != null || link.prevSub != null) {
+          stack = _Stack(value: link, prev: stack);
+        }
+
+        link = dep.deps!;
+        sub = dep;
+        ++checkDepth;
+        continue;
+      }
+
+      if (!dirty && link.nextDep != null) {
+        link = link.nextDep!;
+        continue;
+      }
+
+      while (checkDepth > 0) {
+        --checkDepth;
+        final firstSub = sub.subs!;
+        final hasMutableSubs = firstSub.nextSub != null;
+        if (hasMutableSubs) {
+          link = stack!.value;
+          stack = stack.prev;
+        } else {
+          link = firstSub;
+        }
+
+        if (dirty) {
+          if (update(sub)) {
+            if (hasMutableSubs) shallowPropagate(firstSub);
+            sub = link.sub;
+            continue;
+          }
+        } else {
+          sub.flags &= ~ReactiveFlags.pending;
+        }
+
+        sub = link.sub;
+        if (link.nextDep != null) {
+          link = link.nextDep!;
+          continue top;
+        }
+
+        dirty = false;
+      }
+
+      return dirty;
+    } while (true);
+  }
+
+  void shallowPropagate(Link link) {
+    Link? current = link;
+    do {
+      final sub = current!.sub;
+      final nextSub = link.nextSub;
+      final subFlags = sub.flags;
+      if ((subFlags & (ReactiveFlags.pending | ReactiveFlags.dirty)) ==
+          ReactiveFlags.pending) {
+        sub.flags = subFlags | ReactiveFlags.dirty;
+        if ((subFlags & ReactiveFlags.watching) != ReactiveFlags.none) {
+          notify(sub);
+        }
+      }
+
+      current = nextSub;
+    } while (current != null);
+  }
 }
 
 extension on ReactiveSystem {

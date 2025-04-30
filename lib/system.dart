@@ -53,7 +53,7 @@ extension type const ReactiveFlags._(int raw) implements int {
 }
 
 abstract class ReactiveSystem {
-  ReactiveSystem();
+  const ReactiveSystem();
 
   bool update(ReactiveNode sub);
   void notify(ReactiveNode sub);

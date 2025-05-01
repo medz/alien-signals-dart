@@ -33,7 +33,6 @@ dart pub add alien_signals
 
 ## Adoption
 
-- [flutter_alien_signals](https://github.com/medz/alien-signals-dart/tree/main/pub/flutter_alien_signals) - Flutter binding of `alien_signals` preset
 - [solidart](https://github.com/nank1ro/solidart) - [WIP] Signals in Dart and Flutter, inspired by SolidJS
 
 ## Basic Usage

@@ -1,23 +1,20 @@
-name: test
-on:
-  push:
-    branches:
-      - main
-  pull_request:
-    branches:
-      - main
+name: testing
+
+on: [push, pull_request]
+
 jobs:
   run:
     runs-on: ubuntu-latest
+
+    strategy:
+      matrix:
+        sdk: [stable, 3.5, 3.6, 3.7]
+
     steps:
       - uses: actions/checkout@v4
       - uses: dart-lang/setup-dart@v1
         with:
-          sdk: stable
-      - uses: subosito/flutter-action@v2
-        with:
-          channel: stable
+          sdk: ${{ matrix.sdk }}
       - run: dart pub get
       - run: dart analyze
-      - run: dart test pub/alien_signals/test
-      - run: flutter test pub/flutter_alien_signals/test
+      - run: dart test

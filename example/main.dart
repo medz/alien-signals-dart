@@ -1,7 +1,7 @@
 import 'package:alien_signals/alien_signals.dart';
 
 void basis() {
-  print("\n=========== Basic Uses ===========");
+  print("\n=========== Basic Usage ===========");
 
   final count = signal(1);
   final doubleCount = computed((_) => count() * 2);

@@ -6,6 +6,9 @@
   <a href="https://pub.dev/packages/alien_signals">
     <img src="https://img.shields.io/pub/v/alien_signals" alt="Alien Signals on pub.dev" />
   </a>
+  <a href="https://github.com/medz/alien-signals-dart/actions/workflows/test.yml">
+    <img src="https://github.com/medz/alien-signals-dart/actions/workflows/test.yml/badge.svg" alt="testing status" />
+  </a>
 </p>
 
 # Alien Signals for Dart
@@ -38,7 +41,7 @@ dart pub add alien_signals
 ## Basic Usage
 
 ```dart
-import 'package:alien_signals/preset.dart';
+import 'package:alien_signals/alien_signals.dart';
 
 void main() {
   // Create a signal
@@ -56,12 +59,6 @@ void main() {
   count(1); // Prints: Count: 1, Doubled: 2
 }
 ```
-
-## Creating Your Own Public API
-
-You can reuse `alien_signals` core algorithm via `ReactiveSystem` to build your own signal API. For implementation examples, see:
-
-* [alien_signals preset](https://github.com/medz/alien-signals-dart/tree/main/pub/alien_signals/lib/src/preset)
 
 ## API Reference
 

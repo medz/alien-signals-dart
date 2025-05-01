@@ -79,15 +79,13 @@ abstract class ReactiveSystem {
         (recursedCheck == 0 || isValidLink(prevSub, sub))) {
       return;
     }
-    final newLink =
-        sub.depsTail =
-            dep.subsTail = Link(
-              dep: dep,
-              sub: sub,
-              prevDep: prevDep,
-              nextDep: nextDep,
-              prevSub: prevSub,
-            );
+    final newLink = sub.depsTail = dep.subsTail = Link(
+      dep: dep,
+      sub: sub,
+      prevDep: prevDep,
+      nextDep: nextDep,
+      prevSub: prevSub,
+    );
     if (nextDep != null) {
       nextDep.prevDep = newLink;
     }
@@ -205,8 +203,7 @@ abstract class ReactiveSystem {
 
   void startTracking(ReactiveNode sub) {
     sub.depsTail = null;
-    sub.flags =
-        (sub.flags &
+    sub.flags = (sub.flags &
             ~(ReactiveFlags.recursed |
                 ReactiveFlags.dirty |
                 ReactiveFlags.pending)) |

@@ -270,6 +270,8 @@ T signalOper<T>(Signal<T> signal, T? value, bool nulls) {
         if (batchDepth == 0) flush();
       }
     }
+
+    return value;
   }
 
   value = signal.value;

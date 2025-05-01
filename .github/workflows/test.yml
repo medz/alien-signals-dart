@@ -8,7 +8,7 @@ jobs:
 
     strategy:
       matrix:
-        sdk: [stable, 3.5, 3.6, 3.7]
+        sdk: [stable, 3.6, 3.7]
 
     steps:
       - uses: actions/checkout@v4

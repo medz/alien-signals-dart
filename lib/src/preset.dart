@@ -8,10 +8,10 @@ class EffectScope extends ReactiveNode {
   EffectScope({required super.flags});
 }
 
-class Effect<T> extends ReactiveNode {
+class Effect extends ReactiveNode {
   Effect({required super.flags, required this.run});
 
-  final T Function() run;
+  final void Function() run;
 }
 
 abstract interface class Updatable {
@@ -62,13 +62,17 @@ class PresetReactiveSystsm extends ReactiveSystem {
   void notify(ReactiveNode sub) => notifyEffect(sub);
 
   @override
-  void unwatched(ReactiveNode sub) {
-    var toRemove = sub.deps;
-    if (toRemove != null) {
-      do {
-        toRemove = unlink(toRemove!, sub);
-      } while (toRemove != null);
-      sub.flags |= ReactiveFlags.dirty;
+  void unwatched(ReactiveNode node) {
+    if (node is Computed) {
+      var toRemove = node.deps;
+      if (toRemove != null) {
+        node.flags = ReactiveFlags.mutable | ReactiveFlags.dirty;
+        do {
+          toRemove = unlink(toRemove!, node);
+        } while (toRemove != null);
+      }
+    } else if (node is! Signal) {
+      effectOper(node);
     }
   }
 
@@ -89,7 +93,7 @@ final link = system.link,
     shallowPropagate = system.shallowPropagate;
 
 final pauseStack = <ReactiveNode?>[];
-final queuedEffects = <ReactiveNode?>[];
+final queuedEffects = <int, ReactiveNode?>{};
 
 int batchDepth = 0;
 int notifyIndex = 0;
@@ -116,16 +120,20 @@ void endBatch() {
   if ((--batchDepth) == 0) flush();
 }
 
+@Deprecated("Will be removed in the next major version. Use"
+    "`const pausedSub = setCurrentSub(null)`"
+    " instead for better performance.")
 void pauseTracking() {
-  pauseStack.add(activeSub);
-  activeSub = null;
+  pauseStack.add(setCurrentSub(null));
 }
 
+@Deprecated(
+    "Will be removed in the next major version. Use `setCurrentSub(pausedSub)` instead for better performance.")
 void resumeTracking() {
   try {
-    activeSub = pauseStack.removeLast();
+    setCurrentSub(pauseStack.removeLast());
   } catch (_) {
-    activeSub = null;
+    setCurrentSub(null);
   }
 }
 
@@ -147,7 +155,7 @@ T Function() computed<T>(T Function(T? previousValue) getter) {
   return () => computedOper(computed);
 }
 
-void Function() effect<T>(T Function() run) {
+void Function() effect(void Function() run) {
   final e = Effect(run: run, flags: ReactiveFlags.watching);
   if (activeSub != null) {
     link(e, activeSub!);
@@ -164,14 +172,18 @@ void Function() effect<T>(T Function() run) {
   return () => effectOper(e);
 }
 
-void Function() effectScope<T>(T Function() run) {
+void Function() effectScope(void Function() run) {
   final e = EffectScope(flags: ReactiveFlags.none);
   if (activeScope != null) link(e, activeScope!);
-  final prev = setCurrentScope(e);
+
+  final prevSub = setCurrentSub(null);
+  final prevScope = setCurrentScope(e);
+
   try {
     run();
   } finally {
-    activeScope = prev;
+    setCurrentScope(prevScope);
+    setCurrentSub(prevSub);
   }
 
   return () => effectOper(e);
@@ -185,18 +197,7 @@ void notifyEffect(ReactiveNode e) {
     if (subs != null) {
       notifyEffect(subs.sub);
     } else {
-      // queuedEffects[queuedEffectsLength++] = e;
-      //
-      // NOTE: Dart not support dynamic using index,
-      // so, we will fill null items.
-
-      final nextIndex = queuedEffectsLength + 1;
-      if (queuedEffects.length < nextIndex) {
-        queuedEffects.length = nextIndex;
-      }
-
-      queuedEffects[queuedEffectsLength] = e;
-      queuedEffectsLength = nextIndex;
+      queuedEffects[queuedEffectsLength++] = e;
     }
   }
 }
@@ -297,11 +298,8 @@ void effectOper(ReactiveNode e) {
     dep = unlink(dep, e);
   }
 
-  var sub = e.subs;
-  while (sub != null) {
-    unlink(sub);
-    sub = e.subs;
-  }
+  final sub = e.subs;
+  if (sub != null) unlink(sub);
 
   e.flags = ReactiveFlags.none;
 }

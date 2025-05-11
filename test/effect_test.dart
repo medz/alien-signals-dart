@@ -167,9 +167,9 @@ void main() {
 
     effect(() {
       order.add("a");
-      pauseTracking();
+      final currentSub = setCurrentSub(null);
       final isOne = s2() == 1;
-      resumeTracking();
+      setCurrentSub(currentSub);
       if (isOne) s1();
       s2();
       s1();

@@ -1,3 +1,16 @@
+## v0.4.1
+
+- refactor: simplifying unlink sub in effect cleanup
+- refactor: update pauseTracking and resumeTracking to use setCurrentSub
+- refactor(preset): change queuedEffects to map like JS Array
+- refactor: remove generic type from effect, effectScope
+- refactor: more accurate unwatched handling
+- fix: invalidate parent effect when executing effectScope
+- test: update untrack tests
+- test: use setCurrentSub instead of pauseTracking
+
+**NOTE**: Sync upstream v2.0.4 version.
+
 ## v0.4.0
 
 ### Major Changes

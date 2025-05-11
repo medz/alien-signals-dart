@@ -89,7 +89,7 @@ final link = system.link,
     shallowPropagate = system.shallowPropagate;
 
 final pauseStack = <ReactiveNode?>[];
-final queuedEffects = <ReactiveNode?>[];
+final queuedEffects = <int, ReactiveNode?>{};
 
 int batchDepth = 0;
 int notifyIndex = 0;
@@ -193,18 +193,7 @@ void notifyEffect(ReactiveNode e) {
     if (subs != null) {
       notifyEffect(subs.sub);
     } else {
-      // queuedEffects[queuedEffectsLength++] = e;
-      //
-      // NOTE: Dart not support dynamic using index,
-      // so, we will fill null items.
-
-      final nextIndex = queuedEffectsLength + 1;
-      if (queuedEffects.length < nextIndex) {
-        queuedEffects.length = nextIndex;
-      }
-
-      queuedEffects[queuedEffectsLength] = e;
-      queuedEffectsLength = nextIndex;
+      queuedEffects[queuedEffectsLength++] = e;
     }
   }
 }

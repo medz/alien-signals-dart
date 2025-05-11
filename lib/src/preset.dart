@@ -62,13 +62,17 @@ class PresetReactiveSystsm extends ReactiveSystem {
   void notify(ReactiveNode sub) => notifyEffect(sub);
 
   @override
-  void unwatched(ReactiveNode sub) {
-    var toRemove = sub.deps;
-    if (toRemove != null) {
-      do {
-        toRemove = unlink(toRemove!, sub);
-      } while (toRemove != null);
-      sub.flags |= ReactiveFlags.dirty;
+  void unwatched(ReactiveNode node) {
+    if (node is Computed) {
+      var toRemove = node.deps;
+      if (toRemove != null) {
+        node.flags = ReactiveFlags.mutable | ReactiveFlags.dirty;
+        do {
+          toRemove = unlink(toRemove!, node);
+        } while (toRemove != null);
+      }
+    } else if (node is! Signal) {
+      effectOper(node);
     }
   }
 

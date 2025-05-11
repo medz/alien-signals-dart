@@ -8,10 +8,10 @@ class EffectScope extends ReactiveNode {
   EffectScope({required super.flags});
 }
 
-class Effect<T> extends ReactiveNode {
+class Effect extends ReactiveNode {
   Effect({required super.flags, required this.run});
 
-  final T Function() run;
+  final void Function() run;
 }
 
 abstract interface class Updatable {
@@ -151,7 +151,7 @@ T Function() computed<T>(T Function(T? previousValue) getter) {
   return () => computedOper(computed);
 }
 
-void Function() effect<T>(T Function() run) {
+void Function() effect(void Function() run) {
   final e = Effect(run: run, flags: ReactiveFlags.watching);
   if (activeSub != null) {
     link(e, activeSub!);
@@ -168,7 +168,7 @@ void Function() effect<T>(T Function() run) {
   return () => effectOper(e);
 }
 
-void Function() effectScope<T>(T Function() run) {
+void Function() effectScope(void Function() run) {
   final e = EffectScope(flags: ReactiveFlags.none);
   if (activeScope != null) link(e, activeScope!);
 

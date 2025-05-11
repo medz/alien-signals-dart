@@ -116,12 +116,15 @@ void endBatch() {
   if ((--batchDepth) == 0) flush();
 }
 
-@Deprecated("TODO: Remove in next major")
+@Deprecated("Will be removed in the next major version. Use"
+    "`const pausedSub = setCurrentSub(null)`"
+    " instead for better performance.")
 void pauseTracking() {
   pauseStack.add(setCurrentSub(null));
 }
 
-@Deprecated("TODO: Remove in next major")
+@Deprecated(
+    "Will be removed in the next major version. Use `setCurrentSub(pausedSub)` instead for better performance.")
 void resumeTracking() {
   try {
     setCurrentSub(pauseStack.removeLast());

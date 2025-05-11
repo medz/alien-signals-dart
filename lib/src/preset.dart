@@ -297,11 +297,8 @@ void effectOper(ReactiveNode e) {
     dep = unlink(dep, e);
   }
 
-  var sub = e.subs;
-  while (sub != null) {
-    unlink(sub);
-    sub = e.subs;
-  }
+  final sub = e.subs;
+  if (sub != null) unlink(sub);
 
   e.flags = ReactiveFlags.none;
 }

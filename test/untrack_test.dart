@@ -8,11 +8,11 @@ void main() {
 
     final c = computed((_) {
       computedTriggerTimes++;
-      pauseTracking();
+      final currentSub = setCurrentSub(null);
       try {
         return s();
       } finally {
-        resumeTracking();
+        setCurrentSub(currentSub);
       }
     });
 
@@ -34,9 +34,9 @@ void main() {
     effect(() {
       effectTriggerTimes++;
       if (b() > 0) {
-        pauseTracking();
+        final currentSub = setCurrentSub(null);
         a();
-        resumeTracking();
+        setCurrentSub(currentSub);
       }
     });
 
@@ -73,9 +73,9 @@ void main() {
     effectScope(() {
       effect(() {
         effectTriggerTimes++;
-        pauseTracking();
+        final currentSub = setCurrentSub(null);
         s();
-        resumeTracking();
+        setCurrentSub(currentSub);
       });
     });
 

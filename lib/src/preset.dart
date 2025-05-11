@@ -168,11 +168,15 @@ void Function() effect<T>(T Function() run) {
 void Function() effectScope<T>(T Function() run) {
   final e = EffectScope(flags: ReactiveFlags.none);
   if (activeScope != null) link(e, activeScope!);
-  final prev = setCurrentScope(e);
+
+  final prevSub = setCurrentSub(null);
+  final prevScope = setCurrentScope(e);
+
   try {
     run();
   } finally {
-    activeScope = prev;
+    setCurrentScope(prevScope);
+    setCurrentSub(prevSub);
   }
 
   return () => effectOper(e);

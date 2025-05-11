@@ -22,4 +22,26 @@ void main() {
     count(4);
     expect(triggers, 3);
   });
+
+  test("should dispose inner effects if created in an effect", () {
+    final s = signal(1);
+    int triggers = 0;
+
+    effect(() {
+      final dispose = effectScope(() {
+        effect(() {
+          s();
+          triggers++;
+        });
+      });
+      expect(triggers, 1);
+
+      s(2);
+      expect(triggers, 2);
+
+      dispose();
+      s(3);
+      expect(triggers, 2);
+    });
+  });
 }

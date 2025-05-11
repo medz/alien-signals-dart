@@ -116,16 +116,17 @@ void endBatch() {
   if ((--batchDepth) == 0) flush();
 }
 
+@Deprecated("TODO: Remove in next major")
 void pauseTracking() {
-  pauseStack.add(activeSub);
-  activeSub = null;
+  pauseStack.add(setCurrentSub(null));
 }
 
+@Deprecated("TODO: Remove in next major")
 void resumeTracking() {
   try {
-    activeSub = pauseStack.removeLast();
+    setCurrentSub(pauseStack.removeLast());
   } catch (_) {
-    activeSub = null;
+    setCurrentSub(null);
   }
 }
 

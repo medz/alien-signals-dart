@@ -1,3 +1,7 @@
+## v0.3.1
+
+- Backport: Add inlining pragmas to core and preset functions [#18](https://github.com/medz/alien-signals-dart/pull/18)
+
 ## v0.3.0
 
 sync `alien-signals` v1.0.7 version

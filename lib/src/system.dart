@@ -59,6 +59,9 @@ abstract class ReactiveSystem {
   void notify(ReactiveNode sub);
   void unwatched(ReactiveNode sub);
 
+  @pragma('vm:prefer-inline')
+  @pragma('wasm:prefer-inline')
+  @pragma('dart2js:prefer-inline')
   void link(ReactiveNode dep, ReactiveNode sub) {
     final prevDep = sub.depsTail;
     if (prevDep != null && prevDep.dep == dep) {
@@ -101,6 +104,9 @@ abstract class ReactiveSystem {
     }
   }
 
+  @pragma('vm:prefer-inline')
+  @pragma('wasm:prefer-inline')
+  @pragma('dart2js:prefer-inline')
   Link? unlink(Link link, [ReactiveNode? sub]) {
     sub ??= link.sub;
     final dep = link.dep;
@@ -131,6 +137,9 @@ abstract class ReactiveSystem {
     return nextDep;
   }
 
+  @pragma('vm:prefer-inline')
+  @pragma('wasm:prefer-inline')
+  @pragma('dart2js:prefer-inline')
   void propagate(Link link) {
     var next = link.nextSub;
     Stack<Link?>? stack;
@@ -201,6 +210,9 @@ abstract class ReactiveSystem {
     } while (true);
   }
 
+  @pragma('vm:prefer-inline')
+  @pragma('wasm:prefer-inline')
+  @pragma('dart2js:prefer-inline')
   void startTracking(ReactiveNode sub) {
     sub.depsTail = null;
     sub.flags = (sub.flags &
@@ -210,6 +222,9 @@ abstract class ReactiveSystem {
         ReactiveFlags.recursedCheck;
   }
 
+  @pragma('vm:prefer-inline')
+  @pragma('wasm:prefer-inline')
+  @pragma('dart2js:prefer-inline')
   void endTracking(ReactiveNode sub) {
     final depsTail = sub.depsTail;
     var toRemove = depsTail != null ? depsTail.nextDep : sub.deps;
@@ -219,6 +234,9 @@ abstract class ReactiveSystem {
     sub.flags &= ~ReactiveFlags.recursedCheck;
   }
 
+  @pragma('vm:prefer-inline')
+  @pragma('wasm:prefer-inline')
+  @pragma('dart2js:prefer-inline')
   bool checkDirty(Link checkLink, ReactiveNode sub) {
     Stack<Link>? stack;
     int checkDepth = 0;
@@ -291,6 +309,9 @@ abstract class ReactiveSystem {
     } while (true);
   }
 
+  @pragma('vm:prefer-inline')
+  @pragma('wasm:prefer-inline')
+  @pragma('dart2js:prefer-inline')
   void shallowPropagate(Link link) {
     Link? current = link;
     do {
@@ -310,6 +331,9 @@ abstract class ReactiveSystem {
 }
 
 extension on ReactiveSystem {
+  @pragma('vm:prefer-inline')
+  @pragma('wasm:prefer-inline')
+  @pragma('dart2js:prefer-inline')
   bool isValidLink(Link checkLink, ReactiveNode sub) {
     final depsTail = sub.depsTail;
     if (depsTail != null) {

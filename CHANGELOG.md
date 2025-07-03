@@ -1,4 +1,4 @@
-## v0.4.2-pre.1
+## v0.4.2
 
 - pref: Add prefer-inline pragmas to core reactive methods. (Thx [#17](https://github.com/medz/alien-signals-dart/issues/17) at [@Kypsis](https://github.com/Kypsis))
 

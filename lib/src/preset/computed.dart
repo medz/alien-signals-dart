@@ -16,6 +16,9 @@ class Computed<T> with Dependency, Subscriber implements types.Computed<T> {
   T? untracked;
 
   @override
+  @pragma('vm:prefer-inline')
+  @pragma('wasm:prefer-inline')
+  @pragma('dart2js:prefer-inline')
   T call() {
     if ((flags & (SubscriberFlags.dirty | SubscriberFlags.pendingComputed)) !=
         0) {
@@ -31,6 +34,9 @@ class Computed<T> with Dependency, Subscriber implements types.Computed<T> {
     return untracked as T;
   }
 
+  @pragma('vm:prefer-inline')
+  @pragma('wasm:prefer-inline')
+  @pragma('dart2js:prefer-inline')
   bool notify() {
     final oldValue = untracked, newValue = getter(oldValue);
     if (oldValue != newValue) {
@@ -42,6 +48,9 @@ class Computed<T> with Dependency, Subscriber implements types.Computed<T> {
   }
 }
 
+@pragma('vm:prefer-inline')
+@pragma('wasm:prefer-inline')
+@pragma('dart2js:prefer-inline')
 types.Computed<T> computed<T>(T Function(T? prevValue) getter) {
   return Computed<T>(getter);
 }

@@ -13,12 +13,18 @@ class Effect with Dependency, Subscriber implements types.Effect {
   final void Function() run;
 
   @override
+  @pragma('vm:prefer-inline')
+  @pragma('wasm:prefer-inline')
+  @pragma('dart2js:prefer-inline')
   void call() {
     system.startTracking(this);
     system.endTracking(this);
   }
 }
 
+@pragma('vm:prefer-inline')
+@pragma('wasm:prefer-inline')
+@pragma('dart2js:prefer-inline')
 types.Effect effect(void Function() run) {
   final effect = Effect(run);
   if (system.activeSub != null) {

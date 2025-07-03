@@ -10,6 +10,9 @@ class PresetReactiveSystem extends ReactiveSystem<Computed> {
   EffectScope? activeScope;
 
   @override
+  @pragma('vm:prefer-inline')
+  @pragma('wasm:prefer-inline')
+  @pragma('dart2js:prefer-inline')
   bool notifyEffect(Subscriber effect) {
     final flags = effect.flags;
     if (effect is EffectScope) {
@@ -20,14 +23,9 @@ class PresetReactiveSystem extends ReactiveSystem<Computed> {
       return false;
     }
 
-    // dart format off
-    if (
-      (flags & SubscriberFlags.dirty) != 0
-      || (
-        (flags & SubscriberFlags.pendingComputed) != 0
-        && updateDirtyFlag(effect, flags)
-      )
-    ) {
+    if ((flags & SubscriberFlags.dirty) != 0 ||
+        ((flags & SubscriberFlags.pendingComputed) != 0 &&
+            updateDirtyFlag(effect, flags))) {
       runEffect(effect as Effect);
     } else {
       processPendingInnerEffects(effect, flags);
@@ -37,6 +35,9 @@ class PresetReactiveSystem extends ReactiveSystem<Computed> {
   }
 
   @override
+  @pragma('vm:prefer-inline')
+  @pragma('wasm:prefer-inline')
+  @pragma('dart2js:prefer-inline')
   bool updateComputed(Computed computed) {
     final prevSub = activeSub;
     activeSub = computed;
@@ -50,6 +51,9 @@ class PresetReactiveSystem extends ReactiveSystem<Computed> {
     }
   }
 
+  @pragma('vm:prefer-inline')
+  @pragma('wasm:prefer-inline')
+  @pragma('dart2js:prefer-inline')
   void runEffect(Effect effect) {
     final prevSub = activeSub;
     activeSub = effect;

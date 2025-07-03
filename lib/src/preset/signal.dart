@@ -10,6 +10,9 @@ class Signal<T> with Dependency implements types.WriteableSignal<T> {
   T untracked;
 
   @override
+  @pragma('vm:prefer-inline')
+  @pragma('wasm:prefer-inline')
+  @pragma('dart2js:prefer-inline')
   T call([T? value, bool setNulls = false]) {
     if (value != null || (null is T && setNulls == true)) {
       if (untracked != (untracked = value as T)) {
@@ -29,6 +32,9 @@ class Signal<T> with Dependency implements types.WriteableSignal<T> {
   }
 }
 
+@pragma('vm:prefer-inline')
+@pragma('wasm:prefer-inline')
+@pragma('dart2js:prefer-inline')
 types.WriteableSignal<T> signal<T>(T value) {
   return Signal(value);
 }

@@ -1,16 +1,38 @@
 import 'system.dart';
 
 extension type const EffectFlags._(int raw) implements ReactiveFlags {
+  /// Flag indicating that an effect has been queued for execution.
+  ///
+  /// This flag is set when an effect is scheduled to run during the next flush cycle.
   static const queued = EffectFlags._(1 << 6);
 }
 
+/// A scope for effects that can be used to group and track multiple effects.
+///
+/// Effect scopes allow for collective disposal of effects and provide a way to
+/// manage the lifecycle of related effects. When an effect scope is disposed,
+/// all effects within that scope are automatically disposed as well.
 class EffectScope extends ReactiveNode {
   EffectScope({required super.flags});
 }
 
+/// An effect that runs a function and automatically tracks its dependencies.
+///
+/// Effects are reactive computations that automatically track their dependencies
+/// and re-run when those dependencies change. They are useful for side effects
+/// like DOM updates, logging, or other imperative code that should react to
+/// state changes.
+///
+/// The [run] function will be executed immediately when the effect is created,
+/// and again whenever any of its tracked dependencies change.
 class Effect extends ReactiveNode {
   Effect({required super.flags, required this.run});
 
+  /// The function to execute when the effect runs.
+  ///
+  /// This function will be called:
+  /// 1. Immediately when the effect is created
+  /// 2. Whenever any of its tracked dependencies change
   final void Function() run;
 }
 
@@ -99,7 +121,12 @@ class PresetReactiveSystsm extends ReactiveSystem {
   }
 }
 
+/// The default reactive system instance that provides the core reactivity operations.
+///
+/// This constant provides access to the preset reactive system implementation
+/// which handles signal propagation, effect scheduling, and dependency tracking.
 const system = PresetReactiveSystsm();
+
 final link = system.link,
     unlink = system.unlink,
     propagate = system.propagate,
@@ -117,11 +144,21 @@ int queuedEffectsLength = 0;
 ReactiveNode? activeSub;
 EffectScope? activeScope;
 
+/// Gets the currently active reactive subscription.
+///
+/// This returns the [ReactiveNode] that is currently being tracked as the active
+/// subscription during reactive operations. Returns null if no subscription
+/// is currently active.
 @pragma('vm:prefer-inline')
 @pragma('wasm:prefer-inline')
 @pragma('dart2js:prefer-inline')
 ReactiveNode? getCurrentSub() => activeSub;
 
+/// Sets the currently active reactive subscription and returns the previous one.
+///
+/// This updates the [activeSub] to the provided [sub] and returns the previous
+/// subscription that was active. This is used to manage the tracking context
+/// during reactive operations.
 @pragma('vm:prefer-inline')
 @pragma('wasm:prefer-inline')
 @pragma('dart2js:prefer-inline')
@@ -131,11 +168,20 @@ ReactiveNode? setCurrentSub(ReactiveNode? sub) {
   return prevSub;
 }
 
+/// Gets the currently active effect scope.
+///
+/// This returns the [EffectScope] that is currently being tracked as the active
+/// scope during reactive operations. Returns null if no scope is currently active.
 @pragma('vm:prefer-inline')
 @pragma('wasm:prefer-inline')
 @pragma('dart2js:prefer-inline')
 EffectScope? getCurrentScope() => activeScope;
 
+/// Sets the currently active effect scope and returns the previous scope.
+///
+/// This updates the [activeScope] to the provided [scope] and returns the previous
+/// scope that was active. This is used to manage the effect scope context
+/// during reactive operations.
 @pragma('vm:prefer-inline')
 @pragma('wasm:prefer-inline')
 @pragma('dart2js:prefer-inline')
@@ -145,11 +191,23 @@ EffectScope? setCurrentScope(EffectScope? scope) {
   return prevScope;
 }
 
+/// Starts a new batch of reactive updates.
+///
+/// Increments the [batchDepth] counter to indicate that multiple reactive
+/// updates should be batched together. While the batch depth is greater than 0,
+/// updates will be queued but not immediately processed until [endBatch] is
+/// called to decrease the batch depth back to 0.
 @pragma('vm:prefer-inline')
 @pragma('wasm:prefer-inline')
 @pragma('dart2js:prefer-inline')
 void startBatch() => ++batchDepth;
 
+/// Ends the current batch of reactive updates and flushes pending effects if needed.
+///
+/// Decrements the [batchDepth] counter. If this brings the batch depth to 0,
+/// any queued effects will be processed by calling [flush]. This ensures that
+/// multiple updates made within a batch are processed together in a single
+/// flush cycle.
 @pragma('vm:prefer-inline')
 @pragma('wasm:prefer-inline')
 @pragma('dart2js:prefer-inline')
@@ -180,6 +238,20 @@ void resumeTracking() {
   }
 }
 
+/// Creates a reactive signal with an initial value.
+///
+/// A signal is a reactive value container that notifies dependents when its
+/// value changes. The returned function can be used to:
+/// - Get the current value when called with no arguments
+/// - Set a new value when called with a value argument
+/// - Control whether null values should be treated as updates when [nulls] is true
+///
+/// Example:
+/// ```dart
+/// final count = signal(0);
+/// count(); // get value
+/// count(1); // set value
+/// ```
 @pragma('vm:prefer-inline')
 @pragma('wasm:prefer-inline')
 @pragma('dart2js:prefer-inline')
@@ -193,6 +265,24 @@ T Function([T? value, bool nulls]) signal<T>(T initialValue) {
   return ([value, nulls = false]) => signalOper(signal, value, nulls);
 }
 
+/// Creates a reactive computed value that automatically tracks its dependencies.
+///
+/// A computed value is derived from other reactive values (signals or other computed values)
+/// and automatically updates when its dependencies change. The [getter] function will be
+/// called:
+/// 1. Immediately when the computed is created
+/// 2. Whenever any of its tracked dependencies change
+///
+/// The returned function can be called to get the current computed value.
+///
+/// Example:
+/// ```dart
+/// final count = signal(0);
+/// final doubled = computed(() => count() * 2);
+/// doubled(); // returns 0
+/// count(1);
+/// doubled(); // returns 2
+/// ```
 @pragma('vm:prefer-inline')
 @pragma('wasm:prefer-inline')
 @pragma('dart2js:prefer-inline')
@@ -205,6 +295,25 @@ T Function() computed<T>(T Function(T? previousValue) getter) {
   return () => computedOper(computed);
 }
 
+/// Creates a reactive effect that automatically tracks its dependencies and re-runs when they change.
+///
+/// An effect is a reactive computation that automatically tracks any reactive values (signals or computed values)
+/// accessed during its execution. The effect will re-run whenever any of its tracked dependencies change.
+///
+/// The [run] function will be executed:
+/// 1. Immediately when the effect is created
+/// 2. Whenever any of its tracked dependencies change
+///
+/// Returns a cleanup function that can be called to dispose of the effect and stop tracking.
+///
+/// Example:
+/// ```dart
+/// final count = signal(0);
+/// effect(() => print('Count changed to ${count()}'));
+/// // Prints: Count changed to 0
+/// count(1);
+/// // Prints: Count changed to 1
+/// ```
 @pragma('vm:prefer-inline')
 @pragma('wasm:prefer-inline')
 @pragma('dart2js:prefer-inline')
@@ -225,6 +334,17 @@ void Function() effect(void Function() run) {
   return () => effectOper(e);
 }
 
+/// Creates a new effect scope that can be used to group and manage multiple effects.
+///
+/// An effect scope provides a way to collectively manage the lifecycle of effects.
+/// When the scope is disposed by calling the returned cleanup function, all effects
+/// created within the scope are automatically disposed as well.
+///
+/// The [run] function will be executed immediately within the new scope context.
+/// Any effects created during this execution will be associated with this scope.
+///
+/// Returns a cleanup function that can be called to dispose of the scope and all
+/// effects created within it.
 @pragma('vm:prefer-inline')
 @pragma('wasm:prefer-inline')
 @pragma('dart2js:prefer-inline')
@@ -245,6 +365,13 @@ void Function() effectScope(void Function() run) {
   return () => effectOper(e);
 }
 
+/// Notifies an effect that it should be queued for execution.
+///
+/// This function marks an effect as queued if it hasn't been already. If the effect
+/// has subscribers, it recursively notifies them. Otherwise, it adds the effect to
+/// the queue of effects to be executed during the next flush cycle.
+///
+/// The [e] parameter is the reactive node (typically an Effect) to be notified.
 @pragma('vm:prefer-inline')
 @pragma('wasm:prefer-inline')
 @pragma('dart2js:prefer-inline')

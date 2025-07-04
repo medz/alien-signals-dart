@@ -1,4 +1,18 @@
+/// A node in a reactive system that tracks dependencies and subscribers.
+///
+/// The [ReactiveNode] maintains two linked lists:
+/// - [deps]/[depsTail] tracks dependencies (nodes this node depends on)
+/// - [subs]/[subsTail] tracks subscribers (nodes that depend on this node)
+///
+/// The [flags] property stores various state flags for the node.
 abstract class ReactiveNode {
+  /// Creates a new [ReactiveNode] with the given dependencies, subscribers, and flags.
+  ///
+  /// - [deps]: Head of the dependencies linked list (nodes this node depends on)
+  /// - [depsTail]: Tail of the dependencies linked list
+  /// - [subs]: Head of the subscribers linked list (nodes that depend on this node)
+  /// - [subsTail]: Tail of the subscribers linked list
+  /// - [flags]: Bit flags representing the node's state and properties
   ReactiveNode({
     this.deps,
     this.depsTail,
@@ -7,14 +21,33 @@ abstract class ReactiveNode {
     required this.flags,
   });
 
+  /// Head of the dependencies linked list (nodes this node depends on).
   Link? deps;
+
+  /// Tail of the dependencies linked list.
   Link? depsTail;
+
+  /// Head of the subscribers linked list (nodes that depend on this node).
   Link? subs;
+
+  /// Tail of the subscribers linked list.
   Link? subsTail;
+
+  /// Bit flags representing the node's state and properties.
   ReactiveFlags flags;
 }
 
+/// A link between a dependent node ([dep]) and a subscriber node ([sub]).
+///
+/// Links form doubly-linked lists in both directions:
+/// - Through [prevSub]/[nextSub] for subscribers of a dependency
+/// - Through [prevDep]/[nextDep] for dependencies of a subscriber
 class Link {
+  /// A bidirectional link between a dependency ([dep]) and subscriber ([sub]) node.
+  ///
+  /// Links form doubly-linked lists in both directions:
+  /// - [prevSub]/[nextSub] form the subscriber list (nodes that depend on [dep])
+  /// - [prevDep]/[nextDep] form the dependency list (nodes that [sub] depends on)
   Link({
     required this.dep,
     required this.sub,
@@ -24,48 +57,123 @@ class Link {
     this.nextDep,
   });
 
+  /// The dependency node that [sub] depends on.
   ReactiveNode dep;
+
+  /// The subscriber node that depends on [dep].
   ReactiveNode sub;
+
+  /// Previous link in the subscriber list (nodes that depend on [dep]).
   Link? prevSub;
+
+  /// Next link in the subscriber list (nodes that depend on [dep]).
   Link? nextSub;
+
+  /// Previous link in the dependency list (nodes that [sub] depends on).
   Link? prevDep;
+
+  /// Next link in the dependency list (nodes that [sub] depends on).
   Link? nextDep;
 }
 
+/// A simple stack data structure implemented as a linked list.
+///
+/// Each [Stack] node contains a [value] of type [T] and an optional reference
+/// to the previous node ([prev]) in the stack. This creates a LIFO (Last-In-First-Out)
+/// structure where the most recently added items are at the top of the stack.
+///
+/// Example:
+/// ```dart
+/// final stack = Stack<int>(value: 1);
+/// stack.prev = Stack<int>(value: 2);
+/// ```
 final class Stack<T> {
   Stack({required this.value, this.prev});
 
+  /// The value stored in this stack node.
   T value;
+
+  /// The previous node in the stack, or `null` if this is the bottom node.
   Stack<T>? prev;
 }
 
+/// A set of bit flags representing various states and properties of a [ReactiveNode].
+///
+/// The flags are implemented as an extension type wrapping an [int] to provide
+/// type-safe bit manipulation operations while maintaining the performance
+/// characteristics of primitive integers.
 extension type const ReactiveFlags._(int raw) implements int {
+  /// No flags set.
   static const none = ReactiveFlags._(0);
+
+  /// Indicates the node's value can be changed directly.
   static const mutable = ReactiveFlags._(1 << 0);
+
+  /// Indicates the node is being watched for changes.
   static const watching = ReactiveFlags._(1 << 1);
+
+  /// Used during dependency tracking to check for recursion.
   static const recursedCheck = ReactiveFlags._(1 << 2);
+
+  /// Indicates the node is being recursively processed.
   static const recursed = ReactiveFlags._(1 << 3);
+
+  /// Indicates the node's value is out of date and needs recomputation.
   static const dirty = ReactiveFlags._(1 << 4);
+
+  /// Indicates the node has changes that need to be propagated.
   static const pending = ReactiveFlags._(1 << 5);
 
+  /// Bitwise AND operator for combining flags.
+  ///
+  /// Returns new [ReactiveFlags] with only the bits set that are present in both
+  /// this flags and [other].
   @pragma('vm:prefer-inline')
   @pragma('wasm:prefer-inline')
   @pragma('dart2js:prefer-inline')
   ReactiveFlags operator &(int other) => ReactiveFlags._(raw & other);
 
+  /// Bitwise OR operator for combining flags.
+  ///
+  /// Returns new [ReactiveFlags] with bits set from either this flags or [other].
   @pragma('vm:prefer-inline')
   @pragma('wasm:prefer-inline')
   @pragma('dart2js:prefer-inline')
   ReactiveFlags operator |(int other) => ReactiveFlags._(raw | other);
 }
 
+/// A reactive system base class.
 abstract class ReactiveSystem {
   const ReactiveSystem();
 
+  /// Updates the node's value if it's dirty and returns whether it was updated.
+  ///
+  /// Returns `true` if the node was dirty and its value was successfully updated,
+  /// `false` otherwise.
   bool update(ReactiveNode sub);
+
+  /// Notifies the system that the node has changed and needs to be processed.
+  ///
+  /// This is called when a node's value changes and it needs to notify its
+  /// subscribers about the change.
   void notify(ReactiveNode sub);
+
+  /// Called when a node no longer has any subscribers watching it.
+  ///
+  /// This allows the system to perform cleanup for nodes that are no longer
+  /// being observed.
   void unwatched(ReactiveNode sub);
 
+  /// Creates a bidirectional link between a dependency node ([dep]) and a subscriber node ([sub]).
+  ///
+  /// This establishes the relationship where:
+  /// - [sub] depends on [dep] (added to [sub]'s dependency list)
+  /// - [dep] has [sub] as a subscriber (added to [dep]'s subscriber list)
+  ///
+  /// The method handles various edge cases including:
+  /// - Avoiding duplicate links
+  /// - Maintaining proper list structure during recursive checks
+  /// - Preserving existing valid links
   @pragma('vm:prefer-inline')
   @pragma('wasm:prefer-inline')
   @pragma('dart2js:prefer-inline')
@@ -111,6 +219,17 @@ abstract class ReactiveSystem {
     }
   }
 
+  /// Removes a bidirectional link between a dependency node and subscriber node.
+  ///
+  /// This method:
+  /// - Removes the [link] from both the subscriber's dependency list and the
+  ///   dependency's subscriber list
+  /// - Optionally accepts a [sub] node to specify which subscriber to unlink from
+  /// - Returns the next dependency link in the subscriber's list (if any)
+  ///
+  /// The unlinking process handles:
+  /// - Updating adjacent links to maintain proper list structure
+  /// - Cleaning up empty subscriber lists by calling [unwatched]
   @pragma('vm:prefer-inline')
   @pragma('wasm:prefer-inline')
   @pragma('dart2js:prefer-inline')
@@ -144,6 +263,13 @@ abstract class ReactiveSystem {
     return nextDep;
   }
 
+  /// Propagates changes through the reactive graph starting from the given [link].
+  ///
+  /// This method:
+  /// - Processes subscribers in depth-first order using a stack
+  /// - Handles various node states (mutable, watching, dirty, pending)
+  /// - Manages recursive checks and propagation flags
+  /// - Notifies watchers when changes occur
   @pragma('vm:prefer-inline')
   @pragma('wasm:prefer-inline')
   @pragma('dart2js:prefer-inline')
@@ -217,6 +343,13 @@ abstract class ReactiveSystem {
     } while (true);
   }
 
+  /// Starts tracking dependencies for the given [sub] node.
+  ///
+  /// This method:
+  /// - Resets the dependency tracking state by clearing [depsTail]
+  /// - Updates the node's flags to:
+  ///   - Clear any recursive/dirty/pending flags
+  ///   - Set the [ReactiveFlags.recursedCheck] flag to indicate dependency tracking is active
   @pragma('vm:prefer-inline')
   @pragma('wasm:prefer-inline')
   @pragma('dart2js:prefer-inline')
@@ -226,6 +359,12 @@ abstract class ReactiveSystem {
             -57 /* ~(ReactiveFlags.recursed | ReactiveFlags.dirty | ReactiveFlags.pending) */) |
         ReactiveFlags.recursedCheck;
   }
+
+  /// Completes dependency tracking for the given [sub] node.
+  ///
+  /// This method:
+  /// - Removes any dependencies that were not tracked during this cycle
+  /// - Clears the [ReactiveFlags.recursedCheck] flag to indicate tracking is complete
 
   @pragma('vm:prefer-inline')
   @pragma('wasm:prefer-inline')
@@ -239,6 +378,13 @@ abstract class ReactiveSystem {
     sub.flags &= ~ReactiveFlags.recursedCheck;
   }
 
+  /// Checks if a node or any of its dependencies are dirty and need updating.
+  ///
+  /// This method:
+  /// - Traverses the dependency graph starting from [checkLink]
+  /// - Checks if [sub] or any of its dependencies are dirty ([ReactiveFlags.dirty])
+  /// - Updates nodes as needed during the traversal
+  /// - Returns `true` if any dirty nodes were found, `false` otherwise
   @pragma('vm:prefer-inline')
   @pragma('wasm:prefer-inline')
   @pragma('dart2js:prefer-inline')
@@ -316,6 +462,11 @@ abstract class ReactiveSystem {
     } while (true);
   }
 
+  /// Propagates changes shallowly through the reactive graph starting from [link].
+  ///
+  /// Unlike [propagate], this method only processes immediate subscribers without
+  /// traversing deeper into the dependency graph. It marks subscribers as dirty
+  /// if they are pending and notifies watchers when changes occur.
   @pragma('vm:prefer-inline')
   @pragma('wasm:prefer-inline')
   @pragma('dart2js:prefer-inline')

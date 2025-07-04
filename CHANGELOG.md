@@ -1,3 +1,8 @@
+## v0.4.3
+
+- perf: Optimize computed values by using final result value in bit marks calculation (reduces unnecessary computations)
+- docs: Add code comments to public API for better documentation
+
 ## v0.4.2
 
 - pref: Add prefer-inline pragmas to core reactive methods. (Thx [#17](https://github.com/medz/alien-signals-dart/issues/17) at [@Kypsis](https://github.com/Kypsis))

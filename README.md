@@ -36,7 +36,8 @@ dart pub add alien_signals
 
 ## Adoption
 
-- [solidart](https://github.com/nank1ro/solidart) - [WIP] Signals in Dart and Flutter, inspired by SolidJS
+- [solidart](https://github.com/nank1ro/solidart) - ❤️ Signals in Dart and Flutter, inspired by SolidJS
+- [Oref](https://github.com/medz/oref) - 🪄 A Flutter package that brings hooks-like magic to widgets using signals
 
 ## Basic Usage
 

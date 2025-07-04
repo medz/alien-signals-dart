@@ -78,7 +78,8 @@ class PresetReactiveSystsm extends ReactiveSystem {
     if (node is Computed) {
       var toRemove = node.deps;
       if (toRemove != null) {
-        node.flags = ReactiveFlags.mutable | ReactiveFlags.dirty;
+        node.flags = 17
+            as ReactiveFlags /* ReactiveFlags.mutable | ReactiveFlags.dirty */;
         do {
           toRemove = unlink(toRemove!, node);
         } while (toRemove != null);
@@ -198,7 +199,8 @@ T Function([T? value, bool nulls]) signal<T>(T initialValue) {
 T Function() computed<T>(T Function(T? previousValue) getter) {
   final computed = Computed(
     getter: getter,
-    flags: ReactiveFlags.mutable | ReactiveFlags.dirty,
+    flags:
+        17 as ReactiveFlags /* ReactiveFlags.mutable | ReactiveFlags.dirty */,
   );
   return () => computedOper(computed);
 }
@@ -275,14 +277,14 @@ void run(ReactiveNode e, ReactiveFlags flags) {
     }
     return;
   } else if ((flags & ReactiveFlags.pending) != 0) {
-    e.flags = flags & ~ReactiveFlags.pending;
+    e.flags = flags & -33 /* ~ReactiveFlags.pending */;
   }
   var link = e.deps;
   while (link != null) {
     final dep = link.dep;
     final depFlags = dep.flags;
     if ((depFlags & EffectFlags.queued) != 0) {
-      run(dep, dep.flags = depFlags & ~EffectFlags.queued);
+      run(dep, dep.flags = depFlags & -65 /* ~EffectFlags.queued */);
     }
     link = link.nextDep;
   }
@@ -295,7 +297,7 @@ void flush() {
   while (notifyIndex < queuedEffectsLength) {
     final effect = queuedEffects[notifyIndex];
     queuedEffects[notifyIndex++] = null;
-    run(effect!, effect.flags &= ~EffectFlags.queued);
+    run(effect!, effect.flags &= -65 /* ~EffectFlags.queued */);
   }
   notifyIndex = 0;
   queuedEffectsLength = 0;
@@ -316,7 +318,7 @@ T computedOper<T>(Computed<T> computed) {
       }
     }
   } else if ((flags & ReactiveFlags.pending) != 0) {
-    computed.flags = flags & ~ReactiveFlags.pending;
+    computed.flags = flags & -33 /* ~ReactiveFlags.pending */;
   }
   if (activeSub != null) {
     link(computed, activeSub!);
@@ -333,7 +335,8 @@ T computedOper<T>(Computed<T> computed) {
 T signalOper<T>(Signal<T> signal, T? value, bool nulls) {
   if (value is T && (value != null || (value == null && nulls))) {
     if (signal.value != (signal.value = value)) {
-      signal.flags = ReactiveFlags.mutable | ReactiveFlags.dirty;
+      signal.flags =
+          17 as ReactiveFlags /* ReactiveFlags.mutable | ReactiveFlags.dirty */;
       final subs = signal.subs;
       if (subs != null) {
         propagate(subs);

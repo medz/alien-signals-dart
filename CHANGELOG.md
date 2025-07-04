@@ -1,7 +1,8 @@
-## v0.4.3
+## v0.4.3-without-inline
 
 - perf: Optimize computed values by using final result value in bit marks calculation (reduces unnecessary computations)
 - docs: Add code comments to public API for better documentation
+- chore: Remove prefer-inline
 
 ## v0.4.2
 

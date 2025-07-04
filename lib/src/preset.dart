@@ -47,9 +47,6 @@ class Computed<T> extends ReactiveNode implements Updatable {
   final T Function(T? previousValue) getter;
 
   @override
-  @pragma('vm:prefer-inline')
-  @pragma('wasm:prefer-inline')
-  @pragma('dart2js:prefer-inline')
   bool update() {
     final prevSub = setCurrentSub(this);
     startTracking(this);
@@ -74,9 +71,6 @@ class Signal<T> extends ReactiveNode implements Updatable {
   T value;
 
   @override
-  @pragma('vm:prefer-inline')
-  @pragma('wasm:prefer-inline')
-  @pragma('dart2js:prefer-inline')
   bool update() {
     flags = ReactiveFlags.mutable;
     return previousValue != (previousValue = value);
@@ -87,15 +81,9 @@ class PresetReactiveSystsm extends ReactiveSystem {
   const PresetReactiveSystsm();
 
   @override
-  @pragma('vm:prefer-inline')
-  @pragma('wasm:prefer-inline')
-  @pragma('dart2js:prefer-inline')
   void notify(ReactiveNode sub) => notifyEffect(sub);
 
   @override
-  @pragma('vm:prefer-inline')
-  @pragma('wasm:prefer-inline')
-  @pragma('dart2js:prefer-inline')
   void unwatched(ReactiveNode node) {
     if (node is Computed) {
       var toRemove = node.deps;
@@ -112,9 +100,6 @@ class PresetReactiveSystsm extends ReactiveSystem {
   }
 
   @override
-  @pragma('vm:prefer-inline')
-  @pragma('wasm:prefer-inline')
-  @pragma('dart2js:prefer-inline')
   bool update(ReactiveNode sub) {
     assert(sub is Updatable);
     return (sub as Updatable).update();
@@ -149,9 +134,7 @@ EffectScope? activeScope;
 /// This returns the [ReactiveNode] that is currently being tracked as the active
 /// subscription during reactive operations. Returns null if no subscription
 /// is currently active.
-@pragma('vm:prefer-inline')
-@pragma('wasm:prefer-inline')
-@pragma('dart2js:prefer-inline')
+
 ReactiveNode? getCurrentSub() => activeSub;
 
 /// Sets the currently active reactive subscription and returns the previous one.
@@ -159,9 +142,7 @@ ReactiveNode? getCurrentSub() => activeSub;
 /// This updates the [activeSub] to the provided [sub] and returns the previous
 /// subscription that was active. This is used to manage the tracking context
 /// during reactive operations.
-@pragma('vm:prefer-inline')
-@pragma('wasm:prefer-inline')
-@pragma('dart2js:prefer-inline')
+
 ReactiveNode? setCurrentSub(ReactiveNode? sub) {
   final prevSub = activeSub;
   activeSub = sub;
@@ -172,9 +153,7 @@ ReactiveNode? setCurrentSub(ReactiveNode? sub) {
 ///
 /// This returns the [EffectScope] that is currently being tracked as the active
 /// scope during reactive operations. Returns null if no scope is currently active.
-@pragma('vm:prefer-inline')
-@pragma('wasm:prefer-inline')
-@pragma('dart2js:prefer-inline')
+
 EffectScope? getCurrentScope() => activeScope;
 
 /// Sets the currently active effect scope and returns the previous scope.
@@ -182,9 +161,7 @@ EffectScope? getCurrentScope() => activeScope;
 /// This updates the [activeScope] to the provided [scope] and returns the previous
 /// scope that was active. This is used to manage the effect scope context
 /// during reactive operations.
-@pragma('vm:prefer-inline')
-@pragma('wasm:prefer-inline')
-@pragma('dart2js:prefer-inline')
+
 EffectScope? setCurrentScope(EffectScope? scope) {
   final prevScope = activeScope;
   activeScope = scope;
@@ -197,9 +174,7 @@ EffectScope? setCurrentScope(EffectScope? scope) {
 /// updates should be batched together. While the batch depth is greater than 0,
 /// updates will be queued but not immediately processed until [endBatch] is
 /// called to decrease the batch depth back to 0.
-@pragma('vm:prefer-inline')
-@pragma('wasm:prefer-inline')
-@pragma('dart2js:prefer-inline')
+
 void startBatch() => ++batchDepth;
 
 /// Ends the current batch of reactive updates and flushes pending effects if needed.
@@ -208,16 +183,11 @@ void startBatch() => ++batchDepth;
 /// any queued effects will be processed by calling [flush]. This ensures that
 /// multiple updates made within a batch are processed together in a single
 /// flush cycle.
-@pragma('vm:prefer-inline')
-@pragma('wasm:prefer-inline')
-@pragma('dart2js:prefer-inline')
+
 void endBatch() {
   if ((--batchDepth) == 0) flush();
 }
 
-@pragma('vm:prefer-inline')
-@pragma('wasm:prefer-inline')
-@pragma('dart2js:prefer-inline')
 @Deprecated("Will be removed in the next major version. Use"
     "`const pausedSub = setCurrentSub(null)`"
     " instead for better performance.")
@@ -225,9 +195,6 @@ void pauseTracking() {
   pauseStack.add(setCurrentSub(null));
 }
 
-@pragma('vm:prefer-inline')
-@pragma('wasm:prefer-inline')
-@pragma('dart2js:prefer-inline')
 @Deprecated(
     "Will be removed in the next major version. Use `setCurrentSub(pausedSub)` instead for better performance.")
 void resumeTracking() {
@@ -252,9 +219,7 @@ void resumeTracking() {
 /// count(); // get value
 /// count(1); // set value
 /// ```
-@pragma('vm:prefer-inline')
-@pragma('wasm:prefer-inline')
-@pragma('dart2js:prefer-inline')
+
 T Function([T? value, bool nulls]) signal<T>(T initialValue) {
   final signal = Signal(
     value: initialValue,
@@ -283,9 +248,7 @@ T Function([T? value, bool nulls]) signal<T>(T initialValue) {
 /// count(1);
 /// doubled(); // returns 2
 /// ```
-@pragma('vm:prefer-inline')
-@pragma('wasm:prefer-inline')
-@pragma('dart2js:prefer-inline')
+
 T Function() computed<T>(T Function(T? previousValue) getter) {
   final computed = Computed(
     getter: getter,
@@ -314,9 +277,7 @@ T Function() computed<T>(T Function(T? previousValue) getter) {
 /// count(1);
 /// // Prints: Count changed to 1
 /// ```
-@pragma('vm:prefer-inline')
-@pragma('wasm:prefer-inline')
-@pragma('dart2js:prefer-inline')
+
 void Function() effect(void Function() run) {
   final e = Effect(run: run, flags: ReactiveFlags.watching);
   if (activeSub != null) {
@@ -345,9 +306,7 @@ void Function() effect(void Function() run) {
 ///
 /// Returns a cleanup function that can be called to dispose of the scope and all
 /// effects created within it.
-@pragma('vm:prefer-inline')
-@pragma('wasm:prefer-inline')
-@pragma('dart2js:prefer-inline')
+
 void Function() effectScope(void Function() run) {
   final e = EffectScope(flags: ReactiveFlags.none);
   if (activeScope != null) link(e, activeScope!);
@@ -372,9 +331,7 @@ void Function() effectScope(void Function() run) {
 /// the queue of effects to be executed during the next flush cycle.
 ///
 /// The [e] parameter is the reactive node (typically an Effect) to be notified.
-@pragma('vm:prefer-inline')
-@pragma('wasm:prefer-inline')
-@pragma('dart2js:prefer-inline')
+
 void notifyEffect(ReactiveNode e) {
   final flags = e.flags;
   if ((flags & EffectFlags.queued) == 0) {
@@ -388,9 +345,6 @@ void notifyEffect(ReactiveNode e) {
   }
 }
 
-@pragma('vm:prefer-inline')
-@pragma('wasm:prefer-inline')
-@pragma('dart2js:prefer-inline')
 void run(ReactiveNode e, ReactiveFlags flags) {
   if ((flags & ReactiveFlags.dirty) != 0 ||
       ((flags & ReactiveFlags.pending) != 0 && checkDirty(e.deps!, e))) {
@@ -417,9 +371,6 @@ void run(ReactiveNode e, ReactiveFlags flags) {
   }
 }
 
-@pragma('vm:prefer-inline')
-@pragma('wasm:prefer-inline')
-@pragma('dart2js:prefer-inline')
 void flush() {
   while (notifyIndex < queuedEffectsLength) {
     final effect = queuedEffects[notifyIndex];
@@ -430,9 +381,6 @@ void flush() {
   queuedEffectsLength = 0;
 }
 
-@pragma('vm:prefer-inline')
-@pragma('wasm:prefer-inline')
-@pragma('dart2js:prefer-inline')
 T computedOper<T>(Computed<T> computed) {
   final flags = computed.flags;
   if ((flags & ReactiveFlags.dirty) != 0 ||
@@ -456,9 +404,6 @@ T computedOper<T>(Computed<T> computed) {
   return computed.value as T;
 }
 
-@pragma('vm:prefer-inline')
-@pragma('wasm:prefer-inline')
-@pragma('dart2js:prefer-inline')
 T signalOper<T>(Signal<T> signal, T? value, bool nulls) {
   if (value is T && (value != null || (value == null && nulls))) {
     if (signal.value != (signal.value = value)) {
@@ -490,9 +435,6 @@ T signalOper<T>(Signal<T> signal, T? value, bool nulls) {
   return value;
 }
 
-@pragma('vm:prefer-inline')
-@pragma('wasm:prefer-inline')
-@pragma('dart2js:prefer-inline')
 void effectOper(ReactiveNode e) {
   assert(e is Effect || e is EffectScope);
   var dep = e.deps;

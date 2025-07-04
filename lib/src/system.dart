@@ -128,17 +128,13 @@ extension type const ReactiveFlags._(int raw) implements int {
   ///
   /// Returns new [ReactiveFlags] with only the bits set that are present in both
   /// this flags and [other].
-  @pragma('vm:prefer-inline')
-  @pragma('wasm:prefer-inline')
-  @pragma('dart2js:prefer-inline')
+
   ReactiveFlags operator &(int other) => ReactiveFlags._(raw & other);
 
   /// Bitwise OR operator for combining flags.
   ///
   /// Returns new [ReactiveFlags] with bits set from either this flags or [other].
-  @pragma('vm:prefer-inline')
-  @pragma('wasm:prefer-inline')
-  @pragma('dart2js:prefer-inline')
+
   ReactiveFlags operator |(int other) => ReactiveFlags._(raw | other);
 }
 
@@ -174,9 +170,7 @@ abstract class ReactiveSystem {
   /// - Avoiding duplicate links
   /// - Maintaining proper list structure during recursive checks
   /// - Preserving existing valid links
-  @pragma('vm:prefer-inline')
-  @pragma('wasm:prefer-inline')
-  @pragma('dart2js:prefer-inline')
+
   void link(ReactiveNode dep, ReactiveNode sub) {
     final prevDep = sub.depsTail;
     if (prevDep != null && prevDep.dep == dep) {
@@ -230,9 +224,7 @@ abstract class ReactiveSystem {
   /// The unlinking process handles:
   /// - Updating adjacent links to maintain proper list structure
   /// - Cleaning up empty subscriber lists by calling [unwatched]
-  @pragma('vm:prefer-inline')
-  @pragma('wasm:prefer-inline')
-  @pragma('dart2js:prefer-inline')
+
   Link? unlink(Link link, [ReactiveNode? sub]) {
     sub ??= link.sub;
     final dep = link.dep;
@@ -270,9 +262,7 @@ abstract class ReactiveSystem {
   /// - Handles various node states (mutable, watching, dirty, pending)
   /// - Manages recursive checks and propagation flags
   /// - Notifies watchers when changes occur
-  @pragma('vm:prefer-inline')
-  @pragma('wasm:prefer-inline')
-  @pragma('dart2js:prefer-inline')
+
   void propagate(Link link) {
     var next = link.nextSub;
     Stack<Link?>? stack;
@@ -350,9 +340,7 @@ abstract class ReactiveSystem {
   /// - Updates the node's flags to:
   ///   - Clear any recursive/dirty/pending flags
   ///   - Set the [ReactiveFlags.recursedCheck] flag to indicate dependency tracking is active
-  @pragma('vm:prefer-inline')
-  @pragma('wasm:prefer-inline')
-  @pragma('dart2js:prefer-inline')
+
   void startTracking(ReactiveNode sub) {
     sub.depsTail = null;
     sub.flags = (sub.flags &
@@ -366,9 +354,6 @@ abstract class ReactiveSystem {
   /// - Removes any dependencies that were not tracked during this cycle
   /// - Clears the [ReactiveFlags.recursedCheck] flag to indicate tracking is complete
 
-  @pragma('vm:prefer-inline')
-  @pragma('wasm:prefer-inline')
-  @pragma('dart2js:prefer-inline')
   void endTracking(ReactiveNode sub) {
     final depsTail = sub.depsTail;
     var toRemove = depsTail != null ? depsTail.nextDep : sub.deps;
@@ -385,9 +370,7 @@ abstract class ReactiveSystem {
   /// - Checks if [sub] or any of its dependencies are dirty ([ReactiveFlags.dirty])
   /// - Updates nodes as needed during the traversal
   /// - Returns `true` if any dirty nodes were found, `false` otherwise
-  @pragma('vm:prefer-inline')
-  @pragma('wasm:prefer-inline')
-  @pragma('dart2js:prefer-inline')
+
   bool checkDirty(Link checkLink, ReactiveNode sub) {
     Stack<Link>? stack;
     int checkDepth = 0;
@@ -467,9 +450,7 @@ abstract class ReactiveSystem {
   /// Unlike [propagate], this method only processes immediate subscribers without
   /// traversing deeper into the dependency graph. It marks subscribers as dirty
   /// if they are pending and notifies watchers when changes occur.
-  @pragma('vm:prefer-inline')
-  @pragma('wasm:prefer-inline')
-  @pragma('dart2js:prefer-inline')
+
   void shallowPropagate(Link link) {
     Link? current = link;
     do {
@@ -489,9 +470,6 @@ abstract class ReactiveSystem {
 }
 
 extension on ReactiveSystem {
-  @pragma('vm:prefer-inline')
-  @pragma('wasm:prefer-inline')
-  @pragma('dart2js:prefer-inline')
   bool isValidLink(Link checkLink, ReactiveNode sub) {
     final depsTail = sub.depsTail;
     if (depsTail != null) {

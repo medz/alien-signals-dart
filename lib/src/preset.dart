@@ -6,7 +6,7 @@ import 'system.dart';
 /// manage the lifecycle of related effects. When an effect scope is disposed,
 /// all effects within that scope are automatically disposed as well.
 class EffectScope extends ReactiveNode {
-  ReactiveNode? nextEffect;
+  Effect? nextEffect;
 
   EffectScope({required super.flags});
 }

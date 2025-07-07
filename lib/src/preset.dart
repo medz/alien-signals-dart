@@ -317,7 +317,7 @@ void notifyEffect(Effect e) {
     } else if (queuedEffectsTail != null) {
       queuedEffectsTail = queuedEffectsTail!.nextEffect = e;
     } else {
-      queuedEffects = e;
+      queuedEffectsTail = queuedEffects = e;
     }
   }
 }
@@ -350,13 +350,10 @@ void run(ReactiveNode e, int flags) {
 
 void flush() {
   while (queuedEffects != null) {
-    final effect = queuedEffects;
-    final nextEffect = effect!.nextEffect;
-    if (nextEffect != null) {
-      queuedEffects = nextEffect;
+    final effect = queuedEffects!;
+    if ((queuedEffects = effect.nextEffect) != null) {
       effect.nextEffect = null;
     } else {
-      queuedEffects = null;
       queuedEffectsTail = null;
     }
     run(effect, effect.flags &= -65 /* ~Queued */);

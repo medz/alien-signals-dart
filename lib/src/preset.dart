@@ -1,5 +1,3 @@
-import 'dart:convert';
-
 import 'system.dart';
 
 /// A scope for effects that can be used to group and track multiple effects.

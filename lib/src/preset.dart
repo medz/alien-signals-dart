@@ -1,15 +1,5 @@
 import 'system.dart';
 
-extension type const EffectFlags._(int raw) implements ReactiveFlags {
-  /// Flag indicating that an effect has been queued for execution.
-  ///
-  /// This flag is set when an effect is scheduled to run during the next flush cycle.
-  @pragma('vm:prefer-inline')
-  @pragma('wasm:prefer-inline')
-  @pragma('dart2js:prefer-inline')
-  static const queued = EffectFlags._(1 << 6);
-}
-
 abstract interface class LinkedEffect implements ReactiveNode {
   LinkedEffect? nextEffect;
 }
@@ -91,7 +81,7 @@ class Signal<T> extends ReactiveNode implements Updatable {
   @pragma('wasm:prefer-inline')
   @pragma('dart2js:prefer-inline')
   bool update() {
-    flags = ReactiveFlags.mutable;
+    flags = 1 /* Mutable */;
     return previousValue != (previousValue = value);
   }
 }
@@ -107,8 +97,7 @@ class PresetReactiveSystsm extends ReactiveSystem {
     if (node is Computed) {
       var toRemove = node.deps;
       if (toRemove != null) {
-        node.flags = 17
-            as ReactiveFlags /* ReactiveFlags.mutable | ReactiveFlags.dirty */;
+        node.flags = 17 /* Mutable | Dirty */;
         do {
           toRemove = unlink(toRemove!, node);
         } while (toRemove != null);
@@ -240,7 +229,7 @@ T Function([T? value, bool nulls]) signal<T>(T initialValue) {
   final signal = Signal(
     value: initialValue,
     previousValue: initialValue,
-    flags: ReactiveFlags.mutable,
+    flags: 1 /* Mutable */,
   );
 
   return ([value, nulls = false]) => signalOper(signal, value, nulls);
@@ -270,8 +259,7 @@ T Function([T? value, bool nulls]) signal<T>(T initialValue) {
 T Function() computed<T>(T Function(T? previousValue) getter) {
   final computed = Computed(
     getter: getter,
-    flags:
-        17 as ReactiveFlags /* ReactiveFlags.mutable | ReactiveFlags.dirty */,
+    flags: 17 /* Mutable | Dirty */,
   );
   return () => computedOper(computed);
 }
@@ -296,7 +284,7 @@ T Function() computed<T>(T Function(T? previousValue) getter) {
 /// // Prints: Count changed to 1
 /// ```
 void Function() effect(void Function() run) {
-  final e = Effect(run: run, flags: ReactiveFlags.watching);
+  final e = Effect(run: run, flags: 2 /* Watching */);
   if (activeSub != null) {
     link(e, activeSub!);
   } else if (activeScope != null) {
@@ -324,7 +312,7 @@ void Function() effect(void Function() run) {
 /// Returns a cleanup function that can be called to dispose of the scope and all
 /// effects created within it.
 void Function() effectScope(void Function() run) {
-  final e = EffectScope(flags: ReactiveFlags.none);
+  final e = EffectScope(flags: 0 /* None */);
   if (activeScope != null) link(e, activeScope!);
 
   final prevSub = setCurrentSub(null);
@@ -349,8 +337,8 @@ void Function() effectScope(void Function() run) {
 /// The [e] parameter is the reactive node (typically an Effect) to be notified.
 void notifyEffect(ReactiveNode e) {
   final flags = e.flags;
-  if ((flags & EffectFlags.queued) == 0) {
-    e.flags = flags | EffectFlags.queued;
+  if ((flags & 64 /* Queued */) == 0) {
+    e.flags = flags | 64 /* Queued */;
     final subs = e.subs;
     if (subs != null) {
       notifyEffect(subs.sub);
@@ -362,9 +350,9 @@ void notifyEffect(ReactiveNode e) {
   }
 }
 
-void run(ReactiveNode e, ReactiveFlags flags) {
-  if ((flags & ReactiveFlags.dirty) != 0 ||
-      ((flags & ReactiveFlags.pending) != 0 && checkDirty(e.deps!, e))) {
+void run(ReactiveNode e, int flags) {
+  if ((flags & 16 /* Dirty */) != 0 ||
+      ((flags & 32 /* Pending */) != 0 && checkDirty(e.deps!, e))) {
     final prev = setCurrentSub(e);
     startTracking(e);
     try {
@@ -374,15 +362,15 @@ void run(ReactiveNode e, ReactiveFlags flags) {
       endTracking(e);
     }
     return;
-  } else if ((flags & ReactiveFlags.pending) != 0) {
+  } else if ((flags & 32 /* Pending */) != 0) {
     e.flags = flags & -33 /* ~ReactiveFlags.pending */;
   }
   var link = e.deps;
   while (link != null) {
     final dep = link.dep;
     final depFlags = dep.flags;
-    if ((depFlags & EffectFlags.queued) != 0) {
-      run(dep, dep.flags = depFlags & -65 /* ~EffectFlags.queued */);
+    if ((depFlags & 64 /* Queued */) != 0) {
+      run(dep, dep.flags = depFlags & -65 /* ~Queued */);
     }
     link = link.nextDep;
   }
@@ -403,8 +391,8 @@ void flush() {
 
 T computedOper<T>(Computed<T> computed) {
   final flags = computed.flags;
-  if ((flags & ReactiveFlags.dirty) != 0 ||
-      ((flags & ReactiveFlags.pending) != 0 &&
+  if ((flags & 16 /* Dirty */) != 0 ||
+      ((flags & 32 /* Pending */) != 0 &&
           checkDirty(computed.deps!, computed))) {
     if (computed.update()) {
       final subs = computed.subs;
@@ -412,8 +400,8 @@ T computedOper<T>(Computed<T> computed) {
         shallowPropagate(subs);
       }
     }
-  } else if ((flags & ReactiveFlags.pending) != 0) {
-    computed.flags = flags & -33 /* ~ReactiveFlags.pending */;
+  } else if ((flags & 32 /* Pending */) != 0) {
+    computed.flags = flags & -33 /* ~Pending */;
   }
   if (activeSub != null) {
     link(computed, activeSub!);
@@ -427,8 +415,7 @@ T computedOper<T>(Computed<T> computed) {
 T signalOper<T>(Signal<T> signal, T? value, bool nulls) {
   if (value is T && (value != null || (value == null && nulls))) {
     if (signal.value != (signal.value = value)) {
-      signal.flags =
-          17 as ReactiveFlags /* ReactiveFlags.mutable | ReactiveFlags.dirty */;
+      signal.flags = 17 /* Mutable | Dirty */;
       final subs = signal.subs;
       if (subs != null) {
         propagate(subs);
@@ -440,7 +427,7 @@ T signalOper<T>(Signal<T> signal, T? value, bool nulls) {
   }
 
   value = signal.value;
-  if ((signal.flags & ReactiveFlags.dirty) != 0) {
+  if ((signal.flags & 16 /* Dirty */) != 0) {
     if (signal.update()) {
       final subs = signal.subs;
       if (subs != null) {
@@ -464,6 +451,5 @@ void effectOper(ReactiveNode e) {
 
   final sub = e.subs;
   if (sub != null) unlink(sub);
-
-  e.flags = ReactiveFlags.none;
+  e.flags = 0;
 }

@@ -34,7 +34,7 @@ abstract class ReactiveNode {
   Link? subsTail;
 
   /// Bit flags representing the node's state and properties.
-  int flags;
+  ReactiveFlags flags;
 }
 
 /// A link between a dependent node ([dep]) and a subscriber node ([sub]).
@@ -97,6 +97,51 @@ final class Stack<T> {
   Stack<T>? prev;
 }
 
+/// A set of bit flags representing various states and properties of a [ReactiveNode].
+///
+/// The flags are implemented as an extension type wrapping an [int] to provide
+/// type-safe bit manipulation operations while maintaining the performance
+/// characteristics of primitive integers.
+extension type const ReactiveFlags._(int raw) implements int {
+  /// No flags set.
+  static const none = ReactiveFlags._(0);
+
+  /// Indicates the node's value can be changed directly.
+  static const mutable = ReactiveFlags._(1 << 0);
+
+  /// Indicates the node is being watched for changes.
+  static const watching = ReactiveFlags._(1 << 1);
+
+  /// Used during dependency tracking to check for recursion.
+  static const recursedCheck = ReactiveFlags._(1 << 2);
+
+  /// Indicates the node is being recursively processed.
+  static const recursed = ReactiveFlags._(1 << 3);
+
+  /// Indicates the node's value is out of date and needs recomputation.
+  static const dirty = ReactiveFlags._(1 << 4);
+
+  /// Indicates the node has changes that need to be propagated.
+  static const pending = ReactiveFlags._(1 << 5);
+
+  /// Bitwise AND operator for combining flags.
+  ///
+  /// Returns new [ReactiveFlags] with only the bits set that are present in both
+  /// this flags and [other].
+  @pragma('vm:prefer-inline')
+  @pragma('wasm:prefer-inline')
+  @pragma('dart2js:prefer-inline')
+  ReactiveFlags operator &(int other) => ReactiveFlags._(raw & other);
+
+  /// Bitwise OR operator for combining flags.
+  ///
+  /// Returns new [ReactiveFlags] with bits set from either this flags or [other].
+  @pragma('vm:prefer-inline')
+  @pragma('wasm:prefer-inline')
+  @pragma('dart2js:prefer-inline')
+  ReactiveFlags operator |(int other) => ReactiveFlags._(raw | other);
+}
+
 /// A reactive system base class.
 abstract class ReactiveSystem {
   const ReactiveSystem();
@@ -129,14 +174,13 @@ abstract class ReactiveSystem {
   /// - Avoiding duplicate links
   /// - Maintaining proper list structure during recursive checks
   /// - Preserving existing valid links
-
   void link(ReactiveNode dep, ReactiveNode sub) {
     final prevDep = sub.depsTail;
     if (prevDep != null && prevDep.dep == dep) {
       return;
     }
     Link? nextDep;
-    final recursedCheck = sub.flags & 4 /* RecursedCheck */;
+    final recursedCheck = sub.flags & ReactiveFlags.recursedCheck;
     if (recursedCheck != 0) {
       nextDep = prevDep != null ? prevDep.nextDep : sub.deps;
       if (nextDep != null && nextDep.dep == dep) {
@@ -183,7 +227,6 @@ abstract class ReactiveSystem {
   /// The unlinking process handles:
   /// - Updating adjacent links to maintain proper list structure
   /// - Cleaning up empty subscriber lists by calling [unwatched]
-
   Link? unlink(Link link, [ReactiveNode? sub]) {
     sub ??= link.sub;
     final dep = link.dep;
@@ -221,7 +264,6 @@ abstract class ReactiveSystem {
   /// - Handles various node states (mutable, watching, dirty, pending)
   /// - Manages recursive checks and propagation flags
   /// - Notifies watchers when changes occur
-
   void propagate(Link link) {
     var next = link.nextSub;
     Stack<Link?>? stack;
@@ -232,27 +274,34 @@ abstract class ReactiveSystem {
 
       var flags = sub.flags;
 
-      if (flags & 3 /* Mutable | Watching */ != 0) {
-        if ((flags & 60 /* RecursedCheck | Recursed | Dirty | Pending */) ==
+      if (flags & 3 /* ReactiveFlags.mutable | ReactiveFlags.watching */ != 0) {
+        if ((flags &
+                60 /* ReactiveFlags.recursedCheck | ReactiveFlags.recursed | ReactiveFlags.dirty | ReactiveFlags.pending */) ==
             0) {
-          sub.flags = flags | 32 /* Pending */;
-        } else if ((flags & 12 /* RecursedCheck | Recursed */) == 0) {
-          flags = 0 /* None */;
-        } else if ((flags & 4 /* RecursedCheck */) == 0) {
-          sub.flags = (flags & -9 /* ~Recursed */) | 32 /* Pending */;
-        } else if ((flags & 48 /* Dirty | Pending */) == 0 &&
+          sub.flags = flags | ReactiveFlags.pending;
+        } else if ((flags &
+                12 /* ReactiveFlags.recursedCheck | ReactiveFlags.recursed */) ==
+            0) {
+          flags = ReactiveFlags.none;
+        } else if ((flags & ReactiveFlags.recursedCheck) == 0) {
+          sub.flags = (flags & -9 /* ~ReactiveFlags.recursed */) |
+              ReactiveFlags.pending;
+        } else if ((flags &
+                    48 /* ReactiveFlags.dirty | ReactiveFlags.pending */) ==
+                0 &&
             isValidLink(link, sub)) {
-          sub.flags = flags | 40 /* Recursed | Pending */;
-          flags &= 1 /* Mutable */;
+          sub.flags =
+              flags | 40 /* ReactiveFlags.recursed | ReactiveFlags.pending */;
+          flags &= ReactiveFlags.mutable;
         } else {
-          flags = 0 /* None */;
+          flags = ReactiveFlags.none;
         }
 
-        if ((flags & 2 /* Watching */) != 0) {
+        if ((flags & ReactiveFlags.watching) != 0) {
           notify(sub);
         }
 
-        if ((flags & 1 /* Mutable */) != 0) {
+        if ((flags & ReactiveFlags.mutable) != 0) {
           final subSubs = sub.subs;
           if (subSubs != null) {
             link = subSubs;
@@ -291,38 +340,35 @@ abstract class ReactiveSystem {
   /// - Resets the dependency tracking state by clearing [depsTail]
   /// - Updates the node's flags to:
   ///   - Clear any recursive/dirty/pending flags
-  ///   - Set the [RecursedCheck] flag to indicate dependency tracking is active
-
+  ///   - Set the [ReactiveFlags.recursedCheck] flag to indicate dependency tracking is active
   void startTracking(ReactiveNode sub) {
     sub.depsTail = null;
-    sub.flags = (sub.flags & -57 /* ~(Recursed | Dirty | Pending) */) |
-        4 /* RecursedCheck */;
+    sub.flags = (sub.flags &
+            -57 /* ~(ReactiveFlags.recursed | ReactiveFlags.dirty | ReactiveFlags.pending) */) |
+        ReactiveFlags.recursedCheck;
   }
 
   /// Completes dependency tracking for the given [sub] node.
   ///
   /// This method:
   /// - Removes any dependencies that were not tracked during this cycle
-  /// - Clears the [RecursedCheck] flag to indicate tracking is complete
-
+  /// - Clears the [ReactiveFlags.recursedCheck] flag to indicate tracking is complete
   void endTracking(ReactiveNode sub) {
     final depsTail = sub.depsTail;
     var toRemove = depsTail != null ? depsTail.nextDep : sub.deps;
     while (toRemove != null) {
       toRemove = unlink(toRemove, sub);
     }
-
-    sub.flags &= -5 /* ~RecursedCheck */;
+    sub.flags &= -5 /* ~ReactiveFlags.recursedCheck */;
   }
 
   /// Checks if a node or any of its dependencies are dirty and need updating.
   ///
   /// This method:
   /// - Traverses the dependency graph starting from [checkLink]
-  /// - Checks if [sub] or any of its dependencies are dirty ([Dirty])
+  /// - Checks if [sub] or any of its dependencies are dirty ([ReactiveFlags.dirty])
   /// - Updates nodes as needed during the traversal
   /// - Returns `true` if any dirty nodes were found, `false` otherwise
-
   bool checkDirty(Link checkLink, ReactiveNode sub) {
     Stack<Link>? stack;
     int checkDepth = 0;
@@ -335,10 +381,11 @@ abstract class ReactiveSystem {
 
       bool dirty = false;
 
-      if ((sub.flags & 16 /* Dirty */) != 0) {
+      if ((sub.flags & ReactiveFlags.dirty) != 0) {
         dirty = true;
-      } else if ((depFlags & 17 /* Mutable | Dirty */) ==
-          17 /* Mutable | Dirty */) {
+      } else if ((depFlags &
+              17 /* ReactiveFlags.mutable | ReactiveFlags.dirty */) ==
+          17 /* ReactiveFlags.mutable | ReactiveFlags.dirty */) {
         if (update(dep)) {
           final subs = dep.subs;
           if (subs?.nextSub != null) {
@@ -346,8 +393,9 @@ abstract class ReactiveSystem {
           }
           dirty = true;
         }
-      } else if ((depFlags & 33 /* Mutable | Pending */) ==
-          33 /* Mutable | Pending */) {
+      } else if ((depFlags &
+              33 /* ReactiveFlags.mutable | ReactiveFlags.pending */) ==
+          33 /* ReactiveFlags.mutable | ReactiveFlags.pending */) {
         if (link.nextSub != null || link.prevSub != null) {
           stack = Stack(value: link, prev: stack);
         }
@@ -381,7 +429,7 @@ abstract class ReactiveSystem {
             continue;
           }
         } else {
-          sub.flags &= -33 /* ~Pending */;
+          sub.flags &= -33 /* ~ReactiveFlags.pending */;
         }
         sub = link.sub;
         if (link.nextDep != null) {
@@ -400,16 +448,16 @@ abstract class ReactiveSystem {
   /// Unlike [propagate], this method only processes immediate subscribers without
   /// traversing deeper into the dependency graph. It marks subscribers as dirty
   /// if they are pending and notifies watchers when changes occur.
-
   void shallowPropagate(Link link) {
     Link? current = link;
     do {
       final sub = current!.sub;
       final nextSub = current.nextSub;
       final subFlags = sub.flags;
-      if ((subFlags & 48 /* Pending | Dirty */) == 32 /* Pending */) {
-        sub.flags = subFlags | 16 /* Dirty */;
-        if ((subFlags & 2 /* Watching */) != 0) {
+      if ((subFlags & 48 /* ReactiveFlags.pending | ReactiveFlags.dirty */) ==
+          ReactiveFlags.pending) {
+        sub.flags = subFlags | ReactiveFlags.dirty;
+        if ((subFlags & ReactiveFlags.watching) != 0) {
           notify(sub);
         }
       }

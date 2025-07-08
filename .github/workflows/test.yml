@@ -16,4 +16,5 @@ jobs:
         with:
           sdk: ${{ matrix.sdk }}
       - run: dart pub get
+      - run: dart analyze
       - run: dart test

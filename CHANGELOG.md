@@ -1,7 +1,8 @@
-## v0.4.5-pre.1
+## v0.5.0-pre.1
 
 - pref: refactor: queue effects in linked effects list
 - **BREAKING CHANGE**: Remove `pauseTracking` and `resumeTracking`
+- **BREAKING CHANGE**: Remove ReactiveFlags, change flags to int type
 
 ## v0.4.4
 

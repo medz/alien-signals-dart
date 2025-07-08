@@ -1,3 +1,7 @@
+## v0.4.4
+
+- perf: Replace magic number with bitwise operation for clarity
+
 ## v0.4.3
 
 - perf: Optimize computed values by using final result value in bit marks calculation (reduces unnecessary computations)

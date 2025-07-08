@@ -1,3 +1,8 @@
+## v0.4.5-pre.1
+
+- pref: refactor: queue effects in linked effects list
+- **BREAKING CHANGE**: Remove `pauseTracking` and `resumeTracking`
+
 ## v0.4.4
 
 - perf: Replace magic number with bitwise operation for clarity

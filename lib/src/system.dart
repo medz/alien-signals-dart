@@ -289,6 +289,9 @@ abstract class ReactiveSystem {
   /// - Updates the node's flags to:
   ///   - Clear any recursive/dirty/pending flags
   ///   - Set the 8 /* Recursed */ flag to indicate dependency tracking is active
+  @pragma('vm:prefer-inline')
+  @pragma('wasm:prefer-inline')
+  @pragma('dart2js:prefer-inline')
   void startTracking(ReactiveNode sub) {
     sub.depsTail = null;
     sub.flags = (sub.flags & -57 /* ~(Recursed | Rirty | Pending) */) |

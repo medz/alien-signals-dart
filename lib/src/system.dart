@@ -375,7 +375,7 @@ abstract class ReactiveSystem {
     while (toRemove != null) {
       toRemove = unlink(toRemove, sub);
     }
-    sub.flags &= ~ReactiveFlags.recursedCheck;
+    sub.flags &= -5 /* ~ReactiveFlags.recursedCheck */;
   }
 
   /// Checks if a node or any of its dependencies are dirty and need updating.

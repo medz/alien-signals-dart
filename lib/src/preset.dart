@@ -1,10 +1,7 @@
 import 'system.dart';
 
-extension type const EffectFlags._(int raw) implements ReactiveFlags {
-  /// Flag indicating that an effect has been queued for execution.
-  ///
-  /// This flag is set when an effect is scheduled to run during the next flush cycle.
-  static const queued = EffectFlags._(1 << 6);
+abstract interface class LinkedEffect implements ReactiveNode {
+  LinkedEffect? nextEffect;
 }
 
 /// A scope for effects that can be used to group and track multiple effects.
@@ -12,8 +9,11 @@ extension type const EffectFlags._(int raw) implements ReactiveFlags {
 /// Effect scopes allow for collective disposal of effects and provide a way to
 /// manage the lifecycle of related effects. When an effect scope is disposed,
 /// all effects within that scope are automatically disposed as well.
-class EffectScope extends ReactiveNode {
+class EffectScope extends ReactiveNode implements LinkedEffect {
   EffectScope({required super.flags});
+
+  @override
+  LinkedEffect? nextEffect;
 }
 
 /// An effect that runs a function and automatically tracks its dependencies.
@@ -25,7 +25,7 @@ class EffectScope extends ReactiveNode {
 ///
 /// The [run] function will be executed immediately when the effect is created,
 /// and again whenever any of its tracked dependencies change.
-class Effect extends ReactiveNode {
+class Effect extends ReactiveNode implements LinkedEffect {
   Effect({required super.flags, required this.run});
 
   /// The function to execute when the effect runs.
@@ -34,6 +34,9 @@ class Effect extends ReactiveNode {
   /// 1. Immediately when the effect is created
   /// 2. Whenever any of its tracked dependencies change
   final void Function() run;
+
+  @override
+  LinkedEffect? nextEffect;
 }
 
 abstract interface class Updatable {
@@ -78,7 +81,7 @@ class Signal<T> extends ReactiveNode implements Updatable {
   @pragma('wasm:prefer-inline')
   @pragma('dart2js:prefer-inline')
   bool update() {
-    flags = ReactiveFlags.mutable;
+    flags = 1 /* Mutable */;
     return previousValue != (previousValue = value);
   }
 }
@@ -87,21 +90,14 @@ class PresetReactiveSystsm extends ReactiveSystem {
   const PresetReactiveSystsm();
 
   @override
-  @pragma('vm:prefer-inline')
-  @pragma('wasm:prefer-inline')
-  @pragma('dart2js:prefer-inline')
   void notify(ReactiveNode sub) => notifyEffect(sub);
 
   @override
-  @pragma('vm:prefer-inline')
-  @pragma('wasm:prefer-inline')
-  @pragma('dart2js:prefer-inline')
   void unwatched(ReactiveNode node) {
     if (node is Computed) {
       var toRemove = node.deps;
       if (toRemove != null) {
-        node.flags = 17
-            as ReactiveFlags /* ReactiveFlags.mutable | ReactiveFlags.dirty */;
+        node.flags = 17 /* Mutable | Dirty */;
         do {
           toRemove = unlink(toRemove!, node);
         } while (toRemove != null);
@@ -135,14 +131,11 @@ final link = system.link,
     startTracking = system.startTracking,
     shallowPropagate = system.shallowPropagate;
 
-final pauseStack = <ReactiveNode?>[];
-final queuedEffects = <int, ReactiveNode?>{};
-
 int batchDepth = 0;
-int notifyIndex = 0;
-int queuedEffectsLength = 0;
 ReactiveNode? activeSub;
 EffectScope? activeScope;
+LinkedEffect? queuedEffects;
+LinkedEffect? queuedEffectsTail;
 
 /// Gets the currently active reactive subscription.
 ///
@@ -215,29 +208,6 @@ void endBatch() {
   if ((--batchDepth) == 0) flush();
 }
 
-@pragma('vm:prefer-inline')
-@pragma('wasm:prefer-inline')
-@pragma('dart2js:prefer-inline')
-@Deprecated("Will be removed in the next major version. Use"
-    "`const pausedSub = setCurrentSub(null)`"
-    " instead for better performance.")
-void pauseTracking() {
-  pauseStack.add(setCurrentSub(null));
-}
-
-@pragma('vm:prefer-inline')
-@pragma('wasm:prefer-inline')
-@pragma('dart2js:prefer-inline')
-@Deprecated(
-    "Will be removed in the next major version. Use `setCurrentSub(pausedSub)` instead for better performance.")
-void resumeTracking() {
-  try {
-    setCurrentSub(pauseStack.removeLast());
-  } catch (_) {
-    setCurrentSub(null);
-  }
-}
-
 /// Creates a reactive signal with an initial value.
 ///
 /// A signal is a reactive value container that notifies dependents when its
@@ -259,7 +229,7 @@ T Function([T? value, bool nulls]) signal<T>(T initialValue) {
   final signal = Signal(
     value: initialValue,
     previousValue: initialValue,
-    flags: ReactiveFlags.mutable,
+    flags: 1 /* Mutable */,
   );
 
   return ([value, nulls = false]) => signalOper(signal, value, nulls);
@@ -289,8 +259,7 @@ T Function([T? value, bool nulls]) signal<T>(T initialValue) {
 T Function() computed<T>(T Function(T? previousValue) getter) {
   final computed = Computed(
     getter: getter,
-    flags:
-        17 as ReactiveFlags /* ReactiveFlags.mutable | ReactiveFlags.dirty */,
+    flags: 17 /* Mutable | Dirty */,
   );
   return () => computedOper(computed);
 }
@@ -314,11 +283,8 @@ T Function() computed<T>(T Function(T? previousValue) getter) {
 /// count(1);
 /// // Prints: Count changed to 1
 /// ```
-@pragma('vm:prefer-inline')
-@pragma('wasm:prefer-inline')
-@pragma('dart2js:prefer-inline')
 void Function() effect(void Function() run) {
-  final e = Effect(run: run, flags: ReactiveFlags.watching);
+  final e = Effect(run: run, flags: 2 /* Watching */);
   if (activeSub != null) {
     link(e, activeSub!);
   } else if (activeScope != null) {
@@ -345,11 +311,8 @@ void Function() effect(void Function() run) {
 ///
 /// Returns a cleanup function that can be called to dispose of the scope and all
 /// effects created within it.
-@pragma('vm:prefer-inline')
-@pragma('wasm:prefer-inline')
-@pragma('dart2js:prefer-inline')
 void Function() effectScope(void Function() run) {
-  final e = EffectScope(flags: ReactiveFlags.none);
+  final e = EffectScope(flags: 0 /* None */);
   if (activeScope != null) link(e, activeScope!);
 
   final prevSub = setCurrentSub(null);
@@ -372,28 +335,24 @@ void Function() effectScope(void Function() run) {
 /// the queue of effects to be executed during the next flush cycle.
 ///
 /// The [e] parameter is the reactive node (typically an Effect) to be notified.
-@pragma('vm:prefer-inline')
-@pragma('wasm:prefer-inline')
-@pragma('dart2js:prefer-inline')
 void notifyEffect(ReactiveNode e) {
   final flags = e.flags;
-  if ((flags & EffectFlags.queued) == 0) {
-    e.flags = flags | EffectFlags.queued;
+  if ((flags & 64 /* Queued */) == 0) {
+    e.flags = flags | 64 /* Queued */;
     final subs = e.subs;
     if (subs != null) {
       notifyEffect(subs.sub);
+    } else if (queuedEffectsTail != null) {
+      queuedEffectsTail = queuedEffectsTail!.nextEffect = e as LinkedEffect;
     } else {
-      queuedEffects[queuedEffectsLength++] = e;
+      queuedEffectsTail = queuedEffects = e as LinkedEffect;
     }
   }
 }
 
-@pragma('vm:prefer-inline')
-@pragma('wasm:prefer-inline')
-@pragma('dart2js:prefer-inline')
-void run(ReactiveNode e, ReactiveFlags flags) {
-  if ((flags & ReactiveFlags.dirty) != 0 ||
-      ((flags & ReactiveFlags.pending) != 0 && checkDirty(e.deps!, e))) {
+void run(ReactiveNode e, int flags) {
+  if ((flags & 16 /* Dirty */) != 0 ||
+      ((flags & 32 /* Pending */) != 0 && checkDirty(e.deps!, e))) {
     final prev = setCurrentSub(e);
     startTracking(e);
     try {
@@ -403,40 +362,37 @@ void run(ReactiveNode e, ReactiveFlags flags) {
       endTracking(e);
     }
     return;
-  } else if ((flags & ReactiveFlags.pending) != 0) {
+  } else if ((flags & 32 /* Pending */) != 0) {
     e.flags = flags & -33 /* ~ReactiveFlags.pending */;
   }
   var link = e.deps;
   while (link != null) {
     final dep = link.dep;
     final depFlags = dep.flags;
-    if ((depFlags & EffectFlags.queued) != 0) {
-      run(dep, dep.flags = depFlags & -65 /* ~EffectFlags.queued */);
+    if ((depFlags & 64 /* Queued */) != 0) {
+      run(dep, dep.flags = depFlags & -65 /* ~Queued */);
     }
     link = link.nextDep;
   }
 }
 
-@pragma('vm:prefer-inline')
-@pragma('wasm:prefer-inline')
-@pragma('dart2js:prefer-inline')
 void flush() {
-  while (notifyIndex < queuedEffectsLength) {
-    final effect = queuedEffects[notifyIndex];
-    queuedEffects[notifyIndex++] = null;
-    run(effect!, effect.flags &= -65 /* ~EffectFlags.queued */);
+  while (queuedEffects != null) {
+    final effect = queuedEffects!;
+    if ((queuedEffects = effect.nextEffect) != null) {
+      effect.nextEffect = null;
+    } else {
+      queuedEffectsTail = null;
+    }
+
+    run(effect, effect.flags &= -65 /* ~Queued */);
   }
-  notifyIndex = 0;
-  queuedEffectsLength = 0;
 }
 
-@pragma('vm:prefer-inline')
-@pragma('wasm:prefer-inline')
-@pragma('dart2js:prefer-inline')
 T computedOper<T>(Computed<T> computed) {
   final flags = computed.flags;
-  if ((flags & ReactiveFlags.dirty) != 0 ||
-      ((flags & ReactiveFlags.pending) != 0 &&
+  if ((flags & 16 /* Dirty */) != 0 ||
+      ((flags & 32 /* Pending */) != 0 &&
           checkDirty(computed.deps!, computed))) {
     if (computed.update()) {
       final subs = computed.subs;
@@ -444,8 +400,8 @@ T computedOper<T>(Computed<T> computed) {
         shallowPropagate(subs);
       }
     }
-  } else if ((flags & ReactiveFlags.pending) != 0) {
-    computed.flags = flags & -33 /* ~ReactiveFlags.pending */;
+  } else if ((flags & 32 /* Pending */) != 0) {
+    computed.flags = flags & -33 /* ~Pending */;
   }
   if (activeSub != null) {
     link(computed, activeSub!);
@@ -456,14 +412,10 @@ T computedOper<T>(Computed<T> computed) {
   return computed.value as T;
 }
 
-@pragma('vm:prefer-inline')
-@pragma('wasm:prefer-inline')
-@pragma('dart2js:prefer-inline')
 T signalOper<T>(Signal<T> signal, T? value, bool nulls) {
   if (value is T && (value != null || (value == null && nulls))) {
     if (signal.value != (signal.value = value)) {
-      signal.flags =
-          17 as ReactiveFlags /* ReactiveFlags.mutable | ReactiveFlags.dirty */;
+      signal.flags = 17 /* Mutable | Dirty */;
       final subs = signal.subs;
       if (subs != null) {
         propagate(subs);
@@ -475,7 +427,7 @@ T signalOper<T>(Signal<T> signal, T? value, bool nulls) {
   }
 
   value = signal.value;
-  if ((signal.flags & ReactiveFlags.dirty) != 0) {
+  if ((signal.flags & 16 /* Dirty */) != 0) {
     if (signal.update()) {
       final subs = signal.subs;
       if (subs != null) {
@@ -490,9 +442,6 @@ T signalOper<T>(Signal<T> signal, T? value, bool nulls) {
   return value;
 }
 
-@pragma('vm:prefer-inline')
-@pragma('wasm:prefer-inline')
-@pragma('dart2js:prefer-inline')
 void effectOper(ReactiveNode e) {
   assert(e is Effect || e is EffectScope);
   var dep = e.deps;
@@ -502,6 +451,5 @@ void effectOper(ReactiveNode e) {
 
   final sub = e.subs;
   if (sub != null) unlink(sub);
-
-  e.flags = ReactiveFlags.none;
+  e.flags = 0;
 }

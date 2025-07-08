@@ -10,8 +10,6 @@ export "src/preset.dart"
         setCurrentScope,
         startBatch,
         endBatch,
-        pauseTracking,
-        resumeTracking,
         signal,
         computed,
         effect,

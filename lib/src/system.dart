@@ -104,24 +104,45 @@ final class Stack<T> {
 /// characteristics of primitive integers.
 extension type const ReactiveFlags._(int raw) implements int {
   /// No flags set.
+  @pragma('vm:prefer-inline')
+  @pragma('wasm:prefer-inline')
+  @pragma('dart2js:prefer-inline')
   static const none = ReactiveFlags._(0);
 
   /// Indicates the node's value can be changed directly.
+  @pragma('vm:prefer-inline')
+  @pragma('wasm:prefer-inline')
+  @pragma('dart2js:prefer-inline')
   static const mutable = ReactiveFlags._(1 << 0);
 
   /// Indicates the node is being watched for changes.
+  @pragma('vm:prefer-inline')
+  @pragma('wasm:prefer-inline')
+  @pragma('dart2js:prefer-inline')
   static const watching = ReactiveFlags._(1 << 1);
 
   /// Used during dependency tracking to check for recursion.
+  @pragma('vm:prefer-inline')
+  @pragma('wasm:prefer-inline')
+  @pragma('dart2js:prefer-inline')
   static const recursedCheck = ReactiveFlags._(1 << 2);
 
   /// Indicates the node is being recursively processed.
+  @pragma('vm:prefer-inline')
+  @pragma('wasm:prefer-inline')
+  @pragma('dart2js:prefer-inline')
   static const recursed = ReactiveFlags._(1 << 3);
 
   /// Indicates the node's value is out of date and needs recomputation.
+  @pragma('vm:prefer-inline')
+  @pragma('wasm:prefer-inline')
+  @pragma('dart2js:prefer-inline')
   static const dirty = ReactiveFlags._(1 << 4);
 
   /// Indicates the node has changes that need to be propagated.
+  @pragma('vm:prefer-inline')
+  @pragma('wasm:prefer-inline')
+  @pragma('dart2js:prefer-inline')
   static const pending = ReactiveFlags._(1 << 5);
 
   /// Bitwise AND operator for combining flags.

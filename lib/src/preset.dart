@@ -4,6 +4,9 @@ extension type const EffectFlags._(int raw) implements ReactiveFlags {
   /// Flag indicating that an effect has been queued for execution.
   ///
   /// This flag is set when an effect is scheduled to run during the next flush cycle.
+  @pragma('vm:prefer-inline')
+  @pragma('wasm:prefer-inline')
+  @pragma('dart2js:prefer-inline')
   static const queued = EffectFlags._(1 << 6);
 }
 

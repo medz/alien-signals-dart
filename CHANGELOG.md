@@ -1,3 +1,10 @@
+## v0.5.0-pre.2
+
+- pref: refactor: queue effects in linked effects list
+- pref: Add pragma annotations for inlining to startTracking
+- **BREAKING CHANGE**: Remove `pauseTracking` and `resumeTracking`
+- **BREAKING CHANGE**: Remove ReactiveFlags, change flags to int type
+
 ## v0.4.4
 
 - perf: Replace magic number with bitwise operation for clarity

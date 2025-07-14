@@ -18,7 +18,6 @@ The lightest signal library for Dart, ported from [stackblitz/alien-signals](htt
 > [!TIP]
 > `alien_signals` is the fastest signal library currently, as shown by experimental results from 👉 [dart-reactivity-benchmark](https://github.com/medz/dart-reactivity-benchmark#score-ranking).
 
-
 ## Installation
 
 To install Alien Signals, add the following to your `pubspec.yaml`:
@@ -36,7 +35,7 @@ dart pub add alien_signals
 
 ## Adoption
 
-- [solidart](https://github.com/nank1ro/solidart) - ❤️ Signals in Dart and Flutter, inspired by SolidJS
+- [Solidart](https://github.com/nank1ro/solidart) - ❤️ Signals in Dart and Flutter, inspired by SolidJS
 - [Oref](https://github.com/medz/oref) - 🪄 A Flutter package that brings hooks-like magic to widgets using signals
 
 ## Basic Usage

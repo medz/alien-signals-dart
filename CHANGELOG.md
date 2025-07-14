@@ -1,4 +1,4 @@
-## v0.5.0-pre.2
+## v0.5.0
 
 - pref: refactor: queue effects in linked effects list
 - pref: Add pragma annotations for inlining to startTracking

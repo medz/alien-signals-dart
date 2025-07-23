@@ -9,6 +9,7 @@
   <a href="https://github.com/medz/alien-signals-dart/actions/workflows/test.yml">
     <img src="https://github.com/medz/alien-signals-dart/actions/workflows/test.yml/badge.svg" alt="testing status" />
   </a>
+  <a href="https://deepwiki.com/medz/alien-signals-dart"><img src="https://deepwiki.com/badge.svg" alt="Ask DeepWiki"></a>
 </p>
 
 # Alien Signals for Dart

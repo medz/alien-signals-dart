@@ -135,20 +135,15 @@ abstract class ReactiveSystem {
       return;
     }
     Link? nextDep;
-    final recursedCheck = sub.flags & 4 /* RecursedCheck */;
-    if (recursedCheck != 0) {
+    if (sub.flags & 4 /* RecursedCheck */ != 0) {
       nextDep = prevDep != null ? prevDep.nextDep : sub.deps;
       if (nextDep != null && nextDep.dep == dep) {
         sub.depsTail = nextDep;
         return;
       }
     }
+
     final prevSub = dep.subsTail;
-    if (prevSub != null &&
-        prevSub.sub == sub &&
-        (recursedCheck == 0 || isValidLink(prevSub, sub))) {
-      return;
-    }
     final newLink = sub.depsTail = dep.subsTail = Link(
       dep: dep,
       sub: sub,

@@ -1,3 +1,7 @@
+## v0.5.1
+
+- fix: Remove non-contiguous dep check
+
 ## v0.5.0
 
 - pref: refactor: queue effects in linked effects list

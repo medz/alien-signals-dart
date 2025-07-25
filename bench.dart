@@ -37,5 +37,11 @@ class Bench extends ReactiveFramework {
 }
 
 void main() {
+  print('Running alien-signals performance benchmark...');
+  final stopwatch = Stopwatch()..start();
+  
   runFrameworkBench(const Bench());
+  
+  stopwatch.stop();
+  print('Benchmark completed in ${stopwatch.elapsedMilliseconds}ms');
 }

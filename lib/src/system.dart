@@ -58,10 +58,10 @@ class Link {
   });
 
   /// The dependency node that [sub] depends on.
-  ReactiveNode dep;
+  final ReactiveNode dep;
 
   /// The subscriber node that depends on [dep].
-  ReactiveNode sub;
+  final ReactiveNode sub;
 
   /// Previous link in the subscriber list (nodes that depend on [dep]).
   Link? prevSub;

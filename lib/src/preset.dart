@@ -1,7 +1,11 @@
 import 'system.dart';
+import 'performance_monitor.dart';
 
 abstract interface class LinkedEffect implements ReactiveNode {
   LinkedEffect? nextEffect;
+  
+  /// Priority level for effect scheduling (higher values = higher priority)
+  int get priority => 0;
 }
 
 /// A scope for effects that can be used to group and track multiple effects.
@@ -26,7 +30,7 @@ class EffectScope extends ReactiveNode implements LinkedEffect {
 /// The [run] function will be executed immediately when the effect is created,
 /// and again whenever any of its tracked dependencies change.
 class Effect extends ReactiveNode implements LinkedEffect {
-  Effect({required super.flags, required this.run});
+  Effect({required super.flags, required this.run, this.priority = 0});
 
   /// The function to execute when the effect runs.
   ///
@@ -34,6 +38,10 @@ class Effect extends ReactiveNode implements LinkedEffect {
   /// 1. Immediately when the effect is created
   /// 2. Whenever any of its tracked dependencies change
   final void Function() run;
+  
+  /// Priority level for effect scheduling (higher values = higher priority)
+  @override
+  final int priority;
 
   @override
   LinkedEffect? nextEffect;
@@ -137,6 +145,17 @@ EffectScope? activeScope;
 LinkedEffect? queuedEffects;
 LinkedEffect? queuedEffectsTail;
 
+/// Enhanced batching with deferred signal updates
+List<Signal>? _batchedSignals;
+List? _batchedValues;
+int _batchedCount = 0;
+
+/// Priority-based effect scheduling
+LinkedEffect? _highPriorityEffects;
+LinkedEffect? _highPriorityEffectsTail;
+LinkedEffect? _normalPriorityEffects;
+LinkedEffect? _normalPriorityEffectsTail;
+
 /// Gets the currently active reactive subscription.
 ///
 /// This returns the [ReactiveNode] that is currently being tracked as the active
@@ -205,7 +224,36 @@ void startBatch() => ++batchDepth;
 @pragma('wasm:prefer-inline')
 @pragma('dart2js:prefer-inline')
 void endBatch() {
-  if ((--batchDepth) == 0) flush();
+  if ((--batchDepth) == 0) {
+    _flushBatchedSignals();
+    flush();
+  }
+}
+
+/// Flushes all batched signal updates at once for better performance.
+void _flushBatchedSignals() {
+  if (_batchedCount > 0) {
+    final signals = _batchedSignals!;
+    final values = _batchedValues!;
+    
+    // Process all batched updates
+    for (int i = 0; i < _batchedCount; i++) {
+      final signal = signals[i];
+      final value = values[i];
+      
+      if (signal.value != value) {
+        signal.value = value;
+        signal.flags = 17; // Mutable | Dirty
+        final subs = signal.subs;
+        if (subs != null) {
+          propagate(subs);
+        }
+      }
+    }
+    
+    // Clear batch
+    _batchedCount = 0;
+  }
 }
 
 /// Creates a reactive signal with an initial value.
@@ -273,6 +321,9 @@ T Function() computed<T>(T Function(T? previousValue) getter) {
 /// 1. Immediately when the effect is created
 /// 2. Whenever any of its tracked dependencies change
 ///
+/// The optional [priority] parameter allows controlling execution order during batch flushes.
+/// Higher priority values execute first. Default is 0 (normal priority).
+///
 /// Returns a cleanup function that can be called to dispose of the effect and stop tracking.
 ///
 /// Example:
@@ -283,8 +334,8 @@ T Function() computed<T>(T Function(T? previousValue) getter) {
 /// count(1);
 /// // Prints: Count changed to 1
 /// ```
-void Function() effect(void Function() run) {
-  final e = Effect(run: run, flags: 2 /* Watching */);
+void Function() effect(void Function() run, {int priority = 0}) {
+  final e = Effect(run: run, flags: 2 /* Watching */, priority: priority);
   if (activeSub != null) {
     link(e, activeSub!);
   } else if (activeScope != null) {
@@ -332,7 +383,7 @@ void Function() effectScope(void Function() run) {
 ///
 /// This function marks an effect as queued if it hasn't been already. If the effect
 /// has subscribers, it recursively notifies them. Otherwise, it adds the effect to
-/// the queue of effects to be executed during the next flush cycle.
+/// the appropriate priority queue for execution during the next flush cycle.
 ///
 /// The [e] parameter is the reactive node (typically an Effect) to be notified.
 void notifyEffect(ReactiveNode e) {
@@ -342,10 +393,32 @@ void notifyEffect(ReactiveNode e) {
     final subs = e.subs;
     if (subs != null) {
       notifyEffect(subs.sub);
-    } else if (queuedEffectsTail != null) {
-      queuedEffectsTail = queuedEffectsTail!.nextEffect = e as LinkedEffect;
     } else {
-      queuedEffectsTail = queuedEffects = e as LinkedEffect;
+      final linkedEffect = e as LinkedEffect;
+      
+      // Queue based on priority
+      if (linkedEffect.priority > 0) {
+        // High priority queue
+        if (_highPriorityEffectsTail != null) {
+          _highPriorityEffectsTail = _highPriorityEffectsTail!.nextEffect = linkedEffect;
+        } else {
+          _highPriorityEffectsTail = _highPriorityEffects = linkedEffect;
+        }
+      } else {
+        // Normal priority queue
+        if (_normalPriorityEffectsTail != null) {
+          _normalPriorityEffectsTail = _normalPriorityEffectsTail!.nextEffect = linkedEffect;
+        } else {
+          _normalPriorityEffectsTail = _normalPriorityEffects = linkedEffect;
+        }
+      }
+      
+      // Maintain backward compatibility with original queue
+      if (queuedEffectsTail != null) {
+        queuedEffectsTail = queuedEffectsTail!.nextEffect = linkedEffect;
+      } else {
+        queuedEffectsTail = queuedEffects = linkedEffect;
+      }
     }
   }
 }
@@ -377,16 +450,46 @@ void run(ReactiveNode e, int flags) {
 }
 
 void flush() {
+  final stopwatch = Stopwatch()..start();
+  
+  // Process high priority effects first
+  while (_highPriorityEffects != null) {
+    performanceMonitor.recordHighPriorityEffect();
+    final effect = _highPriorityEffects!;
+    if ((_highPriorityEffects = effect.nextEffect) != null) {
+      effect.nextEffect = null;
+    } else {
+      _highPriorityEffectsTail = null;
+    }
+    run(effect, effect.flags &= -65 /* ~Queued */);
+  }
+  
+  // Then process normal priority effects
+  while (_normalPriorityEffects != null) {
+    performanceMonitor.recordNormalPriorityEffect();
+    final effect = _normalPriorityEffects!;
+    if ((_normalPriorityEffects = effect.nextEffect) != null) {
+      effect.nextEffect = null;
+    } else {
+      _normalPriorityEffectsTail = null;
+    }
+    run(effect, effect.flags &= -65 /* ~Queued */);
+  }
+  
+  // Maintain backward compatibility
   while (queuedEffects != null) {
+    performanceMonitor.recordNormalPriorityEffect();
     final effect = queuedEffects!;
     if ((queuedEffects = effect.nextEffect) != null) {
       effect.nextEffect = null;
     } else {
       queuedEffectsTail = null;
     }
-
     run(effect, effect.flags &= -65 /* ~Queued */);
   }
+  
+  stopwatch.stop();
+  performanceMonitor.recordFlushTime(stopwatch.elapsedMicroseconds);
 }
 
 T computedOper<T>(Computed<T> computed) {
@@ -414,12 +517,48 @@ T computedOper<T>(Computed<T> computed) {
 
 T signalOper<T>(Signal<T> signal, T? value, bool nulls) {
   if (value is T && (value != null || (value == null && nulls))) {
+    // Enhanced batching: defer updates when in batch mode
+    if (batchDepth > 0) {
+      // Initialize batch arrays if needed
+      if (_batchedSignals == null) {
+        _batchedSignals = <Signal>[];
+        _batchedValues = <dynamic>[];
+      }
+      
+      // Check if signal is already in batch
+      bool found = false;
+      for (int i = 0; i < _batchedCount; i++) {
+        if (identical(_batchedSignals![i], signal)) {
+          _batchedValues![i] = value;
+          found = true;
+          break;
+        }
+      }
+      
+      // Add to batch if not found
+      if (!found) {
+        performanceMonitor.recordBatchedUpdate();
+        if (_batchedCount >= _batchedSignals!.length) {
+          _batchedSignals!.add(signal);
+          _batchedValues!.add(value);
+        } else {
+          _batchedSignals![_batchedCount] = signal;
+          _batchedValues![_batchedCount] = value;
+        }
+        _batchedCount++;
+      }
+      
+      return value;
+    }
+    
+    // Immediate update when not batching
+    performanceMonitor.recordImmediateUpdate();
     if (signal.value != (signal.value = value)) {
       signal.flags = 17 /* Mutable | Dirty */;
       final subs = signal.subs;
       if (subs != null) {
         propagate(subs);
-        if (batchDepth == 0) flush();
+        flush();
       }
     }
 

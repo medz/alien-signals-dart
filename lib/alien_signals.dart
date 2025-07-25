@@ -15,6 +15,8 @@ export "src/preset.dart"
         effect,
         effectScope;
 
+export "src/performance_monitor.dart" show PerformanceMonitor, performanceMonitor;
+
 /// Returns the current batch depth.
 ///
 /// The batch depth represents how many nested batches are currently active.

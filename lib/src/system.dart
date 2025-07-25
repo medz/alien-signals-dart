@@ -1,3 +1,5 @@
+import 'performance_monitor.dart';
+
 /// A node in a reactive system that tracks dependencies and subscribers.
 ///
 /// The [ReactiveNode] maintains two linked lists:
@@ -37,18 +39,81 @@ abstract class ReactiveNode {
   int flags;
 }
 
+/// Memory pool for reusing Link objects to reduce GC pressure.
+class _LinkPool {
+  static const int _maxPoolSize = 100;
+  static final List<Link> _pool = <Link>[];
+  static int _poolSize = 0;
+
+  /// Gets a Link from the pool or creates a new one if pool is empty.
+  @pragma('vm:prefer-inline')
+  @pragma('wasm:prefer-inline')
+  @pragma('dart2js:prefer-inline')
+  static Link acquire({
+    required ReactiveNode dep,
+    required ReactiveNode sub,
+    Link? prevSub,
+    Link? nextSub,
+    Link? prevDep,
+    Link? nextDep,
+  }) {
+    late Link link;
+    if (_poolSize > 0) {
+      performanceMonitor.recordLinkPoolHit();
+      link = _pool[--_poolSize];
+      link.dep = dep;
+      link.sub = sub;
+      link.prevSub = prevSub;
+      link.nextSub = nextSub;
+      link.prevDep = prevDep;
+      link.nextDep = nextDep;
+    } else {
+      performanceMonitor.recordLinkPoolMiss();
+      link = Link._(
+        dep: dep,
+        sub: sub,
+        prevSub: prevSub,
+        nextSub: nextSub,
+        prevDep: prevDep,
+        nextDep: nextDep,
+      );
+    }
+    return link;
+  }
+
+  /// Returns a Link to the pool for reuse.
+  @pragma('vm:prefer-inline')
+  @pragma('wasm:prefer-inline')
+  @pragma('dart2js:prefer-inline')
+  static void release(Link link) {
+    if (_poolSize < _maxPoolSize) {
+      // Clear references to prevent memory leaks
+      link.dep = _dummyNode;
+      link.sub = _dummyNode;
+      link.prevSub = null;
+      link.nextSub = null;
+      link.prevDep = null;
+      link.nextDep = null;
+      _pool[_poolSize++] = link;
+    }
+  }
+}
+
+/// Dummy node used for clearing references in pooled Links.
+final _dummyNode = _DummyReactiveNode();
+
+class _DummyReactiveNode extends ReactiveNode {
+  _DummyReactiveNode() : super(flags: 0);
+}
+
 /// A link between a dependent node ([dep]) and a subscriber node ([sub]).
 ///
 /// Links form doubly-linked lists in both directions:
 /// - Through [prevSub]/[nextSub] for subscribers of a dependency
 /// - Through [prevDep]/[nextDep] for dependencies of a subscriber
 class Link {
-  /// A bidirectional link between a dependency ([dep]) and subscriber ([sub]) node.
-  ///
-  /// Links form doubly-linked lists in both directions:
-  /// - [prevSub]/[nextSub] form the subscriber list (nodes that depend on [dep])
-  /// - [prevDep]/[nextDep] form the dependency list (nodes that [sub] depends on)
-  Link({
+  /// Private constructor used by the memory pool.
+  Link._({
     required this.dep,
     required this.sub,
     this.prevSub,
@@ -144,7 +209,7 @@ abstract class ReactiveSystem {
     }
 
     final prevSub = dep.subsTail;
-    final newLink = sub.depsTail = dep.subsTail = Link(
+    final newLink = sub.depsTail = dep.subsTail = _LinkPool.acquire(
       dep: dep,
       sub: sub,
       prevDep: prevDep,
@@ -204,6 +269,10 @@ abstract class ReactiveSystem {
     } else if ((dep.subs = nextSub) == null) {
       unwatched(dep);
     }
+    
+    // Return the link to the pool for reuse
+    _LinkPool.release(link);
+    
     return nextDep;
   }
 
@@ -218,33 +287,51 @@ abstract class ReactiveSystem {
     var next = link.nextSub;
     Stack<Link?>? stack;
 
+    // Constants for optimized bitwise operations
+    const mutableWatching = 3; // Mutable | Watching
+    const recursedCheckRecursedDirtyPending = 60; // RecursedCheck | Recursed | Dirty | Pending
+    const recursedCheckRecursed = 12; // RecursedCheck | Recursed
+    const recursedCheck = 4; // RecursedCheck
+    const dirtyPending = 48; // Dirty | Pending
+    const recursedPending = 40; // Recursed | Pending
+    const pending = 32; // Pending
+    const watching = 2; // Watching
+    const mutable = 1; // Mutable
+    const none = 0; // None
+
     top:
     do {
       final sub = link.sub;
-
       var flags = sub.flags;
 
-      if (flags & 3 /* Mutable | Watching */ != 0) {
-        if ((flags & 60 /* RecursedCheck | Recursed | Rirty | Pending */) ==
-            0) {
-          sub.flags = flags | 32 /* Pending */;
-        } else if ((flags & 12 /* RecursedCheck | Recursed */) == 0) {
-          flags = 0 /* None */;
-        } else if ((flags & 4 /* RecursedCheck */) == 0) {
-          sub.flags = (flags & -9 /* ~Recursed */) | 32 /* Pending */;
-        } else if ((flags & 48 /* Dirty | Pending */) == 0 &&
-            isValidLink(link, sub)) {
-          sub.flags = flags | 40 /* Recursed | Pending */;
-          flags &= 1 /* Mutable */;
+      // Fast path: Check if node is mutable or watching
+      if ((flags & mutableWatching) != 0) {
+        // Optimized flag checking with fewer branches
+        final recursedState = flags & recursedCheckRecursedDirtyPending;
+        
+        if (recursedState == 0) {
+          sub.flags = flags | pending;
         } else {
-          flags = 0 /* None */;
+          final recursedBits = flags & recursedCheckRecursed;
+          if (recursedBits == 0) {
+            flags = none;
+          } else if ((flags & recursedCheck) == 0) {
+            sub.flags = (flags & ~8) | pending; // Clear Recursed, set Pending
+          } else if ((flags & dirtyPending) == 0 && isValidLink(link, sub)) {
+            sub.flags = flags | recursedPending;
+            flags &= mutable;
+          } else {
+            flags = none;
+          }
         }
 
-        if ((flags & 2 /* Watching */) != 0) {
+        // Notify if watching flag is set
+        if ((flags & watching) != 0) {
           notify(sub);
         }
 
-        if ((flags & 1 /* Mutable */) != 0) {
+        // Continue propagation if mutable
+        if ((flags & mutable) != 0) {
           final subSubs = sub.subs;
           if (subSubs != null) {
             link = subSubs;
@@ -257,12 +344,14 @@ abstract class ReactiveSystem {
         }
       }
 
-      if ((next) != null) {
+      // Move to next sibling if available
+      if (next != null) {
         link = next;
         next = link.nextSub;
         continue;
       }
 
+      // Pop from stack to continue with parent level
       while (stack != null) {
         final stackValue = stack.value;
         stack = stack.prev;

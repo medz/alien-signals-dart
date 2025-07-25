@@ -225,7 +225,7 @@ abstract class ReactiveSystem {
       var flags = sub.flags;
 
       if (flags & 3 /* Mutable | Watching */ != 0) {
-        if ((flags & 60 /* RecursedCheck | Recursed | Rirty | Pending */) ==
+        if ((flags & 60 /* RecursedCheck | Recursed | Dirty | Pending */) ==
             0) {
           sub.flags = flags | 32 /* Pending */;
         } else if ((flags & 12 /* RecursedCheck | Recursed */) == 0) {
@@ -289,7 +289,7 @@ abstract class ReactiveSystem {
   @pragma('dart2js:prefer-inline')
   void startTracking(ReactiveNode sub) {
     sub.depsTail = null;
-    sub.flags = (sub.flags & -57 /* ~(Recursed | Rirty | Pending) */) |
+    sub.flags = (sub.flags & -57 /* ~(Recursed | Dirty | Pending) */) |
         4 /* RecursedCheck */;
   }
 

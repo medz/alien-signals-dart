@@ -97,8 +97,8 @@ class Signal<T> extends ReactiveNode implements Updatable {
   }
 }
 
-class PresetReactiveSystsm extends ReactiveSystem {
-  const PresetReactiveSystsm();
+class PresetReactiveSystem extends ReactiveSystem {
+  const PresetReactiveSystem();
 
   @override
   void notify(ReactiveNode sub) => notifyEffect(sub);
@@ -132,7 +132,7 @@ class PresetReactiveSystsm extends ReactiveSystem {
 ///
 /// This constant provides access to the preset reactive system implementation
 /// which handles signal propagation, effect scheduling, and dependency tracking.
-const system = PresetReactiveSystsm();
+const system = PresetReactiveSystem();
 
 // Performance optimized flag constants
 const int _FlagMutable = 1;

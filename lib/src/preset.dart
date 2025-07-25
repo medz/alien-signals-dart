@@ -134,29 +134,6 @@ class PresetReactiveSystem extends ReactiveSystem {
 /// which handles signal propagation, effect scheduling, and dependency tracking.
 const system = PresetReactiveSystem();
 
-// Performance optimized flag constants
-const int _FlagMutable = 1;
-const int _FlagWatching = 2;
-const int _FlagRecursedCheck = 4;
-const int _FlagRecursed = 8;
-const int _FlagDirty = 16;
-const int _FlagPending = 32;
-const int _FlagQueued = 64;
-
-@pragma('vm:prefer-inline')
-@pragma('wasm:prefer-inline')
-@pragma('dart2js:prefer-inline')
-bool _hasFlag(int flags, int flag) => (flags & flag) != 0;
-
-@pragma('vm:prefer-inline')
-@pragma('wasm:prefer-inline')
-@pragma('dart2js:prefer-inline')
-int _setFlag(int flags, int flag) => flags | flag;
-
-@pragma('vm:prefer-inline')
-@pragma('wasm:prefer-inline')
-@pragma('dart2js:prefer-inline')
-int _clearFlag(int flags, int flag) => flags & ~flag;
 
 final link = system.link,
     unlink = system.unlink,
@@ -373,9 +350,9 @@ void Function() effectScope(void Function() run) {
 /// The [e] parameter is the reactive node (typically an Effect) to be notified.
 void notifyEffect(ReactiveNode e) {
   final flags = e.flags;
-  if (_hasFlag(flags, _FlagQueued)) return;
+  if ((flags & 64 /* Queued */) != 0) return;
   
-  e.flags = _setFlag(flags, _FlagQueued);
+  e.flags = flags | 64 /* Queued */;
   final subs = e.subs;
   if (subs != null) {
     notifyEffect(subs.sub);
@@ -428,7 +405,7 @@ void flush() {
     current.nextEffect = null;
     
     final flags = current.flags;
-    current.flags = _clearFlag(flags, _FlagQueued);
+    current.flags = flags & -65 /* ~Queued */;
     run(current, flags);
     
     current = next;
@@ -437,8 +414,8 @@ void flush() {
 
 T computedOper<T>(Computed<T> computed) {
   final flags = computed.flags;
-  final isDirty = _hasFlag(flags, _FlagDirty);
-  final isPending = _hasFlag(flags, _FlagPending);
+  final isDirty = (flags & 16 /* Dirty */) != 0;
+  final isPending = (flags & 32 /* Pending */) != 0;
   
   if (isDirty || (isPending && checkDirty(computed.deps!, computed))) {
     if (computed.update()) {
@@ -448,7 +425,7 @@ T computedOper<T>(Computed<T> computed) {
       }
     }
   } else if (isPending) {
-    computed.flags = _clearFlag(flags, _FlagPending);
+    computed.flags = flags & -33 /* ~Pending */;
   }
   
   final currentSub = activeSub;
@@ -481,7 +458,7 @@ T signalOper<T>(Signal<T> signal, T? value, bool nulls) {
   }
 
   final currentValue = signal.value;
-  if (_hasFlag(signal.flags, _FlagDirty)) {
+  if ((signal.flags & 16 /* Dirty */) != 0) {
     if (signal.update()) {
       final subs = signal.subs;
       if (subs != null) {

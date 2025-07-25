@@ -82,7 +82,9 @@ class Signal<T> extends ReactiveNode implements Updatable {
   @pragma('dart2js:prefer-inline')
   bool update() {
     flags = 1 /* Mutable */;
-    return previousValue != (previousValue = value);
+    final oldValue = previousValue;
+    previousValue = value;
+    return oldValue != value;
   }
 }
 
@@ -414,7 +416,9 @@ T computedOper<T>(Computed<T> computed) {
 
 T signalOper<T>(Signal<T> signal, T? value, bool nulls) {
   if (value is T && (value != null || (value == null && nulls))) {
-    if (signal.value != (signal.value = value)) {
+    final oldValue = signal.value;
+    if (oldValue != value) {
+      signal.value = value;
       signal.flags = 17 /* Mutable | Dirty */;
       final subs = signal.subs;
       if (subs != null) {

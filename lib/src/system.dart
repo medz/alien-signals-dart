@@ -37,18 +37,60 @@ abstract class ReactiveNode {
   int flags;
 }
 
+/// Object pool for Link instances to reduce garbage collection pressure
+class _LinkPool {
+  static final List<Link> _pool = <Link>[];
+  static const int _maxPoolSize = 100;
+
+  static Link acquire({
+    required ReactiveNode dep,
+    required ReactiveNode sub,
+    Link? prevSub,
+    Link? nextSub,
+    Link? prevDep,
+    Link? nextDep,
+  }) {
+    if (_pool.isNotEmpty) {
+      final link = _pool.removeLast();
+      link.dep = dep;
+      link.sub = sub;
+      link.prevSub = prevSub;
+      link.nextSub = nextSub;
+      link.prevDep = prevDep;
+      link.nextDep = nextDep;
+      return link;
+    }
+    return Link._(
+      dep: dep,
+      sub: sub,
+      prevSub: prevSub,
+      nextSub: nextSub,
+      prevDep: prevDep,
+      nextDep: nextDep,
+    );
+  }
+
+  static void release(Link link) {
+    if (_pool.length < _maxPoolSize) {
+      link.dep = null!;
+      link.sub = null!;
+      link.prevSub = null;
+      link.nextSub = null;
+      link.prevDep = null;
+      link.nextDep = null;
+      _pool.add(link);
+    }
+  }
+}
+
 /// A link between a dependent node ([dep]) and a subscriber node ([sub]).
 ///
 /// Links form doubly-linked lists in both directions:
 /// - Through [prevSub]/[nextSub] for subscribers of a dependency
 /// - Through [prevDep]/[nextDep] for dependencies of a subscriber
 class Link {
-  /// A bidirectional link between a dependency ([dep]) and subscriber ([sub]) node.
-  ///
-  /// Links form doubly-linked lists in both directions:
-  /// - [prevSub]/[nextSub] form the subscriber list (nodes that depend on [dep])
-  /// - [prevDep]/[nextDep] form the dependency list (nodes that [sub] depends on)
-  Link({
+  /// Private constructor for object pooling
+  Link._({
     required this.dep,
     required this.sub,
     this.prevSub,
@@ -97,6 +139,22 @@ final class Stack<T> {
   Stack<T>? prev;
 }
 
+// Optimized flag constants for better performance
+const int _MUTABLE = 1;
+const int _WATCHING = 2;
+const int _MUTABLE_WATCHING = 3;
+const int _RECURSED_CHECK = 4;
+const int _RECURSED = 8;
+const int _RECURSED_CHECK_RECURSED = 12;
+const int _DIRTY = 16;
+const int _PENDING = 32;
+const int _DIRTY_PENDING = 48;
+const int _QUEUED = 64;
+const int _MUTABLE_DIRTY = 17;
+const int _MUTABLE_PENDING = 33;
+const int _RECURSED_PENDING = 40;
+const int _RECURSED_CHECK_RECURSED_DIRTY_PENDING = 60;
+
 /// A reactive system base class.
 abstract class ReactiveSystem {
   const ReactiveSystem();
@@ -135,7 +193,7 @@ abstract class ReactiveSystem {
       return;
     }
     Link? nextDep;
-    if (sub.flags & 4 /* RecursedCheck */ != 0) {
+    if (sub.flags & _RECURSED_CHECK != 0) {
       nextDep = prevDep != null ? prevDep.nextDep : sub.deps;
       if (nextDep != null && nextDep.dep == dep) {
         sub.depsTail = nextDep;
@@ -144,7 +202,7 @@ abstract class ReactiveSystem {
     }
 
     final prevSub = dep.subsTail;
-    final newLink = sub.depsTail = dep.subsTail = Link(
+    final newLink = sub.depsTail = dep.subsTail = _LinkPool.acquire(
       dep: dep,
       sub: sub,
       prevDep: prevDep,
@@ -204,6 +262,7 @@ abstract class ReactiveSystem {
     } else if ((dep.subs = nextSub) == null) {
       unwatched(dep);
     }
+    _LinkPool.release(link);
     return nextDep;
   }
 
@@ -218,33 +277,66 @@ abstract class ReactiveSystem {
     var next = link.nextSub;
     Stack<Link?>? stack;
 
+    // Fast path for single subscriber
+    if (next == null) {
+      final sub = link.sub;
+      var flags = sub.flags;
+
+      if (flags & _MUTABLE_WATCHING != 0) {
+        if ((flags & _RECURSED_CHECK_RECURSED_DIRTY_PENDING) == 0) {
+          sub.flags = flags | _PENDING;
+        } else if ((flags & _RECURSED_CHECK_RECURSED) == 0) {
+          return;
+        } else if ((flags & _RECURSED_CHECK) == 0) {
+          sub.flags = (flags & -9 /* ~Recursed */) | _PENDING;
+        } else if ((flags & _DIRTY_PENDING) == 0 &&
+            isValidLink(link, sub)) {
+          sub.flags = flags | _RECURSED_PENDING;
+          flags &= _MUTABLE;
+        } else {
+          return;
+        }
+
+        if ((flags & _WATCHING) != 0) {
+          notify(sub);
+        }
+
+        if ((flags & _MUTABLE) != 0) {
+          final subSubs = sub.subs;
+          if (subSubs != null) {
+            propagate(subSubs);
+          }
+        }
+      }
+      return;
+    }
+
     top:
     do {
       final sub = link.sub;
 
       var flags = sub.flags;
 
-      if (flags & 3 /* Mutable | Watching */ != 0) {
-        if ((flags & 60 /* RecursedCheck | Recursed | Rirty | Pending */) ==
-            0) {
-          sub.flags = flags | 32 /* Pending */;
-        } else if ((flags & 12 /* RecursedCheck | Recursed */) == 0) {
+      if (flags & _MUTABLE_WATCHING != 0) {
+        if ((flags & _RECURSED_CHECK_RECURSED_DIRTY_PENDING) == 0) {
+          sub.flags = flags | _PENDING;
+        } else if ((flags & _RECURSED_CHECK_RECURSED) == 0) {
           flags = 0 /* None */;
-        } else if ((flags & 4 /* RecursedCheck */) == 0) {
-          sub.flags = (flags & -9 /* ~Recursed */) | 32 /* Pending */;
-        } else if ((flags & 48 /* Dirty | Pending */) == 0 &&
+        } else if ((flags & _RECURSED_CHECK) == 0) {
+          sub.flags = (flags & -9 /* ~Recursed */) | _PENDING;
+        } else if ((flags & _DIRTY_PENDING) == 0 &&
             isValidLink(link, sub)) {
-          sub.flags = flags | 40 /* Recursed | Pending */;
-          flags &= 1 /* Mutable */;
+          sub.flags = flags | _RECURSED_PENDING;
+          flags &= _MUTABLE;
         } else {
           flags = 0 /* None */;
         }
 
-        if ((flags & 2 /* Watching */) != 0) {
+        if ((flags & _WATCHING) != 0) {
           notify(sub);
         }
 
-        if ((flags & 1 /* Mutable */) != 0) {
+        if ((flags & _MUTABLE) != 0) {
           final subSubs = sub.subs;
           if (subSubs != null) {
             link = subSubs;
@@ -289,8 +381,8 @@ abstract class ReactiveSystem {
   @pragma('dart2js:prefer-inline')
   void startTracking(ReactiveNode sub) {
     sub.depsTail = null;
-    sub.flags = (sub.flags & -57 /* ~(Recursed | Rirty | Pending) */) |
-        4 /* RecursedCheck */;
+    sub.flags = (sub.flags & -57 /* ~(Recursed | Dirty | Pending) */) |
+        _RECURSED_CHECK;
   }
 
   /// Completes dependency tracking for the given [sub] node.
@@ -304,7 +396,7 @@ abstract class ReactiveSystem {
     while (toRemove != null) {
       toRemove = unlink(toRemove, sub);
     }
-    sub.flags &= -5 /* ~ReactiveFlags.recursedCheck */;
+    sub.flags &= ~_RECURSED_CHECK;
   }
 
   /// Checks if a node or any of its dependencies are dirty and need updating.
@@ -326,10 +418,9 @@ abstract class ReactiveSystem {
 
       bool dirty = false;
 
-      if ((sub.flags & 16 /* Dirty */) != 0) {
+      if ((sub.flags & _DIRTY) != 0) {
         dirty = true;
-      } else if ((depFlags & 17 /* Mutable | Dirty */) ==
-          17 /* Mutable | Dirty */) {
+      } else if ((depFlags & _MUTABLE_DIRTY) == _MUTABLE_DIRTY) {
         if (update(dep)) {
           final subs = dep.subs;
           if (subs?.nextSub != null) {
@@ -337,8 +428,7 @@ abstract class ReactiveSystem {
           }
           dirty = true;
         }
-      } else if ((depFlags & 33 /* Mutable | Pending */) ==
-          33 /* Mutable | Pending */) {
+      } else if ((depFlags & _MUTABLE_PENDING) == _MUTABLE_PENDING) {
         if (link.nextSub != null || link.prevSub != null) {
           stack = Stack(value: link, prev: stack);
         }
@@ -372,7 +462,7 @@ abstract class ReactiveSystem {
             continue;
           }
         } else {
-          sub.flags &= -33 /* ~Pending */;
+          sub.flags &= ~_PENDING;
         }
         sub = link.sub;
         if (link.nextDep != null) {
@@ -397,9 +487,9 @@ abstract class ReactiveSystem {
       final sub = current!.sub;
       final nextSub = current.nextSub;
       final subFlags = sub.flags;
-      if ((subFlags & 48 /* Pending | Dirty */) == 32 /* Pending */) {
-        sub.flags = subFlags | 16 /* Dirty */;
-        if ((subFlags & 2 /* Watching */) != 0) {
+      if ((subFlags & _DIRTY_PENDING) == _PENDING) {
+        sub.flags = subFlags | _DIRTY;
+        if ((subFlags & _WATCHING) != 0) {
           notify(sub);
         }
       }

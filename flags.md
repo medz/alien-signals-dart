@@ -1,6 +1,6 @@
 | Bit Shift | Flag Name                   | Value | Description   |
 | --------- | --------------------------- | ----- | ------------- |
-|           | ReactiveFlags.Node          | 0     | None          |
+| 0         | ReactiveFlags.Node          | 0     | None          |
 | 1 << 0    | ReactiveFlags.Mutable       | 1     | Mutable       |
 | 1 << 1    | ReactiveFlags.Watching      | 2     | Watching      |
 | 1 << 2    | ReactiveFlags.RecursedCheck | 4     | RecursedCheck |

@@ -51,11 +51,15 @@ class Link {
   Link({
     required this.dep,
     required this.sub,
+    required this.version,
     this.prevSub,
     this.nextSub,
     this.prevDep,
     this.nextDep,
   });
+
+  /// The version of the link.
+  int version;
 
   /// The dependency node that [sub] depends on.
   ReactiveNode dep;
@@ -99,7 +103,10 @@ final class Stack<T> {
 
 /// A reactive system base class.
 abstract class ReactiveSystem {
-  const ReactiveSystem();
+  ReactiveSystem();
+
+  /// Internal version counter for tracking changes.
+  int _globalVersion = 0;
 
   /// Updates the node's value if it's dirty and returns whether it was updated.
   ///
@@ -138,15 +145,23 @@ abstract class ReactiveSystem {
     if (sub.flags & 4 /* RecursedCheck */ != 0) {
       nextDep = prevDep != null ? prevDep.nextDep : sub.deps;
       if (nextDep != null && nextDep.dep == dep) {
+        nextDep.version = _globalVersion;
         sub.depsTail = nextDep;
         return;
       }
     }
 
     final prevSub = dep.subsTail;
+    if (prevSub != null &&
+        prevSub.version == _globalVersion &&
+        prevSub.sub == sub) {
+      return;
+    }
+
     final newLink = sub.depsTail = dep.subsTail = Link(
       dep: dep,
       sub: sub,
+      version: _globalVersion,
       prevDep: prevDep,
       nextDep: nextDep,
       prevSub: prevSub,
@@ -288,6 +303,7 @@ abstract class ReactiveSystem {
   @pragma('wasm:prefer-inline')
   @pragma('dart2js:prefer-inline')
   void startTracking(ReactiveNode sub) {
+    _globalVersion++;
     sub.depsTail = null;
     sub.flags = (sub.flags & -57 /* ~(Recursed | Rirty | Pending) */) |
         4 /* RecursedCheck */;

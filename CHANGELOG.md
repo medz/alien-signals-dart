@@ -1,3 +1,7 @@
+## v0.5.2
+
+- fix: Introduce per-cycle version to dedupe dependency links
+
 ## v0.5.1
 
 - fix: Remove non-contiguous dep check

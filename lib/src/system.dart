@@ -141,14 +141,12 @@ abstract class ReactiveSystem {
     if (prevDep != null && prevDep.dep == dep) {
       return;
     }
-    Link? nextDep;
-    if (sub.flags & 4 /* RecursedCheck */ != 0) {
-      nextDep = prevDep != null ? prevDep.nextDep : sub.deps;
-      if (nextDep != null && nextDep.dep == dep) {
-        nextDep.version = _globalVersion;
-        sub.depsTail = nextDep;
-        return;
-      }
+
+    final nextDep = prevDep != null ? prevDep.nextDep : sub.deps;
+    if (nextDep != null && nextDep.dep == dep) {
+      nextDep.version = _globalVersion;
+      sub.depsTail = nextDep;
+      return;
     }
 
     final prevSub = dep.subsTail;
@@ -230,49 +228,45 @@ abstract class ReactiveSystem {
   /// - Manages recursive checks and propagation flags
   /// - Notifies watchers when changes occur
   void propagate(Link link) {
-    var next = link.nextSub;
+    Link? next = link.nextSub;
     Stack<Link?>? stack;
 
     top:
     do {
       final sub = link.sub;
+      int flags = sub.flags;
 
-      var flags = sub.flags;
+      if ((flags & 60 /* RecursedCheck | Recursed | Rirty | Pending */) == 0) {
+        sub.flags = flags | 32 /* Pending */;
+      } else if ((flags & 12 /* RecursedCheck | Recursed */) == 0) {
+        flags = 0 /* None */;
+      } else if ((flags & 4 /* RecursedCheck */) == 0) {
+        sub.flags = (flags & -9 /* ~Recursed */) | 32 /* Pending */;
+      } else if ((flags & 48 /* Dirty | Pending */) == 0 &&
+          isValidLink(link, sub)) {
+        sub.flags = flags | 40 /* Recursed | Pending */;
+        flags &= 1 /* Mutable */;
+      } else {
+        flags = 0 /* None */;
+      }
 
-      if (flags & 3 /* Mutable | Watching */ != 0) {
-        if ((flags & 60 /* RecursedCheck | Recursed | Rirty | Pending */) ==
-            0) {
-          sub.flags = flags | 32 /* Pending */;
-        } else if ((flags & 12 /* RecursedCheck | Recursed */) == 0) {
-          flags = 0 /* None */;
-        } else if ((flags & 4 /* RecursedCheck */) == 0) {
-          sub.flags = (flags & -9 /* ~Recursed */) | 32 /* Pending */;
-        } else if ((flags & 48 /* Dirty | Pending */) == 0 &&
-            isValidLink(link, sub)) {
-          sub.flags = flags | 40 /* Recursed | Pending */;
-          flags &= 1 /* Mutable */;
-        } else {
-          flags = 0 /* None */;
-        }
+      if ((flags & 2 /* Watching */) != 0) {
+        notify(sub);
+      }
 
-        if ((flags & 2 /* Watching */) != 0) {
-          notify(sub);
-        }
-
-        if ((flags & 1 /* Mutable */) != 0) {
-          final subSubs = sub.subs;
-          if (subSubs != null) {
-            link = subSubs;
-            if (subSubs.nextSub != null) {
-              stack = Stack(value: next, prev: stack);
-              next = link.nextSub;
-            }
-            continue;
+      if ((flags & 1 /* Mutable */) != 0) {
+        final subSubs = sub.subs;
+        if (subSubs != null) {
+          final nextSub = (link = subSubs).nextSub;
+          if (nextSub != null) {
+            stack = Stack(value: next, prev: stack);
+            next = nextSub;
           }
+          continue;
         }
       }
 
-      if ((next) != null) {
+      if (next != null) {
         link = next;
         next = link.nextSub;
         continue;
@@ -316,7 +310,7 @@ abstract class ReactiveSystem {
   /// - Clears the [ReactiveFlags.recursedCheck] flag to indicate tracking is complete
   void endTracking(ReactiveNode sub) {
     final depsTail = sub.depsTail;
-    var toRemove = depsTail != null ? depsTail.nextDep : sub.deps;
+    Link? toRemove = depsTail != null ? depsTail.nextDep : sub.deps;
     while (toRemove != null) {
       toRemove = unlink(toRemove, sub);
     }
@@ -338,13 +332,12 @@ abstract class ReactiveSystem {
     top:
     do {
       final dep = link!.dep;
-      final depFlags = dep.flags;
-
+      final flags = dep.flags;
       bool dirty = false;
 
       if ((sub.flags & 16 /* Dirty */) != 0) {
         dirty = true;
-      } else if ((depFlags & 17 /* Mutable | Dirty */) ==
+      } else if ((flags & 17 /* Mutable | Dirty */) ==
           17 /* Mutable | Dirty */) {
         if (update(dep)) {
           final subs = dep.subs;
@@ -353,7 +346,7 @@ abstract class ReactiveSystem {
           }
           dirty = true;
         }
-      } else if ((depFlags & 33 /* Mutable | Pending */) ==
+      } else if ((flags & 33 /* Mutable | Pending */) ==
           33 /* Mutable | Pending */) {
         if (link.nextSub != null || link.prevSub != null) {
           stack = Stack(value: link, prev: stack);
@@ -364,13 +357,15 @@ abstract class ReactiveSystem {
         continue;
       }
 
-      if (!dirty && link.nextDep != null) {
-        link = link.nextDep;
-        continue;
+      if (!dirty) {
+        final nextDep = link.nextDep;
+        if (nextDep != null) {
+          link = nextDep;
+          continue;
+        }
       }
 
-      while (checkDepth > 0) {
-        --checkDepth;
+      while ((checkDepth--) > 0) {
         final firstSub = sub.subs!;
         final hasMultipleSubs = firstSub.nextSub != null;
         if (hasMultipleSubs) {
@@ -391,8 +386,9 @@ abstract class ReactiveSystem {
           sub.flags &= -33 /* ~Pending */;
         }
         sub = link.sub;
-        if (link.nextDep != null) {
-          link = link.nextDep;
+        final nextDep = link.nextDep;
+        if (nextDep != null) {
+          link = nextDep;
           continue top;
         }
         dirty = false;
@@ -411,34 +407,26 @@ abstract class ReactiveSystem {
     Link? current = link;
     do {
       final sub = current!.sub;
-      final nextSub = current.nextSub;
-      final subFlags = sub.flags;
-      if ((subFlags & 48 /* Pending | Dirty */) == 32 /* Pending */) {
-        sub.flags = subFlags | 16 /* Dirty */;
-        if ((subFlags & 2 /* Watching */) != 0) {
+      final flags = sub.flags;
+
+      if ((flags & 48 /* Pending | Dirty */) == 32 /* Pending */) {
+        sub.flags = flags | 16 /* Dirty */;
+        if ((flags & 2 /* Watching */) != 0) {
           notify(sub);
         }
       }
-      current = nextSub;
-    } while (current != null);
+    } while ((current = current.nextSub) != null);
   }
 }
 
 extension on ReactiveSystem {
   bool isValidLink(Link checkLink, ReactiveNode sub) {
-    final depsTail = sub.depsTail;
-    if (depsTail != null) {
-      var link = sub.deps;
-      do {
-        if (link == checkLink) {
-          return true;
-        }
-        if (link == depsTail) {
-          break;
-        }
-        link = link?.nextDep;
-      } while (link != null);
+    Link? link = sub.depsTail;
+    while (link != null) {
+      if (link == checkLink) return true;
+      link = link.prevDep;
     }
+
     return false;
   }
 }

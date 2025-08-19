@@ -332,13 +332,12 @@ abstract class ReactiveSystem {
     top:
     do {
       final dep = link!.dep;
-      final depFlags = dep.flags;
-
+      final flags = dep.flags;
       bool dirty = false;
 
       if ((sub.flags & 16 /* Dirty */) != 0) {
         dirty = true;
-      } else if ((depFlags & 17 /* Mutable | Dirty */) ==
+      } else if ((flags & 17 /* Mutable | Dirty */) ==
           17 /* Mutable | Dirty */) {
         if (update(dep)) {
           final subs = dep.subs;
@@ -347,7 +346,7 @@ abstract class ReactiveSystem {
           }
           dirty = true;
         }
-      } else if ((depFlags & 33 /* Mutable | Pending */) ==
+      } else if ((flags & 33 /* Mutable | Pending */) ==
           33 /* Mutable | Pending */) {
         if (link.nextSub != null || link.prevSub != null) {
           stack = Stack(value: link, prev: stack);
@@ -358,13 +357,15 @@ abstract class ReactiveSystem {
         continue;
       }
 
-      if (!dirty && link.nextDep != null) {
-        link = link.nextDep;
-        continue;
+      if (!dirty) {
+        final nextDep = link.nextDep;
+        if (nextDep != null) {
+          link = nextDep;
+          continue;
+        }
       }
 
-      while (checkDepth > 0) {
-        --checkDepth;
+      while ((checkDepth--) > 0) {
         final firstSub = sub.subs!;
         final hasMultipleSubs = firstSub.nextSub != null;
         if (hasMultipleSubs) {
@@ -385,8 +386,9 @@ abstract class ReactiveSystem {
           sub.flags &= -33 /* ~Pending */;
         }
         sub = link.sub;
-        if (link.nextDep != null) {
-          link = link.nextDep;
+        final nextDep = link.nextDep;
+        if (nextDep != null) {
+          link = nextDep;
           continue top;
         }
         dirty = false;

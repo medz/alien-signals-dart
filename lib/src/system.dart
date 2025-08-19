@@ -228,7 +228,7 @@ abstract class ReactiveSystem {
   /// - Manages recursive checks and propagation flags
   /// - Notifies watchers when changes occur
   void propagate(Link link) {
-    var next = link.nextSub;
+    Link? next = link.nextSub;
     Stack<Link?>? stack;
 
     top:
@@ -310,7 +310,7 @@ abstract class ReactiveSystem {
   /// - Clears the [ReactiveFlags.recursedCheck] flag to indicate tracking is complete
   void endTracking(ReactiveNode sub) {
     final depsTail = sub.depsTail;
-    var toRemove = depsTail != null ? depsTail.nextDep : sub.deps;
+    Link? toRemove = depsTail != null ? depsTail.nextDep : sub.deps;
     while (toRemove != null) {
       toRemove = unlink(toRemove, sub);
     }
@@ -422,7 +422,7 @@ extension on ReactiveSystem {
   bool isValidLink(Link checkLink, ReactiveNode sub) {
     final depsTail = sub.depsTail;
     if (depsTail != null) {
-      var link = sub.deps;
+      Link? link = sub.deps;
       do {
         if (link == checkLink) {
           return true;

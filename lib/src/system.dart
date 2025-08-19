@@ -234,43 +234,39 @@ abstract class ReactiveSystem {
     top:
     do {
       final sub = link.sub;
+      int flags = sub.flags;
 
-      var flags = sub.flags;
+      if ((flags & 60 /* RecursedCheck | Recursed | Rirty | Pending */) == 0) {
+        sub.flags = flags | 32 /* Pending */;
+      } else if ((flags & 12 /* RecursedCheck | Recursed */) == 0) {
+        flags = 0 /* None */;
+      } else if ((flags & 4 /* RecursedCheck */) == 0) {
+        sub.flags = (flags & -9 /* ~Recursed */) | 32 /* Pending */;
+      } else if ((flags & 48 /* Dirty | Pending */) == 0 &&
+          isValidLink(link, sub)) {
+        sub.flags = flags | 40 /* Recursed | Pending */;
+        flags &= 1 /* Mutable */;
+      } else {
+        flags = 0 /* None */;
+      }
 
-      if (flags & 3 /* Mutable | Watching */ != 0) {
-        if ((flags & 60 /* RecursedCheck | Recursed | Rirty | Pending */) ==
-            0) {
-          sub.flags = flags | 32 /* Pending */;
-        } else if ((flags & 12 /* RecursedCheck | Recursed */) == 0) {
-          flags = 0 /* None */;
-        } else if ((flags & 4 /* RecursedCheck */) == 0) {
-          sub.flags = (flags & -9 /* ~Recursed */) | 32 /* Pending */;
-        } else if ((flags & 48 /* Dirty | Pending */) == 0 &&
-            isValidLink(link, sub)) {
-          sub.flags = flags | 40 /* Recursed | Pending */;
-          flags &= 1 /* Mutable */;
-        } else {
-          flags = 0 /* None */;
-        }
+      if ((flags & 2 /* Watching */) != 0) {
+        notify(sub);
+      }
 
-        if ((flags & 2 /* Watching */) != 0) {
-          notify(sub);
-        }
-
-        if ((flags & 1 /* Mutable */) != 0) {
-          final subSubs = sub.subs;
-          if (subSubs != null) {
-            link = subSubs;
-            if (subSubs.nextSub != null) {
-              stack = Stack(value: next, prev: stack);
-              next = link.nextSub;
-            }
-            continue;
+      if ((flags & 1 /* Mutable */) != 0) {
+        final subSubs = sub.subs;
+        if (subSubs != null) {
+          final nextSub = (link = subSubs).nextSub;
+          if (nextSub != null) {
+            stack = Stack(value: next, prev: stack);
+            next = nextSub;
           }
+          continue;
         }
       }
 
-      if ((next) != null) {
+      if (next != null) {
         link = next;
         next = link.nextSub;
         continue;

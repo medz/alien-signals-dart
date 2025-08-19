@@ -141,14 +141,12 @@ abstract class ReactiveSystem {
     if (prevDep != null && prevDep.dep == dep) {
       return;
     }
-    Link? nextDep;
-    if (sub.flags & 4 /* RecursedCheck */ != 0) {
-      nextDep = prevDep != null ? prevDep.nextDep : sub.deps;
-      if (nextDep != null && nextDep.dep == dep) {
-        nextDep.version = _globalVersion;
-        sub.depsTail = nextDep;
-        return;
-      }
+
+    final nextDep = prevDep != null ? prevDep.nextDep : sub.deps;
+    if (nextDep != null && nextDep.dep == dep) {
+      nextDep.version = _globalVersion;
+      sub.depsTail = nextDep;
+      return;
     }
 
     final prevSub = dep.subsTail;

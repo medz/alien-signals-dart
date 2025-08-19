@@ -421,19 +421,12 @@ abstract class ReactiveSystem {
 
 extension on ReactiveSystem {
   bool isValidLink(Link checkLink, ReactiveNode sub) {
-    final depsTail = sub.depsTail;
-    if (depsTail != null) {
-      Link? link = sub.deps;
-      do {
-        if (link == checkLink) {
-          return true;
-        }
-        if (link == depsTail) {
-          break;
-        }
-        link = link?.nextDep;
-      } while (link != null);
+    Link? link = sub.depsTail;
+    while (link != null) {
+      if (link == checkLink) return true;
+      link = link.prevDep;
     }
+
     return false;
   }
 }

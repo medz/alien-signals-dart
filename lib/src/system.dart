@@ -407,16 +407,15 @@ abstract class ReactiveSystem {
     Link? current = link;
     do {
       final sub = current!.sub;
-      final nextSub = current.nextSub;
-      final subFlags = sub.flags;
-      if ((subFlags & 48 /* Pending | Dirty */) == 32 /* Pending */) {
-        sub.flags = subFlags | 16 /* Dirty */;
-        if ((subFlags & 2 /* Watching */) != 0) {
+      final flags = sub.flags;
+
+      if ((flags & 48 /* Pending | Dirty */) == 32 /* Pending */) {
+        sub.flags = flags | 16 /* Dirty */;
+        if ((flags & 2 /* Watching */) != 0) {
           notify(sub);
         }
       }
-      current = nextSub;
-    } while (current != null);
+    } while ((current = current.nextSub) != null);
   }
 }
 

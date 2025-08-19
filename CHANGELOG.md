@@ -1,3 +1,14 @@
+## v0.5.3
+
+> Sync upstream [alien-signals](https://github.com/stackblitz/alien-signals/commit/503c9e6cec6dea3334fefaccf76e4170d5c2da7c)<sup>v2.0.7</sup>
+
+- **system**: Optimize isValidLink implementation
+- **system**: Optimize reactive system dirty flag propagation loop
+- **system**: Refactor reactive system dependency traversal logic
+- **system**: Use explicit nullable types for Link variables
+- **system**: Optimize reactive system flag checking logic
+- **system**: Simplify recursive dependency check
+
 ## v0.5.2
 
 - fix: Introduce per-cycle version to dedupe dependency links

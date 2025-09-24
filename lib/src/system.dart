@@ -327,13 +327,13 @@ abstract class ReactiveSystem {
   bool checkDirty(Link checkLink, ReactiveNode sub) {
     Stack<Link>? stack;
     int checkDepth = 0;
+    bool dirty = false;
     Link? link = checkLink;
 
     top:
     do {
       final dep = link!.dep;
       final flags = dep.flags;
-      bool dirty = false;
 
       if ((sub.flags & 16 /* Dirty */) != 0) {
         dirty = true;
@@ -382,6 +382,7 @@ abstract class ReactiveSystem {
             sub = link.sub;
             continue;
           }
+          dirty = false;
         } else {
           sub.flags &= -33 /* ~Pending */;
         }
@@ -391,7 +392,6 @@ abstract class ReactiveSystem {
           link = nextDep;
           continue top;
         }
-        dirty = false;
       }
 
       return dirty;

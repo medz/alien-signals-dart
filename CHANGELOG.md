@@ -1,3 +1,7 @@
+## 0.5.4
+
+- perf(system): Move dirty flag declaration outside loop
+
 ## v0.5.3
 
 > Sync upstream [alien-signals](https://github.com/stackblitz/alien-signals/commit/503c9e6cec6dea3334fefaccf76e4170d5c2da7c)<sup>v2.0.7</sup>

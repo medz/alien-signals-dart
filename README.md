@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="https://github.com/stackblitz/alien-signals/raw/master/assets/logo.png" width="250"><br>
+  <img src="assets/logo.png" width="250"><br>
 <p>
 
 <p align="center">

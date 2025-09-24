@@ -4,15 +4,18 @@ version: 0.5.3
 repository: https://github.com/medz/alien-signals-dart
 
 topics:
-  - signal
   - signals
   - reactive
+  - state-management
   - alien-signals
-  - state
 
 funding:
   - https://github.com/sponsors/medz
   - https://opencollective.com/openodroe
+
+screenshots:
+  - description: Alien Signals
+    path: assets/logo.png
 
 environment:
   sdk: ^3.6.0

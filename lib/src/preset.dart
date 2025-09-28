@@ -86,8 +86,8 @@ class Signal<T> extends ReactiveNode implements Updatable {
   }
 }
 
-class PresetReactiveSystsm extends ReactiveSystem {
-  PresetReactiveSystsm();
+class PresetReactiveSystem extends ReactiveSystem {
+  PresetReactiveSystem();
 
   @override
   void notify(ReactiveNode sub) => notifyEffect(sub);
@@ -121,7 +121,7 @@ class PresetReactiveSystsm extends ReactiveSystem {
 ///
 /// This constant provides access to the preset reactive system implementation
 /// which handles signal propagation, effect scheduling, and dependency tracking.
-final system = PresetReactiveSystsm();
+final system = PresetReactiveSystem();
 final link = system.link,
     unlink = system.unlink,
     propagate = system.propagate,

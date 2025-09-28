@@ -1,3 +1,9 @@
+## 0.5.5
+
+Status: Unreleased
+
+- Deprecate library entry point of `package:alien_signals/system.dart`
+
 ## 0.5.4
 
 - perf(system): Move dirty flag declaration outside loop

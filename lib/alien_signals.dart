@@ -1,6 +1,8 @@
 import "src/preset.dart" as preset show batchDepth;
 
+@Deprecated('Use `package:alien_signals/system.dart` instead.')
 export 'system.dart';
+
 export "src/preset.dart"
     show
         EffectScope,

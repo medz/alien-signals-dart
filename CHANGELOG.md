@@ -1,6 +1,25 @@
-## 0.5.5
+## 1.0.0
 
 Status: Unreleased
+
+### System
+
+- **BREAKING CHANGE**: sync [alien-signal](https://github.com/stackblitz/alien-signals) `3.0.0` version
+- **BREAKING CHANGE**: `link` add a third version count param
+- **BREAKING CHANGE**: remove `startTracking` and `endTracking` API
+
+#### Preset
+
+- **BREAKING CHANGE**: remove deprecated `system.dart` entry point export
+- **BREAKING CHANGE**: migrate `batchDepth` to `getBatchDepth()`
+- **BREAKING CHANGE**: rename `getCurrentSub/setCurrentSub` to `getActiveSub/setActiveSub`
+- **BREAKING CHANGE**: remove `getCurrentScope/getCurrentScope`, using `getActiveScope/setActiveScope`
+- **BREAKING CHANGE**: remove signal/computed `call()`, using `.value` property
+- **FEATURE**: add `Signal`,`WritableSignal`,`Computed`,`Effect` abstract interface
+
+## 0.5.5
+
+Status: Released (2025-09-28)
 
 - Deprecate library entry point of `package:alien_signals/system.dart`
 

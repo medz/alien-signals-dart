@@ -1,5 +1,9 @@
 export "src/preset.dart"
     show
+        Signal,
+        WritableSignal,
+        Computed,
+        Effect,
         EffectScope,
         getBatchDepth,
         getActiveSub,

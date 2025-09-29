@@ -1,3 +1,6 @@
+/// Alien signals preset library.
+library;
+
 export "src/preset.dart"
     show
         Signal,

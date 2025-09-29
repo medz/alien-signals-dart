@@ -103,6 +103,7 @@ final class Stack<T> {
 
 /// A reactive system base class.
 abstract class ReactiveSystem {
+  /// Creates a new reactive system.
   const ReactiveSystem();
 
   /// Updates the node's value if it's dirty and returns whether it was updated.

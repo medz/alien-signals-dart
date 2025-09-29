@@ -1,4 +1,4 @@
-import 'system.dart';
+import 'package:alien_signals/system.dart';
 
 /*------------------ Internal variables -------------------*/
 

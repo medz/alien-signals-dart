@@ -1,5 +1,7 @@
 import 'system.dart';
 
+/*------------------ Internal variables -------------------*/
+
 const system = PresetReactiveSystem();
 final link = system.link,
     unlink = system.unlink,
@@ -13,161 +15,7 @@ ReactiveNode? activeSub;
 LinkedEffect? queuedEffects;
 LinkedEffect? queuedEffectsTail;
 
-abstract interface class LinkedEffect implements ReactiveNode {
-  LinkedEffect? nextEffect;
-}
-
-/// A scope for effects that can be used to group and track multiple effects.
-///
-/// Effect scopes allow for collective disposal of effects and provide a way to
-/// manage the lifecycle of related effects. When an effect scope is disposed,
-/// all effects within that scope are automatically disposed as well.
-abstract interface class EffectScope {
-  void call();
-}
-
-class PresetEffectScope extends ReactiveNode
-    implements LinkedEffect, EffectScope {
-  PresetEffectScope({required super.flags});
-
-  @override
-  LinkedEffect? nextEffect;
-
-  @override
-  void call() => effectOper(this);
-}
-
-/// An effect that runs a function and automatically tracks its dependencies.
-///
-/// Effects are reactive computations that automatically track their dependencies
-/// and re-run when those dependencies change. They are useful for side effects
-/// like DOM updates, logging, or other imperative code that should react to
-/// state changes.
-///
-/// The [run] function will be executed immediately when the effect is created,
-/// and again whenever any of its tracked dependencies change.
-abstract interface class Effect {
-  void call();
-}
-
-class PresetEffect extends ReactiveNode implements LinkedEffect, Effect {
-  PresetEffect({required super.flags, required this.callback});
-
-  /// The function to execute when the effect runs.
-  ///
-  /// This function will be called:
-  /// 1. Immediately when the effect is created
-  /// 2. Whenever any of its tracked dependencies change
-  final void Function() callback;
-
-  @override
-  LinkedEffect? nextEffect;
-
-  @override
-  void call() => effectOper(this);
-}
-
-abstract interface class Updatable {
-  bool update();
-}
-
-abstract interface class Signal<T> {
-  T get value;
-}
-
-abstract interface class WritableSignal<T> extends Signal<T> {
-  set value(T value);
-}
-
-class PresetWritableSignal<T> extends ReactiveNode
-    implements Updatable, WritableSignal<T> {
-  PresetWritableSignal({
-    required super.flags,
-    required T initialValue,
-  })  : oldValue = initialValue,
-        latestValue = initialValue;
-
-  T oldValue;
-  T latestValue;
-
-  @override
-  T get value => signalOper<T>(this, null, false);
-
-  @override
-  set value(T newValue) => signalOper<T>(this, newValue, true);
-
-  @override
-  @pragma('vm:prefer-inline')
-  @pragma('wasm:prefer-inline')
-  @pragma('dart2js:prefer-inline')
-  bool update() {
-    flags = 1 /* Mutable */;
-    return oldValue != (oldValue = latestValue);
-  }
-}
-
-abstract interface class Computed<T> implements Signal<T> {}
-
-class PresetComputed<T> extends ReactiveNode implements Updatable, Computed<T> {
-  PresetComputed({required super.flags, required this.getter});
-
-  T? cachedValue;
-  final T Function(T? previousValue) getter;
-
-  @override
-  T get value => computedOper(this);
-
-  @override
-  @pragma('vm:prefer-inline')
-  @pragma('wasm:prefer-inline')
-  @pragma('dart2js:prefer-inline')
-  bool update() {
-    ++cycle;
-    depsTail = null;
-    flags = 5 /* Mutable | RecursedCheck */;
-
-    final prevSub = setActiveSub(this);
-    try {
-      final oldValue = cachedValue;
-      return oldValue != (cachedValue = getter(oldValue));
-    } finally {
-      activeSub = prevSub;
-      flags &= -5 /* RecursedCheck */;
-      purgeDeps(this);
-    }
-  }
-}
-
-class PresetReactiveSystem extends ReactiveSystem {
-  const PresetReactiveSystem();
-
-  @override
-  void notify(ReactiveNode sub) => notifyEffect(sub);
-
-  @override
-  void unwatched(ReactiveNode node) {
-    if (node is Computed) {
-      var toRemove = node.deps;
-      if (toRemove != null) {
-        node.flags = 17 /* Mutable | Dirty */;
-        do {
-          toRemove = unlink(toRemove!, node);
-        } while (toRemove != null);
-      }
-    } else if (node is! Signal) {
-      effectOper(node);
-    }
-  }
-
-  @override
-  @pragma('vm:prefer-inline')
-  @pragma('wasm:prefer-inline')
-  @pragma('dart2js:prefer-inline')
-  bool update(ReactiveNode sub) {
-    assert(sub is Updatable);
-    return (sub as Updatable).update();
-  }
-}
+/*----------------------- Public API -----------------------*/
 
 /// Gets the current batch depth.
 ///
@@ -336,13 +184,149 @@ EffectScope effectScope(void Function() callback) {
   }
 }
 
-/// Notifies an effect that it should be queued for execution.
-///
-/// This function marks an effect as queued if it hasn't been already. If the effect
-/// has subscribers, it recursively notifies them. Otherwise, it adds the effect to
-/// the queue of effects to be executed during the next flush cycle.
-///
-/// The [e] parameter is the reactive node (typically an Effect) to be notified.
+/*------------------------ Types def -----------------------*/
+
+abstract interface class Signal<T> {
+  T get value;
+}
+
+abstract interface class WritableSignal<T> extends Signal<T> {
+  set value(T value);
+}
+
+abstract interface class Computed<T> implements Signal<T> {}
+
+abstract interface class Effect {
+  void call();
+}
+
+abstract interface class EffectScope {
+  void call();
+}
+
+/*--------------------- Preset Impls ---------------------*/
+
+class PresetWritableSignal<T> extends ReactiveNode
+    implements Updatable, WritableSignal<T> {
+  PresetWritableSignal({
+    required super.flags,
+    required T initialValue,
+  })  : oldValue = initialValue,
+        latestValue = initialValue;
+
+  T oldValue;
+  T latestValue;
+
+  @override
+  T get value => signalOper<T>(this, null, false);
+
+  @override
+  set value(T newValue) => signalOper<T>(this, newValue, true);
+
+  @override
+  @pragma('vm:prefer-inline')
+  @pragma('wasm:prefer-inline')
+  @pragma('dart2js:prefer-inline')
+  bool update() {
+    flags = 1 /* Mutable */;
+    return oldValue != (oldValue = latestValue);
+  }
+}
+
+class PresetComputed<T> extends ReactiveNode implements Updatable, Computed<T> {
+  PresetComputed({required super.flags, required this.getter});
+
+  T? cachedValue;
+  final T Function(T? previousValue) getter;
+
+  @override
+  T get value => computedOper(this);
+
+  @override
+  @pragma('vm:prefer-inline')
+  @pragma('wasm:prefer-inline')
+  @pragma('dart2js:prefer-inline')
+  bool update() {
+    ++cycle;
+    depsTail = null;
+    flags = 5 /* Mutable | RecursedCheck */;
+
+    final prevSub = setActiveSub(this);
+    try {
+      final oldValue = cachedValue;
+      return oldValue != (cachedValue = getter(oldValue));
+    } finally {
+      activeSub = prevSub;
+      flags &= -5 /* RecursedCheck */;
+      purgeDeps(this);
+    }
+  }
+}
+
+abstract interface class LinkedEffect implements ReactiveNode {
+  LinkedEffect? nextEffect;
+}
+
+class PresetEffect extends ReactiveNode implements LinkedEffect, Effect {
+  PresetEffect({required super.flags, required this.callback});
+
+  final void Function() callback;
+
+  @override
+  LinkedEffect? nextEffect;
+
+  @override
+  void call() => effectOper(this);
+}
+
+class PresetEffectScope extends ReactiveNode
+    implements LinkedEffect, EffectScope {
+  PresetEffectScope({required super.flags});
+
+  @override
+  LinkedEffect? nextEffect;
+
+  @override
+  void call() => effectOper(this);
+}
+
+/*--------------------- Internal Impls ---------------------*/
+
+abstract interface class Updatable {
+  bool update();
+}
+
+class PresetReactiveSystem extends ReactiveSystem {
+  const PresetReactiveSystem();
+
+  @override
+  void notify(ReactiveNode sub) => notifyEffect(sub);
+
+  @override
+  void unwatched(ReactiveNode node) {
+    if (node is Computed) {
+      var toRemove = node.deps;
+      if (toRemove != null) {
+        node.flags = 17 /* Mutable | Dirty */;
+        do {
+          toRemove = unlink(toRemove!, node);
+        } while (toRemove != null);
+      }
+    } else if (node is! Signal) {
+      effectOper(node);
+    }
+  }
+
+  @override
+  @pragma('vm:prefer-inline')
+  @pragma('wasm:prefer-inline')
+  @pragma('dart2js:prefer-inline')
+  bool update(ReactiveNode sub) {
+    assert(sub is Updatable);
+    return (sub as Updatable).update();
+  }
+}
+
 void notifyEffect(ReactiveNode e) {
   final flags = e.flags;
   if ((flags & 64 /* Queued */) == 0) {

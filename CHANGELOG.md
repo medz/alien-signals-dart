@@ -1,4 +1,4 @@
-## 1.0.0-bate.1
+## 1.0.0-beta.1
 
 Status: Released(2025-09-29)
 

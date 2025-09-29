@@ -194,12 +194,8 @@ abstract interface class EffectScope {
 
 /*--------------------- Preset Impls ---------------------*/
 
-abstract interface class Updatable {
-  bool update();
-}
-
 class PresetWritableSignal<T> extends ReactiveNode
-    implements Updatable, WritableSignal<T> {
+    implements WritableSignal<T> {
   PresetWritableSignal({
     required super.flags,
     required T initialValue,
@@ -210,12 +206,17 @@ class PresetWritableSignal<T> extends ReactiveNode
   T latestValue;
 
   @override
+  @pragma('vm:prefer-inline')
+  @pragma('wasm:prefer-inline')
+  @pragma('dart2js:prefer-inline')
   T get value => signalOper<T>(this, null, false);
 
   @override
+  @pragma('vm:prefer-inline')
+  @pragma('wasm:prefer-inline')
+  @pragma('dart2js:prefer-inline')
   set value(T newValue) => signalOper<T>(this, newValue, true);
 
-  @override
   @pragma('vm:prefer-inline')
   @pragma('wasm:prefer-inline')
   @pragma('dart2js:prefer-inline')
@@ -225,19 +226,18 @@ class PresetWritableSignal<T> extends ReactiveNode
   }
 }
 
-class PresetComputed<T> extends ReactiveNode implements Updatable, Computed<T> {
+class PresetComputed<T> extends ReactiveNode implements Computed<T> {
   PresetComputed({required super.flags, required this.getter});
 
   T? cachedValue;
   final T Function(T? previousValue) getter;
 
   @override
-  T get value => computedOper(this);
-
-  @override
   @pragma('vm:prefer-inline')
   @pragma('wasm:prefer-inline')
   @pragma('dart2js:prefer-inline')
+  T get value => computedOper(this);
+
   bool update() {
     ++cycle;
     depsTail = null;
@@ -268,6 +268,9 @@ class PresetEffect extends ReactiveNode implements LinkedEffect, Effect {
   LinkedEffect? nextEffect;
 
   @override
+  @pragma('vm:prefer-inline')
+  @pragma('wasm:prefer-inline')
+  @pragma('dart2js:prefer-inline')
   void dispose() => effectOper(this);
 }
 
@@ -279,6 +282,9 @@ class PresetEffectScope extends ReactiveNode
   LinkedEffect? nextEffect;
 
   @override
+  @pragma('vm:prefer-inline')
+  @pragma('wasm:prefer-inline')
+  @pragma('dart2js:prefer-inline')
   void dispose() => effectOper(this);
 }
 
@@ -288,12 +294,15 @@ class PresetReactiveSystem extends ReactiveSystem {
   const PresetReactiveSystem();
 
   @override
+  @pragma('vm:prefer-inline')
+  @pragma('wasm:prefer-inline')
+  @pragma('dart2js:prefer-inline')
   void notify(ReactiveNode sub) => notifyEffect(sub);
 
   @override
   void unwatched(ReactiveNode node) {
     if (node is Computed) {
-      var toRemove = node.deps;
+      Link? toRemove = node.deps;
       if (toRemove != null) {
         node.flags = 17 /* Mutable | Dirty */;
         do {
@@ -310,8 +319,11 @@ class PresetReactiveSystem extends ReactiveSystem {
   @pragma('wasm:prefer-inline')
   @pragma('dart2js:prefer-inline')
   bool update(ReactiveNode sub) {
-    assert(sub is Updatable);
-    return (sub as Updatable).update();
+    return switch (sub) {
+      PresetWritableSignal(:final update) => update(),
+      PresetComputed(:final update) => update(),
+      _ => false,
+    };
   }
 }
 
@@ -376,6 +388,7 @@ void flush() {
 
 T computedOper<T>(PresetComputed<T> computed) {
   final flags = computed.flags;
+
   if ((flags & 16 /* Dirty */) != 0 ||
       ((flags & 32 /* Pending */) != 0 &&
           (checkDirty(computed.deps!, computed) ||
@@ -388,7 +401,7 @@ T computedOper<T>(PresetComputed<T> computed) {
         shallowPropagate(subs);
       }
     }
-  } else if (flags == 0) {
+  } else if (flags == 0 /* None */) {
     computed.flags = 1 /* Mutable */;
     final prevSub = setActiveSub(computed);
     try {
@@ -451,7 +464,7 @@ void effectOper(ReactiveNode e) {
 
   final sub = e.subs;
   if (sub != null) unlink(sub);
-  e.flags = 0;
+  e.flags = 0 /* None */;
 }
 
 void purgeDeps(ReactiveNode sub) {

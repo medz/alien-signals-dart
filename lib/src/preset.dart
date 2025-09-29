@@ -74,20 +74,9 @@ void endBatch() {
   if ((--batchDepth) == 0) flush();
 }
 
-/// Creates a reactive signal with an initial value.
+/// A [WritableSignal] stores a value, and can be updated.
 ///
-/// A signal is a reactive value container that notifies dependents when its
-/// value changes. The returned function can be used to:
-/// - Get the current value when called with no arguments
-/// - Set a new value when called with a value argument
-/// - Control whether null values should be treated as updates when [nulls] is true
-///
-/// Example:
-/// ```dart
-/// final count = signal(0);
-/// count(); // get value
-/// count(1); // set value
-/// ```
+/// > When updated, its subscribers are notified.
 @pragma('vm:prefer-inline')
 @pragma('wasm:prefer-inline')
 @pragma('dart2js:prefer-inline')
@@ -96,23 +85,17 @@ WritableSignal<T> signal<T>(T initialValue) {
       flags: 1 /* Mutable */, initialValue: initialValue);
 }
 
-/// Creates a reactive computed value that automatically tracks its dependencies.
+/// A [Computed] derives a memoized value from other signals, and only re-computes
+/// when those dependencies change.
 ///
-/// A computed value is derived from other reactive values (signals or other computed values)
-/// and automatically updates when its dependencies change. The [getter] function will be
-/// called:
-/// 1. Immediately when the computed is created
-/// 2. Whenever any of its tracked dependencies change
-///
-/// The returned function can be called to get the current computed value.
-///
-/// Example:
 /// ```dart
-/// final count = signal(0);
-/// final doubled = computed(() => count() * 2);
-/// doubled(); // returns 0
-/// count(1);
-/// doubled(); // returns 2
+/// final source = signal(0);
+/// final derived = computed((_) => source.value * 2);
+///
+/// print(derived.value); // Prints: 0
+///
+/// source.value = 1;
+/// print(derived.value); // Prints: 2
 /// ```
 @pragma('vm:prefer-inline')
 @pragma('wasm:prefer-inline')
@@ -124,24 +107,18 @@ Computed<T> computed<T>(T Function(T? previousValue) getter) {
   );
 }
 
-/// Creates a reactive effect that automatically tracks its dependencies and re-runs when they change.
+/// An [Effect] runs a function, and schedules it to re-run when the signals it
+/// reads change.
 ///
-/// An effect is a reactive computation that automatically tracks any reactive values (signals or computed values)
-/// accessed during its execution. The effect will re-run whenever any of its tracked dependencies change.
-///
-/// The [run] function will be executed:
-/// 1. Immediately when the effect is created
-/// 2. Whenever any of its tracked dependencies change
-///
-/// Returns a cleanup function that can be called to dispose of the effect and stop tracking.
-///
-/// Example:
 /// ```dart
 /// final count = signal(0);
-/// effect(() => print('Count changed to ${count()}'));
-/// // Prints: Count changed to 0
-/// count(1);
-/// // Prints: Count changed to 1
+/// final dispose = effect(() => print(count.value));
+///
+/// count.value++; // Prints: 1
+/// count.value++; // Prints: 2
+///
+/// dispose();
+/// count.value++; // Does't print anything
 /// ```
 Effect effect(void Function() callback) {
   final effect = PresetEffect(callback: callback, flags: 2 /* Watching */),
@@ -158,17 +135,19 @@ Effect effect(void Function() callback) {
   }
 }
 
-/// Creates a new effect scope that can be used to group and manage multiple effects.
+/// An [EffectScope] groups effects allowing them to be disposed at the same time.
 ///
-/// An effect scope provides a way to collectively manage the lifecycle of effects.
-/// When the scope is disposed by calling the returned cleanup function, all effects
-/// created within the scope are automatically disposed as well.
+/// ```dart
+/// final source = signal(0);
+/// final dispose = effectScope(() {
+///   effect(() => print(source.value));
+///   effect(() => print(source.value));
+/// });
 ///
-/// The [run] function will be executed immediately within the new scope context.
-/// Any effects created during this execution will be associated with this scope.
-///
-/// Returns a cleanup function that can be called to dispose of the scope and all
-/// effects created within it.
+/// source.value++; // Prints: 1, 1
+/// dispose();
+/// source.value++; // Does't print anything
+/// ```
 EffectScope effectScope(void Function() callback) {
   final scope = PresetEffectScope(flags: 0 /* None */),
       prevSub = setActiveSub(scope);
@@ -186,25 +165,38 @@ EffectScope effectScope(void Function() callback) {
 
 /*------------------------ Types def -----------------------*/
 
+/// A readonly signal.
 abstract interface class Signal<T> {
+  /// Returns the current value of the signal.
   T get value;
 }
 
+/// A writable signal.
 abstract interface class WritableSignal<T> extends Signal<T> {
+  /// Sets the value of the signal.
   set value(T value);
 }
 
+/// A computed signal.
 abstract interface class Computed<T> implements Signal<T> {}
 
+/// A reactive effect.
 abstract interface class Effect {
+  /// Calls the effect on dispose.
   void call();
 }
 
+/// A reactive effect scope.
 abstract interface class EffectScope {
+  /// Calls the scope on dispose, notifying all effects.
   void call();
 }
 
 /*--------------------- Preset Impls ---------------------*/
+
+abstract interface class Updatable {
+  bool update();
+}
 
 class PresetWritableSignal<T> extends ReactiveNode
     implements Updatable, WritableSignal<T> {
@@ -291,10 +283,6 @@ class PresetEffectScope extends ReactiveNode
 }
 
 /*--------------------- Internal Impls ---------------------*/
-
-abstract interface class Updatable {
-  bool update();
-}
 
 class PresetReactiveSystem extends ReactiveSystem {
   const PresetReactiveSystem();

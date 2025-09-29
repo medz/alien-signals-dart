@@ -135,6 +135,15 @@ ReactiveNode? activeSub;
 LinkedEffect? queuedEffects;
 LinkedEffect? queuedEffectsTail;
 
+/// Gets the current batch depth.
+///
+/// This returns the current batch depth, which is incremented when a batch
+/// operation is started and decremented when it is completed.
+@pragma('vm:prefer-inline')
+@pragma('wasm:prefer-inline')
+@pragma('dart2js:prefer-inline')
+int getBatchDepth() => batchDepth;
+
 /// Gets the currently active reactive subscription.
 ///
 /// This returns the [ReactiveNode] that is currently being tracked as the active

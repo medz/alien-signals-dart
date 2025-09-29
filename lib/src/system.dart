@@ -103,10 +103,7 @@ final class Stack<T> {
 
 /// A reactive system base class.
 abstract class ReactiveSystem {
-  ReactiveSystem();
-
-  /// Internal version counter for tracking changes.
-  int _globalVersion = 0;
+  const ReactiveSystem();
 
   /// Updates the node's value if it's dirty and returns whether it was updated.
   ///
@@ -136,7 +133,7 @@ abstract class ReactiveSystem {
   /// - Avoiding duplicate links
   /// - Maintaining proper list structure during recursive checks
   /// - Preserving existing valid links
-  void link(ReactiveNode dep, ReactiveNode sub) {
+  void link(ReactiveNode dep, ReactiveNode sub, int version) {
     final prevDep = sub.depsTail;
     if (prevDep != null && prevDep.dep == dep) {
       return;
@@ -144,22 +141,20 @@ abstract class ReactiveSystem {
 
     final nextDep = prevDep != null ? prevDep.nextDep : sub.deps;
     if (nextDep != null && nextDep.dep == dep) {
-      nextDep.version = _globalVersion;
+      nextDep.version = version;
       sub.depsTail = nextDep;
       return;
     }
 
     final prevSub = dep.subsTail;
-    if (prevSub != null &&
-        prevSub.version == _globalVersion &&
-        prevSub.sub == sub) {
+    if (prevSub != null && prevSub.version == version && prevSub.sub == sub) {
       return;
     }
 
     final newLink = sub.depsTail = dep.subsTail = Link(
       dep: dep,
       sub: sub,
-      version: _globalVersion,
+      version: version,
       prevDep: prevDep,
       nextDep: nextDep,
       prevSub: prevSub,
@@ -284,37 +279,6 @@ abstract class ReactiveSystem {
 
       break;
     } while (true);
-  }
-
-  /// Starts tracking dependencies for the given [sub] node.
-  ///
-  /// This method:
-  /// - Resets the dependency tracking state by clearing [depsTail]
-  /// - Updates the node's flags to:
-  ///   - Clear any recursive/dirty/pending flags
-  ///   - Set the 8 /* Recursed */ flag to indicate dependency tracking is active
-  @pragma('vm:prefer-inline')
-  @pragma('wasm:prefer-inline')
-  @pragma('dart2js:prefer-inline')
-  void startTracking(ReactiveNode sub) {
-    _globalVersion++;
-    sub.depsTail = null;
-    sub.flags = (sub.flags & -57 /* ~(Recursed | Rirty | Pending) */) |
-        4 /* RecursedCheck */;
-  }
-
-  /// Completes dependency tracking for the given [sub] node.
-  ///
-  /// This method:
-  /// - Removes any dependencies that were not tracked during this cycle
-  /// - Clears the [ReactiveFlags.recursedCheck] flag to indicate tracking is complete
-  void endTracking(ReactiveNode sub) {
-    final depsTail = sub.depsTail;
-    Link? toRemove = depsTail != null ? depsTail.nextDep : sub.deps;
-    while (toRemove != null) {
-      toRemove = unlink(toRemove, sub);
-    }
-    sub.flags &= -5 /* ~ReactiveFlags.recursedCheck */;
   }
 
   /// Checks if a node or any of its dependencies are dirty and need updating.

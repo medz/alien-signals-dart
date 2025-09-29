@@ -5,10 +5,9 @@ final link = system.link,
     unlink = system.unlink,
     propagate = system.propagate,
     checkDirty = system.checkDirty,
-    endTracking = system.endTracking,
-    startTracking = system.startTracking,
     shallowPropagate = system.shallowPropagate;
 
+int cycle = 0;
 int batchDepth = 0;
 ReactiveNode? activeSub;
 LinkedEffect? queuedEffects;
@@ -123,14 +122,18 @@ class PresetComputed<T> extends ReactiveNode implements Updatable, Computed<T> {
   @pragma('wasm:prefer-inline')
   @pragma('dart2js:prefer-inline')
   bool update() {
+    ++cycle;
+    depsTail = null;
+    flags = 5 /* Mutable | RecursedCheck */;
+
     final prevSub = setCurrentSub(this);
-    startTracking(this);
     try {
       final oldValue = cachedValue;
       return oldValue != (cachedValue = getter(oldValue));
     } finally {
       activeSub = prevSub;
-      endTracking(this);
+      flags &= -5 /* RecursedCheck */;
+      purgeDeps(this);
     }
   }
 }
@@ -293,17 +296,19 @@ Computed<T> computed<T>(T Function(T? previousValue) getter) {
 /// // Prints: Count changed to 1
 /// ```
 Effect effect(void Function() callback) {
-  final effect = PresetEffect(callback: callback, flags: 2 /* Watching */);
-  if (activeSub != null) {
-    link(effect, activeSub!);
+  final effect = PresetEffect(callback: callback, flags: 2 /* Watching */),
+      sub = activeSub;
+
+  if (sub != null) {
+    link(effect, sub, cycle);
   }
 
-  final prev = setCurrentSub(effect);
+  final prevSub = setCurrentSub(effect);
   try {
     callback();
     return effect;
   } finally {
-    activeSub = prev;
+    activeSub = prevSub;
   }
 }
 
@@ -319,9 +324,9 @@ Effect effect(void Function() callback) {
 /// Returns a cleanup function that can be called to dispose of the scope and all
 /// effects created within it.
 EffectScope effectScope(void Function() callback) {
-  final scope = PresetEffectScope(flags: 0 /* None */);
-  if (activeSub != null) {
-    link(scope, activeSub!);
+  final scope = PresetEffectScope(flags: 0 /* None */), sub = activeSub;
+  if (sub != null) {
+    link(scope, sub, cycle);
   }
 
   final prevSub = setCurrentSub(scope);
@@ -359,27 +364,30 @@ void run(ReactiveNode e, int flags) {
   if ((flags & 16 /* Dirty */) != 0 ||
       ((flags & 32 /* Pending */) != 0 &&
           (checkDirty(e.deps!, e) ||
-              // Always false, -1 is a value that can never be reached
-              (e.flags = flags & -33 /* ~Pending */) == -1))) {
-    final prev = setCurrentSub(e);
-    startTracking(e);
+              // Always false, infinity is a value that can never be reached
+              (e.flags = flags & -33 /* ~Pending */) == double.infinity))) {
+    ++cycle;
+    e.depsTail = null;
+    e.flags = 6 /* Watching | RecursedCheck */;
+
+    final prevSub = setCurrentSub(e);
     try {
       (e as PresetEffect).callback();
     } finally {
-      activeSub = prev;
-      endTracking(e);
+      activeSub = prevSub;
+      e.flags &= -5 /* ~RecursedCheck */;
+      purgeDeps(e);
     }
-    return;
-  }
-
-  Link? link = e.deps;
-  while (link != null) {
-    final dep = link.dep;
-    final depFlags = dep.flags;
-    if ((depFlags & 64 /* Queued */) != 0) {
-      run(dep, dep.flags = depFlags & -65 /* ~Queued */);
+  } else {
+    Link? link = e.deps;
+    while (link != null) {
+      final dep = link.dep;
+      final depFlags = dep.flags;
+      if ((depFlags & 64 /* Queued */) != 0) {
+        run(dep, dep.flags = depFlags & -65 /* ~Queued */);
+      }
+      link = link.nextDep;
     }
-    link = link.nextDep;
   }
 }
 
@@ -401,8 +409,9 @@ T computedOper<T>(PresetComputed<T> computed) {
   if ((flags & 16 /* Dirty */) != 0 ||
       ((flags & 32 /* Pending */) != 0 &&
           (checkDirty(computed.deps!, computed) ||
-              // Always false, -1 is a value that can never be reached
-              (computed.flags = flags & -33 /* ~Pending */) == -1))) {
+              // Always false, infinity is a value that can never be reached
+              (computed.flags = flags & -33 /* ~Pending */) ==
+                  double.infinity))) {
     if (computed.update()) {
       final subs = computed.subs;
       if (subs != null) {
@@ -410,8 +419,10 @@ T computedOper<T>(PresetComputed<T> computed) {
       }
     }
   }
-  if (activeSub != null) {
-    link(computed, activeSub!);
+
+  final sub = activeSub;
+  if (sub != null) {
+    link(computed, sub, cycle);
   }
 
   return computed.cachedValue as T;
@@ -443,7 +454,7 @@ T signalOper<T>(PresetWritableSignal<T> signal, T? newValue, bool update) {
   ReactiveNode? sub = activeSub;
   while (sub != null) {
     if ((sub.flags & 3 /* Mutable | Watching */) != 0) {
-      link(signal, sub);
+      link(signal, sub, cycle);
       break;
     }
 
@@ -463,4 +474,12 @@ void effectOper(ReactiveNode e) {
   final sub = e.subs;
   if (sub != null) unlink(sub);
   e.flags = 0;
+}
+
+void purgeDeps(ReactiveNode sub) {
+  final depsTail = sub.depsTail;
+  Link? toRemove = depsTail != null ? depsTail.nextDep : sub.deps;
+  while (toRemove != null) {
+    toRemove = unlink(toRemove, sub);
+  }
 }

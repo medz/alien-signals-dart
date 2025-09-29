@@ -1,6 +1,6 @@
 import 'system.dart';
 
-final system = PresetReactiveSystem();
+const system = PresetReactiveSystem();
 final link = system.link,
     unlink = system.unlink,
     propagate = system.propagate,
@@ -139,7 +139,7 @@ class PresetComputed<T> extends ReactiveNode implements Updatable, Computed<T> {
 }
 
 class PresetReactiveSystem extends ReactiveSystem {
-  PresetReactiveSystem();
+  const PresetReactiveSystem();
 
   @override
   void notify(ReactiveNode sub) => notifyEffect(sub);

@@ -25,7 +25,7 @@ To install Alien Signals, add the following to your `pubspec.yaml`:
 
 ```yaml
 dependencies:
-  alien_signals: latest
+  alien_signals: 1.0
 ```
 
 Alternatively, you can run the following command:
@@ -49,15 +49,15 @@ void main() {
   final count = signal(0);
 
   // Create a computed value
-  final doubled = computed((_) => count() * 2);
+  final doubled = computed((_) => count.value * 2);
 
   // Create an effect
   effect(() {
-    print('Count: ${count()}, Doubled: ${doubled()}');
+    print('Count: ${count()}, Doubled: ${doubled.value}');
   });
 
   // Update the signal
-  count(1); // Prints: Count: 1, Doubled: 2
+  count.value++; // Prints: Count: 1, Doubled: 2
 }
 ```
 

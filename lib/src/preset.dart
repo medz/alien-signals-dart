@@ -297,13 +297,11 @@ Computed<T> computed<T>(T Function(T? previousValue) getter) {
 /// ```
 Effect effect(void Function() callback) {
   final effect = PresetEffect(callback: callback, flags: 2 /* Watching */),
-      sub = activeSub;
-
-  if (sub != null) {
-    link(effect, sub, 0);
+      prevSub = setActiveSub(effect);
+  if (prevSub != null) {
+    link(effect, prevSub, 0);
   }
 
-  final prevSub = setActiveSub(effect);
   try {
     callback();
     return effect;
@@ -324,12 +322,12 @@ Effect effect(void Function() callback) {
 /// Returns a cleanup function that can be called to dispose of the scope and all
 /// effects created within it.
 EffectScope effectScope(void Function() callback) {
-  final scope = PresetEffectScope(flags: 0 /* None */), sub = activeSub;
-  if (sub != null) {
-    link(scope, sub, 0);
+  final scope = PresetEffectScope(flags: 0 /* None */),
+      prevSub = setActiveSub(scope);
+  if (prevSub != null) {
+    link(scope, prevSub, 0);
   }
 
-  final prevSub = setActiveSub(scope);
   try {
     callback();
     return scope;

@@ -1,6 +1,6 @@
-## 1.0.0
+## 1.0.0-bate.1
 
-Status: Unreleased
+Status: Released(2025-09-29)
 
 ### System
 

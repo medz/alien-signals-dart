@@ -1,3 +1,10 @@
+## 1.0.0-beta.2
+
+Status: Released(2025-09-29)
+
+- Have good auto-imports, avoid auto-importing src
+- `Effect`/`EffectScope`'s `call()` is renamed to `dispose()`
+
 ## 1.0.0-beta.1
 
 Status: Released(2025-09-29)

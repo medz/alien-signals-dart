@@ -357,7 +357,10 @@ void notifyEffect(ReactiveNode e) {
 
 void run(ReactiveNode e, int flags) {
   if ((flags & 16 /* Dirty */) != 0 ||
-      ((flags & 32 /* Pending */) != 0 && checkDirty(e.deps!, e))) {
+      ((flags & 32 /* Pending */) != 0 &&
+          (checkDirty(e.deps!, e) ||
+              // Always false, -1 is a value that can never be reached
+              (e.flags = flags & -33 /* ~Pending */) == -1))) {
     final prev = setCurrentSub(e);
     startTracking(e);
     try {
@@ -367,10 +370,9 @@ void run(ReactiveNode e, int flags) {
       endTracking(e);
     }
     return;
-  } else if ((flags & 32 /* Pending */) != 0) {
-    e.flags = flags & -33 /* ~ReactiveFlags.pending */;
   }
-  var link = e.deps;
+
+  Link? link = e.deps;
   while (link != null) {
     final dep = link.dep;
     final depFlags = dep.flags;
@@ -398,15 +400,15 @@ T computedOper<T>(PresetComputed<T> computed) {
   final flags = computed.flags;
   if ((flags & 16 /* Dirty */) != 0 ||
       ((flags & 32 /* Pending */) != 0 &&
-          checkDirty(computed.deps!, computed))) {
+          (checkDirty(computed.deps!, computed) ||
+              // Always false, -1 is a value that can never be reached
+              (computed.flags = flags & -33 /* ~Pending */) == -1))) {
     if (computed.update()) {
       final subs = computed.subs;
       if (subs != null) {
         shallowPropagate(subs);
       }
     }
-  } else if ((flags & 32 /* Pending */) != 0) {
-    computed.flags = flags & -33 /* ~Pending */;
   }
   if (activeSub != null) {
     link(computed, activeSub!);

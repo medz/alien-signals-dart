@@ -2,8 +2,8 @@ export "src/preset.dart"
     show
         EffectScope,
         getBatchDepth,
-        getCurrentSub,
-        setCurrentSub,
+        getActiveSub,
+        setActiveSub,
         startBatch,
         endBatch,
         signal,

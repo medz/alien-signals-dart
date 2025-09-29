@@ -8,11 +8,11 @@ void main() {
 
     final c = computed((_) {
       computedTriggerTimes++;
-      final currentSub = setCurrentSub(null);
+      final currentSub = setActiveSub(null);
       try {
         return s.value;
       } finally {
-        setCurrentSub(currentSub);
+        setActiveSub(currentSub);
       }
     });
 
@@ -34,9 +34,9 @@ void main() {
     effect(() {
       effectTriggerTimes++;
       if (b.value > 0) {
-        final currentSub = setCurrentSub(null);
+        final currentSub = setActiveSub(null);
         a.value;
-        setCurrentSub(currentSub);
+        setActiveSub(currentSub);
       }
     });
 
@@ -73,9 +73,9 @@ void main() {
     effectScope(() {
       effect(() {
         effectTriggerTimes++;
-        final currentSub = setCurrentSub(null);
+        final currentSub = setActiveSub(null);
         s.value;
-        setCurrentSub(currentSub);
+        setActiveSub(currentSub);
       });
     });
 

@@ -126,7 +126,7 @@ class PresetComputed<T> extends ReactiveNode implements Updatable, Computed<T> {
     depsTail = null;
     flags = 5 /* Mutable | RecursedCheck */;
 
-    final prevSub = setCurrentSub(this);
+    final prevSub = setActiveSub(this);
     try {
       final oldValue = cachedValue;
       return oldValue != (cachedValue = getter(oldValue));
@@ -186,7 +186,7 @@ int getBatchDepth() => batchDepth;
 @pragma('vm:prefer-inline')
 @pragma('wasm:prefer-inline')
 @pragma('dart2js:prefer-inline')
-ReactiveNode? getCurrentSub() => activeSub;
+ReactiveNode? getActiveSub() => activeSub;
 
 /// Sets the currently active reactive subscription and returns the previous one.
 ///
@@ -196,7 +196,7 @@ ReactiveNode? getCurrentSub() => activeSub;
 @pragma('vm:prefer-inline')
 @pragma('wasm:prefer-inline')
 @pragma('dart2js:prefer-inline')
-ReactiveNode? setCurrentSub(ReactiveNode? sub) {
+ReactiveNode? setActiveSub(ReactiveNode? sub) {
   final prevSub = activeSub;
   activeSub = sub;
   return prevSub;
@@ -303,7 +303,7 @@ Effect effect(void Function() callback) {
     link(effect, sub, 0);
   }
 
-  final prevSub = setCurrentSub(effect);
+  final prevSub = setActiveSub(effect);
   try {
     callback();
     return effect;
@@ -329,12 +329,12 @@ EffectScope effectScope(void Function() callback) {
     link(scope, sub, 0);
   }
 
-  final prevSub = setCurrentSub(scope);
+  final prevSub = setActiveSub(scope);
   try {
     callback();
     return scope;
   } finally {
-    setCurrentSub(prevSub);
+    activeSub = prevSub;
   }
 }
 
@@ -370,7 +370,7 @@ void run(ReactiveNode e, int flags) {
     e.depsTail = null;
     e.flags = 6 /* Watching | RecursedCheck */;
 
-    final prevSub = setCurrentSub(e);
+    final prevSub = setActiveSub(e);
     try {
       (e as PresetEffect).callback();
     } finally {
@@ -420,7 +420,7 @@ T computedOper<T>(PresetComputed<T> computed) {
     }
   } else if (flags == 0) {
     computed.flags = 1 /* Mutable */;
-    final prevSub = setCurrentSub(computed);
+    final prevSub = setActiveSub(computed);
     try {
       computed.cachedValue = computed.getter(null);
     } finally {

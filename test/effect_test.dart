@@ -167,9 +167,9 @@ void main() {
 
     effect(() {
       order.add("a");
-      final currentSub = setCurrentSub(null);
+      final currentSub = setActiveSub(null);
       final isOne = s2.value == 1;
-      setCurrentSub(currentSub);
+      setActiveSub(currentSub);
       if (isOne) s1.value;
       s2.value;
       s1.value;

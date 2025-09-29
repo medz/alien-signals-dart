@@ -271,7 +271,7 @@ WritableSignal<T> signal<T>(T initialValue) {
 @pragma('dart2js:prefer-inline')
 Computed<T> computed<T>(T Function(T? previousValue) getter) {
   return PresetComputed(
-    flags: 17 /* Mutable | Dirty */,
+    flags: 0 /* None */,
     getter: getter,
   );
 }
@@ -417,6 +417,14 @@ T computedOper<T>(PresetComputed<T> computed) {
       if (subs != null) {
         shallowPropagate(subs);
       }
+    }
+  } else if (flags == 0) {
+    computed.flags = 1 /* Mutable */;
+    final prevSub = setCurrentSub(computed);
+    try {
+      computed.cachedValue = computed.getter(null);
+    } finally {
+      activeSub = prevSub;
     }
   }
 

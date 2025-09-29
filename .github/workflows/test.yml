@@ -3,18 +3,37 @@ name: testing
 on: [push, pull_request]
 
 jobs:
-  run:
+  analyze:
     runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: dart-lang/setup-dart@v1
+        with:
+          sdk: latest
+      - run: dart pub get
+      - run: dart analyze
 
+  test:
+    needs: analyze
+    runs-on: ubuntu-latest
     strategy:
       matrix:
         sdk: [stable, 3.6, 3.7, 3.8]
-
     steps:
       - uses: actions/checkout@v5
       - uses: dart-lang/setup-dart@v1
         with:
           sdk: ${{ matrix.sdk }}
       - run: dart pub get
-      - run: dart analyze
       - run: dart test
+
+  try-publish:
+    needs: [analyze, test]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: dart-lang/setup-dart@v1
+        with:
+          sdk: latest
+      - run: dart pub get
+      - run: dart pub publish --dry-run

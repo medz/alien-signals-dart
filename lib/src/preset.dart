@@ -183,13 +183,13 @@ abstract interface class Computed<T> implements Signal<T> {}
 /// A reactive effect.
 abstract interface class Effect {
   /// Calls the effect on dispose.
-  void call();
+  void dispose();
 }
 
 /// A reactive effect scope.
 abstract interface class EffectScope {
   /// Calls the scope on dispose, notifying all effects.
-  void call();
+  void dispose();
 }
 
 /*--------------------- Preset Impls ---------------------*/
@@ -268,7 +268,7 @@ class PresetEffect extends ReactiveNode implements LinkedEffect, Effect {
   LinkedEffect? nextEffect;
 
   @override
-  void call() => effectOper(this);
+  void dispose() => effectOper(this);
 }
 
 class PresetEffectScope extends ReactiveNode
@@ -279,7 +279,7 @@ class PresetEffectScope extends ReactiveNode
   LinkedEffect? nextEffect;
 
   @override
-  void call() => effectOper(this);
+  void dispose() => effectOper(this);
 }
 
 /*--------------------- Internal Impls ---------------------*/

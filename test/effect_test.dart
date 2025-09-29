@@ -9,12 +9,14 @@ void main() {
       bRunTimes++;
       return a.value * 2;
     });
-    final stop = effect(() => b.value);
+    final Effect(:dispose) = effect(() => b.value);
 
     expect(bRunTimes, 1);
+
     a.value = 2;
     expect(bRunTimes, 2);
-    stop();
+
+    dispose();
     a.value = 3;
     expect(bRunTimes, 2);
   });
@@ -128,15 +130,15 @@ void main() {
   });
 
   test("should custom effect support batch", () {
-    void Function() batchEffect(void Function() fn) {
-      return effect(() {
+    void batchEffect(void Function() fn) {
+      effect(() {
         startBatch();
         try {
           fn();
         } finally {
           endBatch();
         }
-      }).call;
+      });
     }
 
     final logs = <String>[];

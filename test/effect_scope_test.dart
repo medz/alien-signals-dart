@@ -8,18 +8,18 @@ void main() {
     final stop = effectScope(() {
       effect(() {
         triggers++;
-        count();
+        count.value;
       });
 
       expect(triggers, 1);
-      count(2);
+      count.value = 2;
       expect(triggers, 2);
     });
 
-    count(3);
+    count.value = 3;
     expect(triggers, 3);
     stop();
-    count(4);
+    count.value = 4;
     expect(triggers, 3);
   });
 
@@ -28,19 +28,19 @@ void main() {
     int triggers = 0;
 
     effect(() {
-      final dispose = effectScope(() {
+      final stop = effectScope(() {
         effect(() {
-          s();
+          s.value;
           triggers++;
         });
       });
       expect(triggers, 1);
 
-      s(2);
+      s.value = 2;
       expect(triggers, 2);
 
-      dispose();
-      s(3);
+      stop();
+      s.value = 3;
       expect(triggers, 2);
     });
   });
@@ -52,13 +52,13 @@ void main() {
     int triggers = 0;
     effect(() {
       effectScope(() {
-        source();
+        source.value;
       });
       triggers++;
     });
 
     expect(triggers, equals(1));
-    source(2);
+    source.value = 2;
     expect(triggers, equals(2));
   });
 }

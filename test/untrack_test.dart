@@ -10,19 +10,19 @@ void main() {
       computedTriggerTimes++;
       final currentSub = setCurrentSub(null);
       try {
-        return s();
+        return s.value;
       } finally {
         setCurrentSub(currentSub);
       }
     });
 
-    expect(c(), 0);
+    expect(c.value, 0);
     expect(computedTriggerTimes, 1);
 
-    s(1);
-    s(2);
-    s(3);
-    expect(c(), 0);
+    s.value = 1;
+    s.value = 2;
+    s.value = 3;
+    expect(c.value, 0);
     expect(computedTriggerTimes, 1);
   });
 
@@ -33,37 +33,37 @@ void main() {
     int effectTriggerTimes = 0;
     effect(() {
       effectTriggerTimes++;
-      if (b() > 0) {
+      if (b.value > 0) {
         final currentSub = setCurrentSub(null);
-        a();
+        a.value;
         setCurrentSub(currentSub);
       }
     });
 
     expect(effectTriggerTimes, 1);
 
-    b(1);
+    b.value = 1;
     expect(effectTriggerTimes, 2);
 
-    a(1);
-    a(2);
-    a(3);
+    a.value = 1;
+    a.value = 2;
+    a.value = 3;
     expect(effectTriggerTimes, 2);
 
-    b(2);
+    b.value = 2;
     expect(effectTriggerTimes, 3);
 
-    a(4);
-    a(5);
-    a(6);
+    a.value = 4;
+    a.value = 5;
+    a.value = 6;
     expect(effectTriggerTimes, 3);
 
-    b(0);
+    b.value = 0;
     expect(effectTriggerTimes, 4);
 
-    a(7);
-    a(8);
-    a(9);
+    a.value = 7;
+    a.value = 8;
+    a.value = 9;
     expect(effectTriggerTimes, 4);
   });
 
@@ -74,16 +74,16 @@ void main() {
       effect(() {
         effectTriggerTimes++;
         final currentSub = setCurrentSub(null);
-        s();
+        s.value;
         setCurrentSub(currentSub);
       });
     });
 
     expect(effectTriggerTimes, 1);
 
-    s(1);
-    s(2);
-    s(3);
+    s.value = 1;
+    s.value = 2;
+    s.value = 3;
     expect(effectTriggerTimes, 1);
   });
 }

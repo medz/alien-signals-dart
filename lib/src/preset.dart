@@ -300,7 +300,7 @@ Effect effect(void Function() callback) {
       sub = activeSub;
 
   if (sub != null) {
-    link(effect, sub, cycle);
+    link(effect, sub, 0);
   }
 
   final prevSub = setCurrentSub(effect);
@@ -326,7 +326,7 @@ Effect effect(void Function() callback) {
 EffectScope effectScope(void Function() callback) {
   final scope = PresetEffectScope(flags: 0 /* None */), sub = activeSub;
   if (sub != null) {
-    link(scope, sub, cycle);
+    link(scope, sub, 0);
   }
 
   final prevSub = setCurrentSub(scope);

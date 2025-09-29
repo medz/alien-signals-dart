@@ -1,3 +1,9 @@
+## 1.0.0-beta.3
+
+Status: Released(2025-09-30)
+
+- **FEATURE**: Add `preset_developer.dart`, the basics of exporting Preset
+
 ## 1.0.0-beta.2
 
 Status: Released(2025-09-29)

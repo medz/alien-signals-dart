@@ -44,4 +44,21 @@ void main() {
       expect(triggers, 2);
     });
   });
+
+  test(
+      'should track signal updates in an inner scope when accessed by an outer effect',
+      () {
+    final source = signal(0);
+    int triggers = 0;
+    effect(() {
+      effectScope(() {
+        source();
+      });
+      triggers++;
+    });
+
+    expect(triggers, equals(1));
+    source(2);
+    expect(triggers, equals(2));
+  });
 }

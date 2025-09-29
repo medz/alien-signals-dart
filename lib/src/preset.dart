@@ -132,7 +132,6 @@ final link = system.link,
 
 int batchDepth = 0;
 ReactiveNode? activeSub;
-EffectScope? activeScope;
 LinkedEffect? queuedEffects;
 LinkedEffect? queuedEffectsTail;
 
@@ -158,29 +157,6 @@ ReactiveNode? setCurrentSub(ReactiveNode? sub) {
   final prevSub = activeSub;
   activeSub = sub;
   return prevSub;
-}
-
-/// Gets the currently active effect scope.
-///
-/// This returns the [EffectScope] that is currently being tracked as the active
-/// scope during reactive operations. Returns null if no scope is currently active.
-@pragma('vm:prefer-inline')
-@pragma('wasm:prefer-inline')
-@pragma('dart2js:prefer-inline')
-EffectScope? getCurrentScope() => activeScope;
-
-/// Sets the currently active effect scope and returns the previous scope.
-///
-/// This updates the [activeScope] to the provided [scope] and returns the previous
-/// scope that was active. This is used to manage the effect scope context
-/// during reactive operations.
-@pragma('vm:prefer-inline')
-@pragma('wasm:prefer-inline')
-@pragma('dart2js:prefer-inline')
-EffectScope? setCurrentScope(EffectScope? scope) {
-  final prevScope = activeScope;
-  activeScope = scope;
-  return prevScope;
 }
 
 /// Starts a new batch of reactive updates.
@@ -286,9 +262,8 @@ void Function() effect(void Function() run) {
   final e = Effect(run: run, flags: 2 /* Watching */);
   if (activeSub != null) {
     link(e, activeSub!);
-  } else if (activeScope != null) {
-    link(e, activeScope!);
   }
+
   final prev = setCurrentSub(e);
   try {
     run();
@@ -312,15 +287,15 @@ void Function() effect(void Function() run) {
 /// effects created within it.
 void Function() effectScope(void Function() run) {
   final e = EffectScope(flags: 0 /* None */);
-  if (activeScope != null) link(e, activeScope!);
+  if (activeSub != null) {
+    link(e, activeSub!);
+  }
 
-  final prevSub = setCurrentSub(null);
-  final prevScope = setCurrentScope(e);
+  final prevSub = setCurrentSub(e);
 
   try {
     run();
   } finally {
-    setCurrentScope(prevScope);
     setCurrentSub(prevSub);
   }
 
@@ -404,8 +379,6 @@ T computedOper<T>(Computed<T> computed) {
   }
   if (activeSub != null) {
     link(computed, activeSub!);
-  } else if (activeScope != null) {
-    link(computed, activeScope!);
   }
 
   return computed.value as T;
@@ -434,8 +407,15 @@ T signalOper<T>(Signal<T> signal, T? value, bool nulls) {
       }
     }
   }
-  if (activeSub != null) {
-    link(signal, activeSub!);
+
+  ReactiveNode? sub = activeSub;
+  while (sub != null) {
+    if ((sub.flags & 3 /* Mutable | Watching */) != 0) {
+      link(signal, sub);
+      break;
+    }
+
+    sub = sub.subs?.sub;
   }
 
   return value;

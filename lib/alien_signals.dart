@@ -8,8 +8,6 @@ export "src/preset.dart"
         EffectScope,
         getCurrentSub,
         setCurrentSub,
-        getCurrentScope,
-        setCurrentScope,
         startBatch,
         endBatch,
         signal,

@@ -199,30 +199,53 @@ class PresetWritableSignal<T> extends ReactiveNode
   PresetWritableSignal({
     required super.flags,
     required T initialValue,
-  })  : oldValue = initialValue,
+  })  : previousValue = initialValue,
         latestValue = initialValue;
 
-  T oldValue;
+  T previousValue;
   T latestValue;
 
   @override
-  @pragma('vm:prefer-inline')
-  @pragma('wasm:prefer-inline')
-  @pragma('dart2js:prefer-inline')
-  T get value => signalOper<T>(this, null, false);
+  T get value {
+    if ((flags & 16 /* Dirty */) != 0 && update()) {
+      final subs = this.subs;
+      if (subs != null) shallowPropagate(subs);
+    }
+
+    ReactiveNode? sub = activeSub;
+    while (sub != null) {
+      if ((sub.flags & 3 /* Mutable | Watching */) != 0) {
+        link(this, sub, cycle);
+        break;
+      }
+
+      sub = sub.subs?.sub;
+    }
+    return latestValue;
+  }
 
   @override
-  @pragma('vm:prefer-inline')
-  @pragma('wasm:prefer-inline')
-  @pragma('dart2js:prefer-inline')
-  set value(T newValue) => signalOper<T>(this, newValue, true);
+  set value(T newValue) {
+    if (latestValue != newValue) {
+      latestValue = newValue;
+      flags = 17 /* Mutable | Dirty */;
 
-  @pragma('vm:prefer-inline')
-  @pragma('wasm:prefer-inline')
-  @pragma('dart2js:prefer-inline')
+      final subs = this.subs;
+      if (subs != null) {
+        propagate(subs);
+        if (batchDepth == 0) flush();
+      }
+    }
+  }
+
   bool update() {
     flags = 1 /* Mutable */;
-    return oldValue != (oldValue = latestValue);
+    if (previousValue != latestValue) {
+      previousValue = latestValue;
+      return true;
+    }
+
+    return false;
   }
 }
 
@@ -233,10 +256,37 @@ class PresetComputed<T> extends ReactiveNode implements Computed<T> {
   final T Function(T? previousValue) getter;
 
   @override
-  @pragma('vm:prefer-inline')
-  @pragma('wasm:prefer-inline')
-  @pragma('dart2js:prefer-inline')
-  T get value => computedOper(this);
+  T get value {
+    final flags = this.flags;
+    if ((flags & 16 /* Dirty */) != 0 ||
+        ((flags & 32 /* Pending */) != 0 &&
+            (checkDirty(deps!, this) ||
+                // Always false, infinity is a value that can never be reached
+                (this.flags = flags & -33 /* ~Pending */) ==
+                    double.infinity))) {
+      if (update()) {
+        final subs = this.subs;
+        if (subs != null) {
+          shallowPropagate(subs);
+        }
+      }
+    } else if (flags == 0 /* None */) {
+      this.flags = 1 /* Mutable */;
+      final prevSub = setActiveSub(this);
+      try {
+        cachedValue = getter(null);
+      } finally {
+        activeSub = prevSub;
+      }
+    }
+
+    final sub = activeSub;
+    if (sub != null) {
+      link(this, sub, cycle);
+    }
+
+    return cachedValue as T;
+  }
 
   bool update() {
     ++cycle;
@@ -384,75 +434,6 @@ void flush() {
 
     run(effect, effect.flags &= -65 /* ~Queued */);
   }
-}
-
-T computedOper<T>(PresetComputed<T> computed) {
-  final flags = computed.flags;
-
-  if ((flags & 16 /* Dirty */) != 0 ||
-      ((flags & 32 /* Pending */) != 0 &&
-          (checkDirty(computed.deps!, computed) ||
-              // Always false, infinity is a value that can never be reached
-              (computed.flags = flags & -33 /* ~Pending */) ==
-                  double.infinity))) {
-    if (computed.update()) {
-      final subs = computed.subs;
-      if (subs != null) {
-        shallowPropagate(subs);
-      }
-    }
-  } else if (flags == 0 /* None */) {
-    computed.flags = 1 /* Mutable */;
-    final prevSub = setActiveSub(computed);
-    try {
-      computed.cachedValue = computed.getter(null);
-    } finally {
-      activeSub = prevSub;
-    }
-  }
-
-  final sub = activeSub;
-  if (sub != null) {
-    link(computed, sub, cycle);
-  }
-
-  return computed.cachedValue as T;
-}
-
-T signalOper<T>(PresetWritableSignal<T> signal, T? newValue, bool update) {
-  if (newValue is T && (newValue != null || (newValue == null && update))) {
-    if (signal.latestValue != (signal.latestValue = newValue)) {
-      signal.flags = 17 /* Mutable | Dirty */;
-      final subs = signal.subs;
-      if (subs != null) {
-        propagate(subs);
-        if (batchDepth == 0) flush();
-      }
-    }
-
-    return newValue;
-  }
-
-  if ((signal.flags & 16 /* Dirty */) != 0) {
-    if (signal.update()) {
-      final subs = signal.subs;
-      if (subs != null) {
-        shallowPropagate(subs);
-      }
-    }
-  }
-
-  ReactiveNode? sub = activeSub;
-  while (sub != null) {
-    if ((sub.flags & 3 /* Mutable | Watching */) != 0) {
-      link(signal, sub, cycle);
-      break;
-    }
-
-    sub = sub.subs?.sub;
-  }
-
-  return signal.latestValue;
 }
 
 void effectOper(ReactiveNode e) {

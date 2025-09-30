@@ -1,8 +1,11 @@
 import 'package:alien_signals/system.dart';
 
+/*------------------- Public variables --------------------*/
+/// Alien signals preset system
+const ReactiveSystem system = PresetReactiveSystem();
+
 /*------------------ Internal variables -------------------*/
 
-const system = PresetReactiveSystem();
 final link = system.link,
     unlink = system.unlink,
     propagate = system.propagate,
@@ -194,10 +197,11 @@ abstract interface class EffectScope {
 
 /*--------------------- Preset Impls ---------------------*/
 
+/// Preset writable signal implementation.
 class PresetWritableSignal<T> extends ReactiveNode
     implements WritableSignal<T> {
   PresetWritableSignal({
-    required super.flags,
+    super.flags = 1 /* Mutable */,
     required T initialValue,
   })  : previousValue = initialValue,
         latestValue = initialValue;
@@ -249,8 +253,9 @@ class PresetWritableSignal<T> extends ReactiveNode
   }
 }
 
+/// Preset computed signal implementation.
 class PresetComputed<T> extends ReactiveNode implements Computed<T> {
-  PresetComputed({required super.flags, required this.getter});
+  PresetComputed({super.flags = 0 /* None */, required this.getter});
 
   T? cachedValue;
   final T Function(T? previousValue) getter;
@@ -309,8 +314,9 @@ abstract interface class LinkedEffect implements ReactiveNode {
   LinkedEffect? nextEffect;
 }
 
+/// Preset effect implementation.
 class PresetEffect extends ReactiveNode implements LinkedEffect, Effect {
-  PresetEffect({required super.flags, required this.callback});
+  PresetEffect({super.flags = 2 /* Watching */, required this.callback});
 
   final void Function() callback;
 
@@ -324,9 +330,10 @@ class PresetEffect extends ReactiveNode implements LinkedEffect, Effect {
   void dispose() => effectOper(this);
 }
 
+/// Preset effect scope implementation.
 class PresetEffectScope extends ReactiveNode
     implements LinkedEffect, EffectScope {
-  PresetEffectScope({required super.flags});
+  PresetEffectScope({super.flags = 0 /* None */});
 
   @override
   LinkedEffect? nextEffect;

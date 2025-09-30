@@ -17,3 +17,4 @@ export "src/preset.dart"
         computed,
         effect,
         effectScope;
+export 'src/preset_legacy.dart';

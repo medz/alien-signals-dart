@@ -7,35 +7,35 @@ void main() {
     final a = signal(1);
     final b = computed((_) {
       bRunTimes++;
-      return a.value * 2;
+      return a() * 2;
     });
-    final Effect(:dispose) = effect(() => b.value);
+    final Effect(:dispose) = effect(() => b());
 
     expect(bRunTimes, 1);
 
-    a.value = 2;
+    a(2);
     expect(bRunTimes, 2);
 
     dispose();
-    a.value = 3;
+    a(3);
     expect(bRunTimes, 2);
   });
 
   test("should not run untracked inner effect", () {
     final a = signal(3);
-    final b = computed((_) => a.value > 0);
+    final b = computed((_) => a() > 0);
 
     effect(() {
-      if (b.value) {
+      if (b()) {
         effect(() {
-          if (a.value == 0) throw Error();
+          if (a() == 0) throw Error();
         });
       }
     });
 
-    a.value = 2;
-    a.value = 1;
-    a.value = 0;
+    a(2);
+    a(1);
+    a(0);
   });
 
   test("should run outer effect first", () {
@@ -43,10 +43,10 @@ void main() {
     final b = signal(1);
 
     effect(() {
-      if (a.value > 0) {
+      if (a() > 0) {
         effect(() {
-          b.value;
-          if (a.value == 0) throw Error();
+          b();
+          if (a() == 0) throw Error();
         });
       }
     });
@@ -59,44 +59,44 @@ void main() {
 
   test("should not trigger inner effect when resolve maybe dirty", () {
     final a = signal(0);
-    final b = computed((_) => a.value % 2);
+    final b = computed((_) => a() % 2);
     int innerTriggerTimes = 0;
     effect(() {
       effect(() {
-        b.value;
+        b();
         innerTriggerTimes++;
         if (innerTriggerTimes >= 2) throw Error();
       });
     });
 
-    a.value = 2;
+    a(2);
   });
 
   test("should trigger inner effects in sequence", () {
     final a = signal(0);
     final b = signal(0);
-    final c = computed((_) => a.value - b.value);
+    final c = computed((_) => a() - b());
     final order = <String>[];
 
     effect(() {
-      c.value;
+      c();
 
       effect(() {
         order.add("first inner");
-        a.value;
+        a();
       });
 
       effect(() {
         order.add("last inner");
-        a.value;
-        b.value;
+        a();
+        b();
       });
     });
 
     order.length = 0;
     startBatch();
-    a.value = 1;
-    b.value = 1;
+    a(1);
+    b(1);
     endBatch();
 
     expect(order, ["first inner", "last inner"]);
@@ -110,20 +110,20 @@ void main() {
     effectScope(() {
       effect(() {
         order.add("first inner");
-        a.value;
+        a();
       });
 
       effect(() {
         order.add("last inner");
-        a.value;
-        b.value;
+        a();
+        b();
       });
     });
 
     order.length = 0;
     startBatch();
-    a.value = 1;
-    b.value = 1;
+    a(1);
+    b(1);
     endBatch();
 
     expect(order, ["first inner", "last inner"]);
@@ -147,17 +147,17 @@ void main() {
 
     final aa = computed<void>((_) {
       logs.add('aa-0');
-      if (a.value == 0) b.value = 1;
+      if (a() == 0) b(1);
       logs.add('aa-1');
     });
 
     final bb = computed((_) {
       logs.add("bb");
-      return b.value;
+      return b();
     });
 
-    batchEffect(() => bb.value);
-    batchEffect(() => aa.value);
+    batchEffect(() => bb());
+    batchEffect(() => aa());
 
     expect(logs, ["bb", "aa-0", "aa-1", "bb"]);
   });
@@ -170,21 +170,21 @@ void main() {
     effect(() {
       order.add("a");
       final currentSub = setActiveSub(null);
-      final isOne = s2.value == 1;
+      final isOne = s2() == 1;
       setActiveSub(currentSub);
-      if (isOne) s1.value;
-      s2.value;
-      s1.value;
+      if (isOne) s1();
+      s2();
+      s1();
     });
 
     effect(() {
       order.add("b");
-      s1.value;
+      s1();
     });
 
-    s2.value = 1;
+    s2(1);
     order.length = 0;
-    s1.value += 1;
+    s1(s1() + 1);
     expect(order, ["a", "b"]);
   });
 
@@ -196,19 +196,19 @@ void main() {
 
     effect(() {
       effect(() {
-        a.value;
+        a();
         order.add("a");
       });
       effect(() {
-        b.value;
+        b();
         order.add("b");
       });
 
       expect(order, ["a", "b"]);
 
       order.length = 0;
-      b.value = 1;
-      a.value = 1;
+      b(1);
+      a(1);
       expect(order, ["b", "a"]);
       run = true;
     });
@@ -218,23 +218,23 @@ void main() {
 
   test("should handle flags are indirectly updated during checkDirty", () {
     final a = signal(false);
-    final b = computed((_) => a.value);
+    final b = computed((_) => a());
     final c = computed((_) {
-      b.value;
+      b();
       return 0;
     });
     final d = computed((_) {
-      c.value;
-      return b.value;
+      c();
+      return b();
     });
 
     int triggers = 0;
     effect(() {
-      d.value;
+      d();
       triggers++;
     });
     expect(triggers, 1);
-    a.value = true;
+    a(true);
     expect(triggers, 2);
   });
 }

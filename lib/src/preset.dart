@@ -171,13 +171,14 @@ EffectScope effectScope(void Function() callback) {
 /// A readonly signal.
 abstract interface class Signal<T> {
   /// Returns the current value of the signal.
-  T get value;
+  T call();
 }
 
 /// A writable signal.
 abstract interface class WritableSignal<T> extends Signal<T> {
   /// Sets the value of the signal.
-  set value(T value);
+  @override
+  T call([T? newValue, bool nulls]);
 }
 
 /// A computed signal.
@@ -210,7 +211,22 @@ class PresetWritableSignal<T> extends ReactiveNode
   T latestValue;
 
   @override
-  T get value {
+  T call([T? newValue, bool nulls = false]) {
+    if (newValue != null || (null is T && nulls)) {
+      if (latestValue != newValue) {
+        latestValue = newValue as T;
+        flags = 17 /* Mutable | Dirty */;
+        if (subs case final Link link) {
+          propagate(link);
+          if (batchDepth == 0) flush();
+        }
+      }
+
+      return latestValue;
+    }
+
+    /*----------------- getter 👇 ------------------------*/
+
     if ((flags & 16 /* Dirty */) != 0 && update()) {
       final subs = this.subs;
       if (subs != null) shallowPropagate(subs);
@@ -225,23 +241,13 @@ class PresetWritableSignal<T> extends ReactiveNode
 
       sub = sub.subs?.sub;
     }
+
     return latestValue;
   }
 
-  @override
-  set value(T newValue) {
-    if (latestValue != newValue) {
-      latestValue = newValue;
-      flags = 17 /* Mutable | Dirty */;
-
-      final subs = this.subs;
-      if (subs != null) {
-        propagate(subs);
-        if (batchDepth == 0) flush();
-      }
-    }
-  }
-
+  @pragma('vm:prefer-inline')
+  @pragma('wasm:prefer-inline')
+  @pragma('dart2js:prefer-inline')
   bool update() {
     flags = 1 /* Mutable */;
     if (previousValue != latestValue) {
@@ -261,7 +267,7 @@ class PresetComputed<T> extends ReactiveNode implements Computed<T> {
   final T Function(T? previousValue) getter;
 
   @override
-  T get value {
+  T call() {
     final flags = this.flags;
     if ((flags & 16 /* Dirty */) != 0 ||
         ((flags & 32 /* Pending */) != 0 &&

@@ -19,7 +19,7 @@
 import 'package:alien_signals/alien_signals.dart';
 
 final welcome = signal('Welcome to Alien Signals 1.0.0!');
-effect(() => print(welcome.value));
+effect(() => print(welcome()));
 ```
 
 ## 🌟 What is Alien Signals?
@@ -43,15 +43,15 @@ void main() {
   final count = signal(0);
 
   // Create derived state
-  final doubled = computed((_) => count.value * 2);
+  final doubled = computed((_) => count() * 2);
 
   // Create side effects
   effect(() {
-    print('Count: ${count.value}, Doubled: ${doubled.value}');
+    print('Count: ${count()}, Doubled: ${doubled()}');
   });
 
   // Update state - triggers all dependencies
-  count.value++; // Output: Count: 1, Doubled: 2
+  count(1); // Output: Count: 1, Doubled: 2
 }
 ```
 

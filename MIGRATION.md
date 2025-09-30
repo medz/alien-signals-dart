@@ -8,46 +8,6 @@ The 1.0.0 release introduces several breaking changes to improve API consistency
 
 ### 🔄 API Changes
 
-#### Signal Value Access
-
-**Before (0.x):**
-```dart
-final count = signal<int?>(0);
-
-// Reading value
-print(count()); // Function call syntax
-
-// Writing value
-count(1); // Function call syntax
-count(null, true); // Required second parameter for nullable values
-```
-
-**After (1.0.0):**
-```dart
-final count = signal<int?>(0);
-
-// Reading value
-print(count.value); // Property access
-
-// Writing value
-count.value = 1; // Property assignment
-count.value = null; // Direct assignment, no second parameter needed
-```
-
-#### Computed Values
-
-**Before (0.x):**
-```dart
-final doubled = computed((_) => count() * 2);
-print(doubled()); // Function call syntax
-```
-
-**After (1.0.0):**
-```dart
-final doubled = computed((_) => count.value * 2);
-print(doubled.value); // Property access
-```
-
 #### Effect and EffectScope Disposal
 
 **Before (0.x):**
@@ -64,7 +24,7 @@ scope(); // Function call
 **After (1.0.0):**
 ```dart
 final e = effect(() {
-  print(count.value);
+  print(count());
 });
 e.dispose(); // Method call
 
@@ -119,7 +79,6 @@ The following APIs have been removed in 1.0.0:
 - `startTracking()` and `endTracking()` - Use inline cycle management instead
 - `pauseTracking()` and `resumeTracking()` - No direct replacement
 - `ReactiveFlags` enum - Replaced with int-based flags
-- Signal/Computed `call()` method - Use `.value` property
 
 ### 📦 Import Changes
 
@@ -155,19 +114,7 @@ Replace deprecated imports:
 import 'package:alien_signals/system.dart';
 ```
 
-#### 3. Update Signal Usage
-
-Find and replace signal access patterns:
-
-```dart
-// Find: signalName()
-// Replace with: signalName.value
-
-// Find: signalName(newValue)
-// Replace with: signalName.value = newValue
-```
-
-#### 4. Update Effect Disposal
+#### 3. Update Effect Disposal
 
 Update effect and scope disposal:
 
@@ -179,7 +126,7 @@ Update effect and scope disposal:
 // Replace with: scopeFn.dispose()
 ```
 
-#### 5. Update System Function Calls
+#### 4. Update System Function Calls
 
 Replace deprecated system functions:
 
@@ -212,21 +159,6 @@ After migration, you'll benefit from:
 - **Stability**: Production-ready stable API
 
 ### 🔍 Common Migration Issues
-
-#### Issue: Nullable Signal Updates
-
-**Problem:**
-```dart
-// This won't work anymore
-final nullable = signal<String?>("hello");
-nullable(null); // Error: method doesn't exist
-```
-
-**Solution:**
-```dart
-final nullable = signal<String?>("hello");
-nullable.value = null; // Correct approach
-```
 
 #### Issue: Effect Disposal
 

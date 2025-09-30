@@ -2,7 +2,7 @@
 
 Status: Unreleased (WIP)
 
-- Change signal interface to use call() instead of value getter/setter
+- Change signal interface to use `call()` instead of `.value` getter/setter
 
 ## 1.0.0
 

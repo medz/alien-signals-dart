@@ -25,7 +25,7 @@ To install Alien Signals, add the following to your `pubspec.yaml`:
 
 ```yaml
 dependencies:
-  alien_signals: 1.0
+  alien_signals: ^1.0.0
 ```
 
 Alternatively, you can run the following command:

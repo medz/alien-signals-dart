@@ -52,8 +52,8 @@ void main() {
     });
 
     startBatch();
-    b.value = 0;
-    a.value = 0;
+    b(0);
+    a(0);
     endBatch();
   });
 

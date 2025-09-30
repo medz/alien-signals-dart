@@ -1,10 +1,10 @@
 # Migration Guide
 
-This guide helps you migrate from earlier versions of `alien_signals` to version 1.0.0.
+This guide helps you migrate from earlier versions of `alien_signals` to latest version
 
-## Migration from 0.x to 1.0.0
+## Migration from 0.x to 1.0
 
-The 1.0.0 release introduces several breaking changes to improve API consistency and performance. This guide will help you update your code.
+The 1.0.1 release introduces several breaking changes to improve API consistency and performance. This guide will help you update your code.
 
 ### 🔄 API Changes
 
@@ -21,7 +21,7 @@ final scope = effectScope(() { /* ... */ });
 scope(); // Function call
 ```
 
-**After (1.0.0):**
+**After (1.0):**
 ```dart
 final e = effect(() {
   print(count());
@@ -44,7 +44,7 @@ if (batchDepth > 0) {
 }
 ```
 
-**After (1.0.0):**
+**After (1.0):**
 ```dart
 // Using getBatchDepth() function
 if (getBatchDepth() > 0) {
@@ -65,7 +65,7 @@ getCurrentScope();
 setCurrentScope(scope);
 ```
 
-**After (1.0.0):**
+**After (1.0):**
 ```dart
 // New function names
 getActiveSub();
@@ -74,7 +74,7 @@ setActiveSub(sub);
 
 #### Removed APIs
 
-The following APIs have been removed in 1.0.0:
+The following APIs have been removed in 1.0:
 
 - `startTracking()` and `endTracking()` - Use inline cycle management instead
 - `pauseTracking()` and `resumeTracking()` - No direct replacement
@@ -89,7 +89,7 @@ The following APIs have been removed in 1.0.0:
 import 'package:alien_signals/alien_signals.dart';
 ```
 
-**After (1.0.0):**
+**After (1.0):**
 ```dart
 import 'package:alien_signals/system.dart'; // Still available for low-level access
 ```
@@ -102,7 +102,7 @@ Update your `pubspec.yaml`:
 
 ```yaml
 dependencies:
-  alien_signals: ^1.0.0
+  alien_signals: ^1.0.1
 ```
 
 #### 2. Update Imports
@@ -149,7 +149,7 @@ After migration, ensure your code works correctly:
 2. **Check Performance**: The new version should be faster
 3. **Verify Reactivity**: Ensure all signal updates trigger expected reactions
 
-### 💡 Benefits of 1.0.0
+### 💡 Benefits of 1.0
 
 After migration, you'll benefit from:
 
@@ -191,4 +191,4 @@ If you encounter issues during migration:
 
 ---
 
-**Note**: This migration guide covers the major changes from 0.x to 1.0.0. For migrations from specific beta versions, please refer to the individual changelog entries in [CHANGELOG.md](CHANGELOG.md).
+**Note**: This migration guide covers the major changes from 0.x to 1.0. For migrations from specific beta versions, please refer to the individual changelog entries in [CHANGELOG.md](CHANGELOG.md).

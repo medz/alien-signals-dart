@@ -4,17 +4,17 @@ void basis() {
   print("\n=========== Basic Usage ===========");
 
   final count = signal(1);
-  final doubleCount = computed((_) => count.value * 2);
+  final doubleCount = computed((_) => count() * 2);
 
   effect(() {
-    print("Count is: ${count.value}");
+    print("Count is: ${count()}");
   }); // Count is: 1
 
-  print(doubleCount.value); // 2
+  print(doubleCount()); // 2
 
-  count.value = 2; // Count is: 2
+  count(2); // Count is: 2
 
-  print(doubleCount.value); // 4
+  print(doubleCount()); // 4
 }
 
 void scope() {
@@ -23,13 +23,13 @@ void scope() {
   final count = signal(1);
   final scope = effectScope(() {
     effect(() {
-      print("Count is: ${count.value}");
+      print("Count is: ${count()}");
     }); // Count is: 1
   });
 
-  count.value = 2; // Count is: 2
+  count(2); // Count is: 2
   scope.dispose();
-  count.value = 3; // Not printed
+  count(3); // Not printed
 }
 
 void main() {

@@ -444,8 +444,7 @@ void flush() {
 }
 
 void effectOper(ReactiveNode e) {
-  assert(e is Effect || e is EffectScope);
-  var dep = e.deps;
+  Link? dep = e.deps;
   while (dep != null) {
     dep = unlink(dep, e);
   }

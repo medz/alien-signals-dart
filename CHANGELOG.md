@@ -1,3 +1,9 @@
+## 1.0.0-beta.4
+
+Status: Released(2025-09-30)
+
+- **FIX**: remove assertion in effectOper
+
 ## 1.0.0-beta.3
 
 Status: Released(2025-09-30)

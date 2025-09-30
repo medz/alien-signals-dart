@@ -1,6 +1,100 @@
+## 1.0.0
+
+Status: Released (2025-01-15)
+
+🎉 **First Stable Release!**
+
+After months of development and multiple beta releases, we're excited to announce the first stable version of Alien Signals for Dart! This release brings a mature, high-performance reactive signal library to the Dart ecosystem.
+
+### 🚀 What's New in 1.0.0
+
+- **Stable API**: All APIs are now stable and ready for production use
+- **Better Dart Integration**: Redesigned API that feels natural in Dart
+- **Enhanced Performance**: Optimized reactive system with cycle-based dependency tracking
+- **Comprehensive Documentation**: Complete API documentation and examples
+- **Production Ready**: Battle-tested through beta releases and community feedback
+
+### 📋 Key Features
+
+- **Lightweight & Fast**: The lightest signal library for Dart with excellent performance
+- **Simple API**: Easy-to-use `signal()`, `computed()`, and `effect()` functions
+- **TypeScript Origins**: Based on the excellent [stackblitz/alien-signals](https://github.com/stackblitz/alien-signals)
+- **Effect Scopes**: Manage groups of effects with `effectScope()`
+- **Batch Updates**: Control reactivity with `startBatch()` and `endBatch()`
+
+### 🎯 Getting Started
+
+```dart
+import 'package:alien_signals/alien_signals.dart';
+
+void main() {
+  // Create a signal
+  final count = signal(0);
+
+  // Create a computed value
+  final doubled = computed((_) => count.value * 2);
+
+  // Create an effect
+  effect(() {
+    print('Count: ${count.value}, Doubled: ${doubled.value}');
+  });
+
+  // Update the signal
+  count.value++; // Prints: Count: 1, Doubled: 2
+}
+```
+
+### 🔧 Migration from Beta
+
+If you're upgrading from a beta version, please see our [Migration Guide](MIGRATION.md) for detailed instructions.
+
+### 🙏 Acknowledgments
+
+Special thanks to the StackBlitz team for creating the original alien-signals library and to our community for feedback during the beta period.
+
+---
+
+## 1.0.0-beta.4
+
+Status: Released(2025-09-30)
+
+- **FIX**: remove assertion in effectOper
+
+## 1.0.0-beta.3
+
+Status: Released(2025-09-30)
+
+- **FEATURE**: Add `preset_developer.dart`, the basics of exporting Preset
+
+## 1.0.0-beta.2
+
+Status: Released(2025-09-29)
+
+- Have good auto-imports, avoid auto-importing src
+- `Effect`/`EffectScope`'s `call()` is renamed to `dispose()`
+
+## 1.0.0-beta.1
+
+Status: Released(2025-09-29)
+
+### System
+
+- **BREAKING CHANGE**: sync [alien-signal](https://github.com/stackblitz/alien-signals) `3.0.0` version
+- **BREAKING CHANGE**: `link` add a third version count param
+- **BREAKING CHANGE**: remove `startTracking` and `endTracking` API
+
+#### Preset
+
+- **BREAKING CHANGE**: remove deprecated `system.dart` entry point export
+- **BREAKING CHANGE**: migrate `batchDepth` to `getBatchDepth()`
+- **BREAKING CHANGE**: rename `getCurrentSub/setCurrentSub` to `getActiveSub/setActiveSub`
+- **BREAKING CHANGE**: remove `getCurrentScope/getCurrentScope`, using `getActiveScope/setActiveScope`
+- **BREAKING CHANGE**: remove signal/computed `call()`, using `.value` property
+- **FEATURE**: add `Signal`,`WritableSignal`,`Computed`,`Effect` abstract interface
+
 ## 0.5.5
 
-Status: Unreleased
+Status: Released (2025-09-28)
 
 - Deprecate library entry point of `package:alien_signals/system.dart`
 

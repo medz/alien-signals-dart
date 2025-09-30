@@ -5,21 +5,21 @@ void main() {
   test("should not trigger after stop", () {
     int triggers = 0;
     final count = signal(0);
-    final stop = effectScope(() {
+    final EffectScope(:dispose) = effectScope(() {
       effect(() {
         triggers++;
-        count();
+        count.value;
       });
 
       expect(triggers, 1);
-      count(2);
+      count.value = 2;
       expect(triggers, 2);
     });
 
-    count(3);
+    count.value = 3;
     expect(triggers, 3);
-    stop();
-    count(4);
+    dispose();
+    count.value = 4;
     expect(triggers, 3);
   });
 
@@ -28,20 +28,37 @@ void main() {
     int triggers = 0;
 
     effect(() {
-      final dispose = effectScope(() {
+      final EffectScope(:dispose) = effectScope(() {
         effect(() {
-          s();
+          s.value;
           triggers++;
         });
       });
       expect(triggers, 1);
 
-      s(2);
+      s.value = 2;
       expect(triggers, 2);
 
       dispose();
-      s(3);
+      s.value = 3;
       expect(triggers, 2);
     });
+  });
+
+  test(
+      'should track signal updates in an inner scope when accessed by an outer effect',
+      () {
+    final source = signal(0);
+    int triggers = 0;
+    effect(() {
+      effectScope(() {
+        source.value;
+      });
+      triggers++;
+    });
+
+    expect(triggers, equals(1));
+    source.value = 2;
+    expect(triggers, equals(2));
   });
 }

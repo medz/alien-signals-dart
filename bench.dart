@@ -9,7 +9,8 @@ class Bench extends ReactiveFramework {
 
   @override
   Computed<T> computed<T>(T Function() fn) {
-    return createComputed(alien_signals.computed<T>((_) => fn()));
+    final c = alien_signals.computed<T>((_) => fn());
+    return createComputed(() => c.value);
   }
 
   @override
@@ -20,7 +21,7 @@ class Bench extends ReactiveFramework {
   @override
   Signal<T> signal<T>(T value) {
     final signal = alien_signals.signal(value);
-    return createSignal(signal, signal);
+    return createSignal(() => signal.value, (value) => signal.value = value);
   }
 
   @override

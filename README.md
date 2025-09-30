@@ -12,14 +12,65 @@
   <a href="https://deepwiki.com/medz/alien-signals-dart"><img src="https://deepwiki.com/badge.svg" alt="Ask DeepWiki"></a>
 </p>
 
-# Alien Signals for Dart
+## 🎊 Get Started Today!
 
-The lightest signal library for Dart, ported from [stackblitz/alien-signals](https://github.com/stackblitz/alien-signals).
+```dart
+// Your reactive journey starts here
+import 'package:alien_signals/alien_signals.dart';
 
-> [!TIP]
-> `alien_signals` is the fastest signal library currently, as shown by experimental results from 👉 [dart-reactivity-benchmark](https://github.com/medz/dart-reactivity-benchmark#score-ranking).
+final welcome = signal('Welcome to Alien Signals 1.0.0!');
+effect(() => print(welcome.value));
+```
 
-## Installation
+## 🌟 What is Alien Signals?
+
+Alien Signals is a reactive state management library that brings the power of signals to Dart and Flutter applications. Originally inspired by [StackBlitz's alien-signals](https://github.com/stackblitz/alien-signals), our Dart implementation provides:
+
+- **⚡ Exceptional Performance**: Proven fastest signal library in [dart-reactivity-benchmark](https://github.com/medz/dart-reactivity-benchmark)
+- **🪶 Ultra Lightweight**: Minimal overhead, maximum efficiency
+- **🎯 Simple API**: Intuitive `signal()`, `computed()`, and `effect()` functions
+- **🔧 Production Ready**: Battle-tested through comprehensive beta releases
+
+## 🚀 Key Features
+
+### Core Reactive Primitives
+
+```dart
+import 'package:alien_signals/alien_signals.dart';
+
+void main() {
+  // Create reactive state
+  final count = signal(0);
+
+  // Create derived state
+  final doubled = computed((_) => count.value * 2);
+
+  // Create side effects
+  effect(() {
+    print('Count: ${count.value}, Doubled: ${doubled.value}');
+  });
+
+  // Update state - triggers all dependencies
+  count.value++; // Output: Count: 1, Doubled: 2
+}
+```
+
+### Advanced Features
+
+- **Effect Scopes**: Group and manage effects together
+- **Batch Operations**: Control when reactivity updates occur
+- **Flexible API**: Both high-level presets and low-level system access
+
+## 📊 Performance Highlights
+
+Based on [dart-reactivity-benchmark](https://github.com/medz/dart-reactivity-benchmark) results:
+
+- **🏆 #1 Performance**: Fastest among all Dart signal libraries
+- **⚡ Optimized Updates**: Cycle-based dependency tracking
+- **🎯 Minimal Overhead**: Efficient memory usage and garbage collection
+- **📈 Scales Well**: Performance remains consistent with complex dependency graphs
+
+## 📦 Installation
 
 To install Alien Signals, add the following to your `pubspec.yaml`:
 
@@ -34,41 +85,18 @@ Alternatively, you can run the following command:
 dart pub add alien_signals
 ```
 
-## Adoption
+## 🌍 Community & Ecosystem
 
-- [Solidart](https://github.com/nank1ro/solidart) - ❤️ Signals in Dart and Flutter, inspired by SolidJS
-- [Oref](https://github.com/medz/oref) - 🪄 A reactive state management library for Flutter that adds magic to any Widget with signals
+### Adoptions
+- **[Solidart](https://github.com/nank1ro/solidart)** - Signals for Flutter inspired by SolidJS
+- **[Oref](https://github.com/medz/oref)** - Magical reactive state management for Flutter
 
-## Basic Usage
+### Growing Ecosystem
+Join our thriving community of developers building reactive applications with Alien Signals!
 
-```dart
-import 'package:alien_signals/alien_signals.dart';
+## 📚 Resources
 
-void main() {
-  // Create a signal
-  final count = signal(0);
-
-  // Create a computed value
-  final doubled = computed((_) => count.value * 2);
-
-  // Create an effect
-  effect(() {
-    print('Count: ${count()}, Doubled: ${doubled.value}');
-  });
-
-  // Update the signal
-  count.value++; // Prints: Count: 1, Doubled: 2
-}
-```
-
-## API Reference
-
-See the [API documentation](https://pub.dev/documentation/alien_signals/latest/) for detailed information about all available APIs.
-
-## License
-
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
-
-## Credits
-
-This is a Dart port of the excellent [stackblitz/alien-signals](https://github.com/stackblitz/alien-signals) library.
+- **[API Documentation](https://pub.dev/documentation/alien_signals/latest/)** - Complete API reference
+- **[Examples](https://github.com/medz/alien-signals-dart/tree/main/example)** - Code examples and demos
+- **[Migration Guide](MIGRATION.md)** - Upgrade instructions
+- **[Performance Benchmarks](https://github.com/medz/dart-reactivity-benchmark)** - Performance comparisons

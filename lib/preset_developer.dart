@@ -3,8 +3,6 @@
 /// You can use the presets to further customize.
 library;
 
-import 'src/preset.dart';
-
 export 'src/preset.dart'
     show
         PresetComputed,
@@ -12,11 +10,3 @@ export 'src/preset.dart'
         PresetEffectScope,
         PresetWritableSignal,
         system;
-
-extension PresetWritableSignalLegacy<T> on PresetWritableSignal<T> {
-  @Deprecated('Use `cachedValue` instead.')
-  T get previousValue => cachedValue;
-
-  @Deprecated('Use `cachedValue` instead.')
-  set previousValue(T value) => cachedValue = value;
-}

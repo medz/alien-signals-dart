@@ -1,7 +1,3 @@
-## 1.0.2
-
-- Rename `previousValue` to `cachedValue` in PresetWritableSignal
-
 ## 1.0.1
 
 Status: Unreleased (WIP)

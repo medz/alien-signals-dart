@@ -204,10 +204,10 @@ class PresetWritableSignal<T> extends ReactiveNode
   PresetWritableSignal({
     super.flags = 1 /* Mutable */,
     required T initialValue,
-  })  : cachedValue = initialValue,
+  })  : previousValue = initialValue,
         latestValue = initialValue;
 
-  T cachedValue;
+  T previousValue;
   T latestValue;
 
   @override
@@ -250,8 +250,8 @@ class PresetWritableSignal<T> extends ReactiveNode
   @pragma('dart2js:prefer-inline')
   bool update() {
     flags = 1 /* Mutable */;
-    if (cachedValue != latestValue) {
-      cachedValue = latestValue;
+    if (previousValue != latestValue) {
+      previousValue = latestValue;
       return true;
     }
 

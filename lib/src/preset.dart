@@ -3,6 +3,7 @@ import 'package:alien_signals/system.dart';
 /*------------------- Public variables --------------------*/
 /// Alien signals preset system
 const ReactiveSystem system = PresetReactiveSystem();
+int cycle = 0;
 
 /*------------------ Internal variables -------------------*/
 
@@ -12,7 +13,6 @@ final link = system.link,
     checkDirty = system.checkDirty,
     shallowPropagate = system.shallowPropagate;
 
-int cycle = 0;
 int batchDepth = 0;
 ReactiveNode? activeSub;
 LinkedEffect? queuedEffects;

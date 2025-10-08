@@ -18,7 +18,7 @@
 // Your reactive journey starts here
 import 'package:alien_signals/alien_signals.dart';
 
-final welcome = signal('🎉 Welcome to Alien Signals 1.0!');
+final welcome = signal('🎉 Welcome to Alien Signals!');
 effect(() => print(welcome()));
 ```
 

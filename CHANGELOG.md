@@ -1,3 +1,8 @@
+## 1.0.3
+
+- Restrict preset developer exports to public API
+- Rename update method to shouldUpdated
+
 ## 1.0.1
 
 Status: Unreleased (WIP)

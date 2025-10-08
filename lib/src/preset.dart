@@ -383,8 +383,8 @@ class PresetReactiveSystem extends ReactiveSystem {
   @pragma('dart2js:prefer-inline')
   bool update(ReactiveNode sub) {
     return switch (sub) {
-      PresetWritableSignal(:final update) => update(),
-      PresetComputed(:final update) => update(),
+      PresetWritableSignal(:final shouldUpdated) => shouldUpdated(),
+      PresetComputed(:final shouldUpdated) => shouldUpdated(),
       _ => false,
     };
   }

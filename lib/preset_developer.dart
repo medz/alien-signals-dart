@@ -4,19 +4,16 @@
 library;
 
 export 'src/preset.dart'
-    hide
-        link,
-        unlink,
-        propagate,
-        checkDirty,
-        shallowPropagate,
-        batchDepth,
-        activeSub,
-        queuedEffects,
-        queuedEffectsTail,
-        Signal,
-        WritableSignal,
-        Computed,
-        Effect,
-        EffectScope,
-        PresetReactiveSystem;
+    show
+        system,
+        cycle,
+        notifyEffect,
+        run,
+        flush,
+        effectOper,
+        purgeDeps,
+        PresetWritableSignal,
+        PresetComputed,
+        LinkedEffect,
+        PresetEffect,
+        PresetEffectScope;

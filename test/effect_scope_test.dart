@@ -5,21 +5,21 @@ void main() {
   test("should not trigger after stop", () {
     int triggers = 0;
     final count = signal(0);
-    final EffectScope(:dispose) = effectScope(() {
+    final stop = effectScope(() {
       effect(() {
         triggers++;
         count();
       });
 
       expect(triggers, 1);
-      count(2);
+      count(() => 2);
       expect(triggers, 2);
     });
 
-    count(3);
+    count(() => 3);
     expect(triggers, 3);
-    dispose();
-    count(4);
+    stop();
+    count(() => 4);
     expect(triggers, 3);
   });
 
@@ -28,7 +28,7 @@ void main() {
     int triggers = 0;
 
     effect(() {
-      final EffectScope(:dispose) = effectScope(() {
+      final stop = effectScope(() {
         effect(() {
           s();
           triggers++;
@@ -36,11 +36,11 @@ void main() {
       });
       expect(triggers, 1);
 
-      s(2);
+      s(() => 2);
       expect(triggers, 2);
 
-      dispose();
-      s(3);
+      stop();
+      s(() => 3);
       expect(triggers, 2);
     });
   });
@@ -58,7 +58,7 @@ void main() {
     });
 
     expect(triggers, equals(1));
-    source(2);
+    source(() => 2);
     expect(triggers, equals(2));
   });
 }

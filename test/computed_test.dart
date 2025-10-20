@@ -9,9 +9,9 @@ void main() {
     final c3 = computed((_) => c2());
 
     c3();
-    s(1);
+    s(() => 1);
     c2();
-    s(3);
+    s(() => 3);
 
     expect(c3(), 1);
   });
@@ -25,7 +25,7 @@ void main() {
     final d = computed((_) => b() + c());
 
     expect(d(), 0);
-    s(2);
+    s(() => 2);
     expect(d(), 2);
   });
 
@@ -42,7 +42,7 @@ void main() {
     });
 
     expect(d(), false);
-    a(true);
+    a(() => true);
     expect(d(), true);
   });
 
@@ -56,8 +56,8 @@ void main() {
 
     c();
     expect(times, 1);
-    s(1);
-    s(0);
+    s(() => 1);
+    s(() => 0);
     c();
     expect(times, 1);
   });

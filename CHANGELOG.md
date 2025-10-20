@@ -1,9 +1,6 @@
-## 1.1.0
+## 2.0.0
 
-- Rename signal value fields and update update logic
-- Remove deprecated value getter and setter extensions
-- Optimize dependency cleanup in unwatched method
-- Purge dependencies and reset flags in effectOper
+- Refactor signal API to use function-based updates
 
 ## 1.0.3
 

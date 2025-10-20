@@ -9,15 +9,15 @@ void main() {
       bRunTimes++;
       return a() * 2;
     });
-    final Effect(:dispose) = effect(() => b());
+    final stop = effect(() => b());
 
     expect(bRunTimes, 1);
 
-    a(2);
+    a(() => 2);
     expect(bRunTimes, 2);
 
-    dispose();
-    a(3);
+    stop();
+    a(() => 3);
     expect(bRunTimes, 2);
   });
 
@@ -33,9 +33,9 @@ void main() {
       }
     });
 
-    a(2);
-    a(1);
-    a(0);
+    a(() => 2);
+    a(() => 1);
+    a(() => 0);
   });
 
   test("should run outer effect first", () {
@@ -52,8 +52,8 @@ void main() {
     });
 
     startBatch();
-    b(0);
-    a(0);
+    b(() => 0);
+    a(() => 0);
     endBatch();
   });
 
@@ -69,7 +69,7 @@ void main() {
       });
     });
 
-    a(2);
+    a(() => 2);
   });
 
   test("should trigger inner effects in sequence", () {
@@ -95,8 +95,8 @@ void main() {
 
     order.length = 0;
     startBatch();
-    a(1);
-    b(1);
+    a(() => 1);
+    b(() => 1);
     endBatch();
 
     expect(order, ["first inner", "last inner"]);
@@ -122,8 +122,8 @@ void main() {
 
     order.length = 0;
     startBatch();
-    a(1);
-    b(1);
+    a(() => 1);
+    b(() => 1);
     endBatch();
 
     expect(order, ["first inner", "last inner"]);
@@ -147,7 +147,7 @@ void main() {
 
     final aa = computed<void>((_) {
       logs.add('aa-0');
-      if (a() == 0) b(1);
+      if (a() == 0) b(() => 1);
       logs.add('aa-1');
     });
 
@@ -182,9 +182,9 @@ void main() {
       s1();
     });
 
-    s2(1);
+    s2(() => 1);
     order.length = 0;
-    s1(s1() + 1);
+    s1(() => s1() + 1);
     expect(order, ["a", "b"]);
   });
 
@@ -207,8 +207,8 @@ void main() {
       expect(order, ["a", "b"]);
 
       order.length = 0;
-      b(1);
-      a(1);
+      b(() => 1);
+      a(() => 1);
       expect(order, ["b", "a"]);
       run = true;
     });
@@ -234,7 +234,7 @@ void main() {
       triggers++;
     });
     expect(triggers, 1);
-    a(true);
+    a(() => true);
     expect(triggers, 2);
   });
 }

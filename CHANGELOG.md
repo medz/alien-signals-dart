@@ -1,6 +1,7 @@
 ## 1.1.0
 
 - Rename signal value fields and update update logic
+- Remove deprecated value getter and setter extensions
 
 ## 1.0.3
 

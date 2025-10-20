@@ -50,6 +50,9 @@ class _PresetReactiveSystem extends ReactiveSystem {
   }
 
   @override
+  @pragma('vm:prefer-inline')
+  @pragma('wasm:prefer-inline')
+  @pragma('dart2js:prefer-inline')
   bool update(ReactiveNode sub) {
     return switch (sub) {
       PresetSignal(:final shouldUpdate) => shouldUpdate(),
@@ -68,8 +71,14 @@ class PresetSignal<T> extends ReactiveNode implements Signal<T> {
   T pendingValue;
 
   @override
+  @pragma('vm:prefer-inline')
+  @pragma('wasm:prefer-inline')
+  @pragma('dart2js:prefer-inline')
   T call([T Function()? updates]) => signalOper(this, updates);
 
+  @pragma('vm:prefer-inline')
+  @pragma('wasm:prefer-inline')
+  @pragma('dart2js:prefer-inline')
   bool shouldUpdate() => updateSignal(this);
 }
 
@@ -80,8 +89,14 @@ class PresetComputed<T> extends ReactiveNode implements Computed<T> {
   final T Function(T? previousValue) getter;
 
   @override
+  @pragma('vm:prefer-inline')
+  @pragma('wasm:prefer-inline')
+  @pragma('dart2js:prefer-inline')
   T call() => computedOper(this);
 
+  @pragma('vm:prefer-inline')
+  @pragma('wasm:prefer-inline')
+  @pragma('dart2js:prefer-inline')
   bool shouldUpdate() => updateComputed(this);
 }
 
@@ -91,6 +106,9 @@ class PresetEffect extends ReactiveNode implements Effect {
   final void Function() fn;
 
   @override
+  @pragma('vm:prefer-inline')
+  @pragma('wasm:prefer-inline')
+  @pragma('dart2js:prefer-inline')
   void call() => effectOper(this);
 }
 
@@ -98,6 +116,9 @@ class PresetEffectScope extends ReactiveNode implements EffectScope {
   PresetEffectScope({super.flags = 0 /* None */});
 
   @override
+  @pragma('vm:prefer-inline')
+  @pragma('wasm:prefer-inline')
+  @pragma('dart2js:prefer-inline')
   void call() => effectScopeOper(this);
 }
 
@@ -116,6 +137,9 @@ bool updateComputed<T>(PresetComputed<T> computed) {
   }
 }
 
+@pragma('vm:prefer-inline')
+@pragma('wasm:prefer-inline')
+@pragma('dart2js:prefer-inline')
 bool updateSignal<T>(PresetSignal<T> signal) {
   signal.flags = 1 /* Mutable */;
   return signal.currentValue != (signal.currentValue = signal.pendingValue);
@@ -215,6 +239,9 @@ T signalOper<T>(PresetSignal<T> signal, T Function()? updates) {
   }
 }
 
+@pragma('vm:prefer-inline')
+@pragma('wasm:prefer-inline')
+@pragma('dart2js:prefer-inline')
 void effectOper(ReactiveNode node) => effectScopeOper(node);
 
 void effectScopeOper(ReactiveNode node) {

@@ -105,7 +105,7 @@ WritableSignal<T> signal<T>(T initialValue) {
 @pragma('dart2js:prefer-inline')
 Computed<T> computed<T>(T Function(T? previousValue) getter) {
   return PresetComputed(
-    flags: 17 /* Mutable | Dirty */,
+    flags: 0 /* None */,
     getter: getter,
   );
 }
@@ -256,8 +256,7 @@ class PresetWritableSignal<T> extends ReactiveNode
 
 /// Preset computed signal implementation.
 class PresetComputed<T> extends ReactiveNode implements Computed<T> {
-  PresetComputed(
-      {super.flags = 17 /* Mutable | Dirty */, required this.getter});
+  PresetComputed({super.flags = 0 /* None */, required this.getter});
 
   T? currentValue;
   final T Function(T? previousValue) getter;
@@ -276,6 +275,14 @@ class PresetComputed<T> extends ReactiveNode implements Computed<T> {
         if (subs != null) {
           shallowPropagate(subs);
         }
+      }
+    } else if (flags == 0 /* None */) {
+      this.flags = 1 /* Mutable */;
+      final prevSub = setActiveSub(this);
+      try {
+        currentValue = getter(null);
+      } finally {
+        activeSub = prevSub;
       }
     }
 

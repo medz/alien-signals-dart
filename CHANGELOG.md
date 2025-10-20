@@ -3,7 +3,6 @@
 - Rename signal value fields and update update logic
 - Remove deprecated value getter and setter extensions
 - Optimize dependency cleanup in unwatched method
-- Initialize computed signals as mutable and dirty
 - Purge dependencies and reset flags in effectOper
 
 ## 1.0.3

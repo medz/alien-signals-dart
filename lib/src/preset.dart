@@ -105,7 +105,7 @@ WritableSignal<T> signal<T>(T initialValue) {
 @pragma('dart2js:prefer-inline')
 Computed<T> computed<T>(T Function(T? previousValue) getter) {
   return PresetComputed(
-    flags: 0 /* None */,
+    flags: 17 /* Mutable | Dirty */,
     getter: getter,
   );
 }
@@ -256,7 +256,8 @@ class PresetWritableSignal<T> extends ReactiveNode
 
 /// Preset computed signal implementation.
 class PresetComputed<T> extends ReactiveNode implements Computed<T> {
-  PresetComputed({super.flags = 0 /* None */, required this.getter});
+  PresetComputed(
+      {super.flags = 17 /* Mutable | Dirty */, required this.getter});
 
   T? currentValue;
   final T Function(T? previousValue) getter;
@@ -275,14 +276,6 @@ class PresetComputed<T> extends ReactiveNode implements Computed<T> {
         if (subs != null) {
           shallowPropagate(subs);
         }
-      }
-    } else if (flags == 0 /* None */) {
-      this.flags = 1 /* Mutable */;
-      final prevSub = setActiveSub(this);
-      try {
-        currentValue = getter(null);
-      } finally {
-        activeSub = prevSub;
       }
     }
 
@@ -359,14 +352,12 @@ class PresetReactiveSystem extends ReactiveSystem {
 
   @override
   void unwatched(ReactiveNode node) {
-    if (node is Computed) {
-      if (node.depsTail != null) {
-        node.depsTail = null;
-        node.flags = 17 /* Mutable | Dirty */;
-        purgeDeps(node);
-      }
-    } else if (node is Effect) {
+    if ((node.flags & 1 /* Mutable */) == 0) {
       effectOper(node);
+    } else if (node.depsTail != null) {
+      node.depsTail = null;
+      node.flags = 17 /* Mutable | Dirty */;
+      purgeDeps(node);
     }
   }
 
@@ -455,8 +446,8 @@ void effectOper(ReactiveNode e) {
 
 void purgeDeps(ReactiveNode sub) {
   final depsTail = sub.depsTail;
-  Link? toRemove = depsTail != null ? depsTail.nextDep : sub.deps;
-  while (toRemove != null) {
-    toRemove = unlink(toRemove, sub);
+  Link? dep = depsTail != null ? depsTail.nextDep : sub.deps;
+  while (dep != null) {
+    dep = unlink(dep, sub);
   }
 }

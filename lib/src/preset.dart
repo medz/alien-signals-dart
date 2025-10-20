@@ -360,14 +360,12 @@ class PresetReactiveSystem extends ReactiveSystem {
   @override
   void unwatched(ReactiveNode node) {
     if (node is Computed) {
-      Link? toRemove = node.deps;
-      if (toRemove != null) {
+      if (node.depsTail != null) {
+        node.depsTail = null;
         node.flags = 17 /* Mutable | Dirty */;
-        do {
-          toRemove = unlink(toRemove!, node);
-        } while (toRemove != null);
+        purgeDeps(node);
       }
-    } else if (node is! Signal) {
+    } else if (node is Effect) {
       effectOper(node);
     }
   }

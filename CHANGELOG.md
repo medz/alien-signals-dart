@@ -1,11 +1,13 @@
+## 1.1.0
+
+- Rename signal value fields and update update logic
+
 ## 1.0.3
 
 - Restrict preset developer exports to public API
 - Rename update method to shouldUpdated
 
 ## 1.0.1
-
-Status: Unreleased (WIP)
 
 - Change signal interface to use `call()` instead of `.value` getter/setter
 

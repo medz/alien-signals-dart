@@ -204,17 +204,17 @@ class PresetWritableSignal<T> extends ReactiveNode
   PresetWritableSignal({
     super.flags = 1 /* Mutable */,
     required T initialValue,
-  })  : previousValue = initialValue,
-        latestValue = initialValue;
+  })  : currentValue = initialValue,
+        pendingValue = initialValue;
 
-  T previousValue;
-  T latestValue;
+  T currentValue;
+  T pendingValue;
 
   @override
   T call([T? newValue, bool nulls = false]) {
     if (newValue != null || (null is T && nulls)) {
-      if (latestValue != newValue) {
-        latestValue = newValue as T;
+      if (pendingValue != newValue) {
+        pendingValue = newValue as T;
         flags = 17 /* Mutable | Dirty */;
         if (subs case final Link link) {
           propagate(link);
@@ -222,12 +222,12 @@ class PresetWritableSignal<T> extends ReactiveNode
         }
       }
 
-      return latestValue;
+      return newValue as T;
     }
 
     /*----------------- getter 👇 ------------------------*/
 
-    if ((flags & 16 /* Dirty */) != 0 && shouldUpdated()) {
+    if ((flags & 16 /* Dirty */) != 0 && shouldUpdate()) {
       final subs = this.subs;
       if (subs != null) shallowPropagate(subs);
     }
@@ -242,20 +242,15 @@ class PresetWritableSignal<T> extends ReactiveNode
       sub = sub.subs?.sub;
     }
 
-    return latestValue;
+    return currentValue;
   }
 
   @pragma('vm:prefer-inline')
   @pragma('wasm:prefer-inline')
   @pragma('dart2js:prefer-inline')
-  bool shouldUpdated() {
+  bool shouldUpdate() {
     flags = 1 /* Mutable */;
-    if (previousValue != latestValue) {
-      previousValue = latestValue;
-      return true;
-    }
-
-    return false;
+    return currentValue != (currentValue = pendingValue);
   }
 }
 
@@ -263,7 +258,7 @@ class PresetWritableSignal<T> extends ReactiveNode
 class PresetComputed<T> extends ReactiveNode implements Computed<T> {
   PresetComputed({super.flags = 0 /* None */, required this.getter});
 
-  T? cachedValue;
+  T? currentValue;
   final T Function(T? previousValue) getter;
 
   @override
@@ -275,7 +270,7 @@ class PresetComputed<T> extends ReactiveNode implements Computed<T> {
                 // Always false, infinity is a value that can never be reached
                 (this.flags = flags & -33 /* ~Pending */) ==
                     double.infinity))) {
-      if (shouldUpdated()) {
+      if (shouldUpdate()) {
         final subs = this.subs;
         if (subs != null) {
           shallowPropagate(subs);
@@ -285,7 +280,7 @@ class PresetComputed<T> extends ReactiveNode implements Computed<T> {
       this.flags = 1 /* Mutable */;
       final prevSub = setActiveSub(this);
       try {
-        cachedValue = getter(null);
+        currentValue = getter(null);
       } finally {
         activeSub = prevSub;
       }
@@ -296,18 +291,18 @@ class PresetComputed<T> extends ReactiveNode implements Computed<T> {
       link(this, sub, cycle);
     }
 
-    return cachedValue as T;
+    return currentValue as T;
   }
 
-  bool shouldUpdated() {
+  bool shouldUpdate() {
     ++cycle;
     depsTail = null;
     flags = 5 /* Mutable | RecursedCheck */;
 
     final prevSub = setActiveSub(this);
     try {
-      final oldValue = cachedValue;
-      return oldValue != (cachedValue = getter(oldValue));
+      final oldValue = currentValue;
+      return oldValue != (currentValue = getter(oldValue));
     } finally {
       activeSub = prevSub;
       flags &= -5 /* RecursedCheck */;
@@ -383,8 +378,8 @@ class PresetReactiveSystem extends ReactiveSystem {
   @pragma('dart2js:prefer-inline')
   bool update(ReactiveNode sub) {
     return switch (sub) {
-      PresetWritableSignal(:final shouldUpdated) => shouldUpdated(),
-      PresetComputed(:final shouldUpdated) => shouldUpdated(),
+      PresetWritableSignal(:final shouldUpdate) => shouldUpdate(),
+      PresetComputed(:final shouldUpdate) => shouldUpdate(),
       _ => false,
     };
   }

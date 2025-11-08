@@ -364,13 +364,13 @@ class PresetReactiveSystem extends ReactiveSystem {
 
   @override
   void unwatched(ReactiveNode node) {
-    if (node is Computed) {
-      if (node.depsTail != null) {
-        node.depsTail = null;
-        purgeDeps(node);
-      }
-    } else if (node is! Signal) {
+    if ((node.flags & ReactiveFlags.mutable) == 0) {
       effectOper(node);
+    } else if (node.depsTail != null) {
+      node
+        ..depsTail = null
+        ..flags = ReactiveFlags.mutable | ReactiveFlags.dirty;
+      purgeDeps(node);
     }
   }
 
@@ -378,8 +378,8 @@ class PresetReactiveSystem extends ReactiveSystem {
   @pragma('vm:prefer-inline')
   @pragma('wasm:prefer-inline')
   @pragma('dart2js:prefer-inline')
-  bool update(ReactiveNode sub) {
-    return switch (sub) {
+  bool update(ReactiveNode node) {
+    return switch (node) {
       PresetWritableSignal(:final shouldUpdated) => shouldUpdated(),
       PresetComputed(:final shouldUpdated) => shouldUpdated(),
       _ => false,
@@ -459,8 +459,8 @@ void effectOper(ReactiveNode e) {
 
 void purgeDeps(ReactiveNode sub) {
   final depsTail = sub.depsTail;
-  Link? toRemove = depsTail != null ? depsTail.nextDep : sub.deps;
-  while (toRemove != null) {
-    toRemove = unlink(toRemove, sub);
+  Link? dep = depsTail != null ? depsTail.nextDep : sub.deps;
+  while (dep != null) {
+    dep = unlink(dep, sub);
   }
 }

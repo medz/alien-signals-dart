@@ -205,17 +205,16 @@ class PresetWritableSignal<T> extends ReactiveNode
   PresetWritableSignal({
     super.flags = ReactiveFlags.mutable,
     required T initialValue,
-  })  : previousValue = initialValue,
-        latestValue = initialValue;
+  })  : currentValue = initialValue,
+        pendingValue = initialValue;
 
-  T previousValue;
-  T latestValue;
+  T currentValue;
+  T pendingValue;
 
   @override
   T call([T? newValue, bool nulls = false]) {
     if (newValue != null || (null is T && nulls)) {
-      if (latestValue != newValue) {
-        latestValue = newValue as T;
+      if (pendingValue != (pendingValue = newValue as T)) {
         flags = ReactiveFlags.mutable | ReactiveFlags.dirty;
         if (subs case final Link link) {
           propagate(link);
@@ -223,7 +222,7 @@ class PresetWritableSignal<T> extends ReactiveNode
         }
       }
 
-      return latestValue;
+      return newValue;
     }
 
     /*----------------- getter 👇 ------------------------*/
@@ -243,7 +242,7 @@ class PresetWritableSignal<T> extends ReactiveNode
       sub = sub.subs?.sub;
     }
 
-    return latestValue;
+    return currentValue;
   }
 
   @pragma('vm:prefer-inline')
@@ -251,8 +250,8 @@ class PresetWritableSignal<T> extends ReactiveNode
   @pragma('dart2js:prefer-inline')
   bool shouldUpdated() {
     flags = ReactiveFlags.mutable;
-    if (previousValue != latestValue) {
-      previousValue = latestValue;
+    if (currentValue != pendingValue) {
+      currentValue = pendingValue;
       return true;
     }
 

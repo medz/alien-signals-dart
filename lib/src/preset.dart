@@ -85,7 +85,7 @@ void endBatch() {
 @pragma('dart2js:prefer-inline')
 WritableSignal<T> signal<T>(T initialValue) {
   return PresetWritableSignal(
-      flags: 1 /* Mutable */, initialValue: initialValue);
+      flags: ReactiveFlags.mutable, initialValue: initialValue);
 }
 
 /// A [Computed] derives a memoized value from other signals, and only re-computes
@@ -105,7 +105,7 @@ WritableSignal<T> signal<T>(T initialValue) {
 @pragma('dart2js:prefer-inline')
 Computed<T> computed<T>(T Function(T? previousValue) getter) {
   return PresetComputed(
-    flags: 0 /* None */,
+    flags: ReactiveFlags.none,
     getter: getter,
   );
 }
@@ -124,7 +124,8 @@ Computed<T> computed<T>(T Function(T? previousValue) getter) {
 /// count.value++; // Does't print anything
 /// ```
 Effect effect(void Function() callback) {
-  final effect = PresetEffect(callback: callback, flags: 2 /* Watching */),
+  final effect =
+          PresetEffect(callback: callback, flags: ReactiveFlags.watching),
       prevSub = setActiveSub(effect);
   if (prevSub != null) {
     link(effect, prevSub, 0);
@@ -152,7 +153,7 @@ Effect effect(void Function() callback) {
 /// source.value++; // Does't print anything
 /// ```
 EffectScope effectScope(void Function() callback) {
-  final scope = PresetEffectScope(flags: 0 /* None */),
+  final scope = PresetEffectScope(flags: ReactiveFlags.none),
       prevSub = setActiveSub(scope);
   if (prevSub != null) {
     link(scope, prevSub, 0);
@@ -202,7 +203,7 @@ abstract interface class EffectScope {
 class PresetWritableSignal<T> extends ReactiveNode
     implements WritableSignal<T> {
   PresetWritableSignal({
-    super.flags = 1 /* Mutable */,
+    super.flags = ReactiveFlags.mutable,
     required T initialValue,
   })  : previousValue = initialValue,
         latestValue = initialValue;
@@ -215,7 +216,7 @@ class PresetWritableSignal<T> extends ReactiveNode
     if (newValue != null || (null is T && nulls)) {
       if (latestValue != newValue) {
         latestValue = newValue as T;
-        flags = 17 /* Mutable | Dirty */;
+        flags = ReactiveFlags.mutable | ReactiveFlags.dirty;
         if (subs case final Link link) {
           propagate(link);
           if (batchDepth == 0) flush();
@@ -227,14 +228,14 @@ class PresetWritableSignal<T> extends ReactiveNode
 
     /*----------------- getter 👇 ------------------------*/
 
-    if ((flags & 16 /* Dirty */) != 0 && shouldUpdated()) {
+    if ((flags & ReactiveFlags.dirty) != 0 && shouldUpdated()) {
       final subs = this.subs;
       if (subs != null) shallowPropagate(subs);
     }
 
     ReactiveNode? sub = activeSub;
     while (sub != null) {
-      if ((sub.flags & 3 /* Mutable | Watching */) != 0) {
+      if ((sub.flags & (ReactiveFlags.mutable | ReactiveFlags.watching)) != 0) {
         link(this, sub, cycle);
         break;
       }
@@ -249,7 +250,7 @@ class PresetWritableSignal<T> extends ReactiveNode
   @pragma('wasm:prefer-inline')
   @pragma('dart2js:prefer-inline')
   bool shouldUpdated() {
-    flags = 1 /* Mutable */;
+    flags = ReactiveFlags.mutable;
     if (previousValue != latestValue) {
       previousValue = latestValue;
       return true;
@@ -269,8 +270,8 @@ class PresetComputed<T> extends ReactiveNode implements Computed<T> {
   @override
   T call() {
     final flags = this.flags;
-    if ((flags & 16 /* Dirty */) != 0 ||
-        ((flags & 32 /* Pending */) != 0 &&
+    if ((flags & ReactiveFlags.dirty) != 0 ||
+        ((flags & ReactiveFlags.pending) != 0 &&
             (checkDirty(deps!, this) ||
                 // Always false, infinity is a value that can never be reached
                 (this.flags = flags & -33 /* ~Pending */) ==
@@ -282,7 +283,7 @@ class PresetComputed<T> extends ReactiveNode implements Computed<T> {
         }
       }
     } else if (flags == 0 /* None */) {
-      this.flags = 1 /* Mutable */;
+      this.flags = ReactiveFlags.mutable;
       final prevSub = setActiveSub(this);
       try {
         cachedValue = getter(null);
@@ -302,7 +303,7 @@ class PresetComputed<T> extends ReactiveNode implements Computed<T> {
   bool shouldUpdated() {
     ++cycle;
     depsTail = null;
-    flags = 5 /* Mutable | RecursedCheck */;
+    flags = ReactiveFlags.mutable | ReactiveFlags.recursedCheck;
 
     final prevSub = setActiveSub(this);
     try {
@@ -310,7 +311,7 @@ class PresetComputed<T> extends ReactiveNode implements Computed<T> {
       return oldValue != (cachedValue = getter(oldValue));
     } finally {
       activeSub = prevSub;
-      flags &= -5 /* RecursedCheck */;
+      flags &= ~ReactiveFlags.recursedCheck;
       purgeDeps(this);
     }
   }
@@ -322,7 +323,7 @@ abstract interface class LinkedEffect implements ReactiveNode {
 
 /// Preset effect implementation.
 class PresetEffect extends ReactiveNode implements LinkedEffect, Effect {
-  PresetEffect({super.flags = 2 /* Watching */, required this.callback});
+  PresetEffect({super.flags = ReactiveFlags.watching, required this.callback});
 
   final void Function() callback;
 
@@ -339,7 +340,7 @@ class PresetEffect extends ReactiveNode implements LinkedEffect, Effect {
 /// Preset effect scope implementation.
 class PresetEffectScope extends ReactiveNode
     implements LinkedEffect, EffectScope {
-  PresetEffectScope({super.flags = 0 /* None */});
+  PresetEffectScope({super.flags = ReactiveFlags.none});
 
   @override
   LinkedEffect? nextEffect;
@@ -367,7 +368,7 @@ class PresetReactiveSystem extends ReactiveSystem {
     if (node is Computed) {
       Link? toRemove = node.deps;
       if (toRemove != null) {
-        node.flags = 17 /* Mutable | Dirty */;
+        node.flags = ReactiveFlags.mutable | ReactiveFlags.dirty;
         do {
           toRemove = unlink(toRemove!, node);
         } while (toRemove != null);
@@ -406,21 +407,21 @@ void notifyEffect(ReactiveNode e) {
 }
 
 void run(ReactiveNode e, int flags) {
-  if ((flags & 16 /* Dirty */) != 0 ||
-      ((flags & 32 /* Pending */) != 0 &&
+  if ((flags & ReactiveFlags.dirty) != 0 ||
+      ((flags & ReactiveFlags.pending) != 0 &&
           (checkDirty(e.deps!, e) ||
               // Always false, infinity is a value that can never be reached
-              (e.flags = flags & -33 /* ~Pending */) == double.infinity))) {
+              (e.flags = flags & ~ReactiveFlags.pending) == double.infinity))) {
     ++cycle;
     e.depsTail = null;
-    e.flags = 6 /* Watching | RecursedCheck */;
+    e.flags = ReactiveFlags.watching | ReactiveFlags.recursedCheck;
 
     final prevSub = setActiveSub(e);
     try {
       (e as PresetEffect).callback();
     } finally {
       activeSub = prevSub;
-      e.flags &= -5 /* ~RecursedCheck */;
+      e.flags &= ~ReactiveFlags.recursedCheck;
       purgeDeps(e);
     }
   } else {
@@ -457,7 +458,7 @@ void effectOper(ReactiveNode e) {
 
   final sub = e.subs;
   if (sub != null) unlink(sub);
-  e.flags = 0 /* None */;
+  e.flags = ReactiveFlags.none;
 }
 
 void purgeDeps(ReactiveNode sub) {

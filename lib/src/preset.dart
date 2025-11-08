@@ -447,14 +447,13 @@ void flush() {
 }
 
 void effectOper(ReactiveNode e) {
-  Link? dep = e.deps;
-  while (dep != null) {
-    dep = unlink(dep, e);
+  e
+    ..depsTail = null
+    ..flags = ReactiveFlags.none;
+  purgeDeps(e);
+  if (e.subs case final Link sub) {
+    unlink(sub);
   }
-
-  final sub = e.subs;
-  if (sub != null) unlink(sub);
-  e.flags = ReactiveFlags.none;
 }
 
 void purgeDeps(ReactiveNode sub) {

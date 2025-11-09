@@ -1,424 +1,232 @@
 import 'package:alien_signals/system.dart';
 
-/*------------------- Public variables --------------------*/
-/// Alien signals preset system
-const ReactiveSystem system = PresetReactiveSystem();
+class SignalNode<T> extends ReactiveNode {
+  T currentValue;
+  T pendingValue;
 
-/*------------------ Internal variables -------------------*/
+  SignalNode(
+      {required super.flags,
+      required this.currentValue,
+      required this.pendingValue});
+}
 
-final link = system.link,
+class ComputedNode<T> extends ReactiveNode {
+  final T Function(T?) getter;
+  T? value;
+
+  ComputedNode({required super.flags, required this.getter});
+}
+
+class EffectNode extends ReactiveNode {
+  final void Function() fn;
+
+  EffectNode({required super.flags, required this.fn});
+}
+
+int cycle = 0, batchDepth = 0, notifyIndex = 0, queuedLength = 0;
+ReactiveNode? activeSub;
+
+final queued = List<EffectNode?>.filled(1024, null, growable: true),
+    system = createReactiveSystem(
+        update: update, notify: notify, unwatched: unwatched),
+    link = system.link,
     unlink = system.unlink,
     propagate = system.propagate,
     checkDirty = system.checkDirty,
     shallowPropagate = system.shallowPropagate;
 
-int cycle = 0, batchDepth = 0, notifyIndex = 0, queuedLength = 0;
-ReactiveNode? activeSub;
-
-final queued = List<PresetEffect?>.filled(1024, null);
-
-/*----------------------- Public API -----------------------*/
-
-/// Gets the current batch depth.
-///
-/// This returns the current batch depth, which is incremented when a batch
-/// operation is started and decremented when it is completed.
 @pragma('vm:prefer-inline')
+@pragma('dart2js:tryInline')
 @pragma('wasm:prefer-inline')
-@pragma('dart2js:prefer-inline')
-int getBatchDepth() => batchDepth;
+bool update(ReactiveNode node) {
+  if (node.depsTail == null) {
+    return updateComputed(node as ComputedNode);
+  }
 
-/// Gets the currently active reactive subscription.
-///
-/// This returns the [ReactiveNode] that is currently being tracked as the active
-/// subscription during reactive operations. Returns null if no subscription
-/// is currently active.
+  return updateSignal(node as SignalNode);
+}
+
+void notify(ReactiveNode effect) {
+  int insertIndex = queuedLength, firstInsertedIndex = insertIndex;
+
+  do {
+    effect.flags &= ~ReactiveFlags.watching;
+    queued.safeInsert(insertIndex, effect as EffectNode);
+
+    final next = effect.subs?.sub;
+    if (next == null ||
+        ((effect = next).flags & ReactiveFlags.watching) ==
+            ReactiveFlags.none) {
+      break;
+    }
+  } while (true);
+
+  queuedLength = insertIndex;
+
+  while (firstInsertedIndex < --insertIndex) {
+    final left = queued[firstInsertedIndex];
+    queued[firstInsertedIndex++] = queued[insertIndex];
+    queued[insertIndex] = left;
+  }
+}
+
+void unwatched(ReactiveNode node) {
+  if ((node.flags & ReactiveFlags.mutable) == ReactiveFlags.none) {
+    effectScopeOper(node);
+  } else if (node.depsTail != null) {
+    node.depsTail = null;
+    node.flags = ReactiveFlags.mutable | ReactiveFlags.dirty;
+    purgeDeps(node);
+  }
+}
+
 @pragma('vm:prefer-inline')
+@pragma('dart2js:tryInline')
 @pragma('wasm:prefer-inline')
-@pragma('dart2js:prefer-inline')
 ReactiveNode? getActiveSub() => activeSub;
 
-/// Sets the currently active reactive subscription and returns the previous one.
-///
-/// This updates the [activeSub] to the provided [sub] and returns the previous
-/// subscription that was active. This is used to manage the tracking context
-/// during reactive operations.
 @pragma('vm:prefer-inline')
+@pragma('dart2js:tryInline')
 @pragma('wasm:prefer-inline')
-@pragma('dart2js:prefer-inline')
-ReactiveNode? setActiveSub(ReactiveNode? sub) {
+ReactiveNode? setActiveSub([ReactiveNode? sub]) {
   final prevSub = activeSub;
   activeSub = sub;
   return prevSub;
 }
 
-/// Starts a new batch of reactive updates.
-///
-/// Increments the [batchDepth] counter to indicate that multiple reactive
-/// updates should be batched together. While the batch depth is greater than 0,
-/// updates will be queued but not immediately processed until [endBatch] is
-/// called to decrease the batch depth back to 0.
 @pragma('vm:prefer-inline')
+@pragma('dart2js:tryInline')
 @pragma('wasm:prefer-inline')
-@pragma('dart2js:prefer-inline')
+int getBatchDepth() => batchDepth;
+
+@pragma('vm:prefer-inline')
+@pragma('dart2js:tryInline')
+@pragma('wasm:prefer-inline')
 void startBatch() => ++batchDepth;
 
-/// Ends the current batch of reactive updates and flushes pending effects if needed.
-///
-/// Decrements the [batchDepth] counter. If this brings the batch depth to 0,
-/// any queued effects will be processed by calling [flush]. This ensures that
-/// multiple updates made within a batch are processed together in a single
-/// flush cycle.
 @pragma('vm:prefer-inline')
+@pragma('dart2js:tryInline')
 @pragma('wasm:prefer-inline')
-@pragma('dart2js:prefer-inline')
 void endBatch() {
   if ((--batchDepth) == 0) flush();
 }
 
-/// A [WritableSignal] stores a value, and can be updated.
-///
-/// > When updated, its subscribers are notified.
 @pragma('vm:prefer-inline')
+@pragma('dart2js:tryInline')
 @pragma('wasm:prefer-inline')
-@pragma('dart2js:prefer-inline')
-WritableSignal<T> signal<T>(T initialValue) {
-  return PresetWritableSignal(
-      flags: ReactiveFlags.mutable, initialValue: initialValue);
+T Function([T? newValue, bool nulls]) signal<T>(T initialValue) {
+  final s = SignalNode(
+      currentValue: initialValue,
+      pendingValue: initialValue,
+      flags: ReactiveFlags.mutable);
+  return ([value, nulls = false]) => signalOper(s, value, nulls);
 }
 
-/// A [Computed] derives a memoized value from other signals, and only re-computes
-/// when those dependencies change.
-///
-/// ```dart
-/// final source = signal(0);
-/// final derived = computed((_) => source.value * 2);
-///
-/// print(derived.value); // Prints: 0
-///
-/// source.value = 1;
-/// print(derived.value); // Prints: 2
-/// ```
 @pragma('vm:prefer-inline')
+@pragma('dart2js:tryInline')
 @pragma('wasm:prefer-inline')
-@pragma('dart2js:prefer-inline')
-Computed<T> computed<T>(T Function(T? previousValue) getter) {
-  return PresetComputed(
-    flags: ReactiveFlags.none,
+T Function() computed<T>(T Function(T?) getter) {
+  final c = ComputedNode(
     getter: getter,
+    flags: ReactiveFlags.none,
   );
+  return () => computedOper(c);
 }
 
-/// An [Effect] runs a function, and schedules it to re-run when the signals it
-/// reads change.
-///
-/// ```dart
-/// final count = signal(0);
-/// final dispose = effect(() => print(count.value));
-///
-/// count.value++; // Prints: 1
-/// count.value++; // Prints: 2
-///
-/// dispose();
-/// count.value++; // Does't print anything
-/// ```
-Effect effect(void Function() callback) {
-  final effect =
-          PresetEffect(callback: callback, flags: ReactiveFlags.watching),
-      prevSub = setActiveSub(effect);
-  if (prevSub != null) {
-    link(effect, prevSub, 0);
-  }
+@pragma('vm:prefer-inline')
+@pragma('dart2js:tryInline')
+@pragma('wasm:prefer-inline')
+void Function() effect(void Function() fn) {
+  final e = EffectNode(
+          fn: fn, flags: ReactiveFlags.watching | ReactiveFlags.recursedCheck),
+      prevSub = setActiveSub(e);
+  if (prevSub != null) link(e, prevSub, 0);
 
   try {
-    callback();
-    return effect;
+    fn();
+  } finally {
+    activeSub = prevSub;
+    e.flags &= ~ReactiveFlags.recursedCheck;
+  }
+
+  return () => effectOper(e);
+}
+
+@pragma('vm:prefer-inline')
+@pragma('dart2js:tryInline')
+@pragma('wasm:prefer-inline')
+void Function() effectScope(void Function() fn) {
+  final e = ReactiveNode(flags: ReactiveFlags.none), prevSub = setActiveSub(e);
+  if (prevSub != null) link(e, prevSub, 0);
+
+  try {
+    fn();
   } finally {
     activeSub = prevSub;
   }
+  return () => effectScopeOper(e);
 }
 
-/// An [EffectScope] groups effects allowing them to be disposed at the same time.
-///
-/// ```dart
-/// final source = signal(0);
-/// final dispose = effectScope(() {
-///   effect(() => print(source.value));
-///   effect(() => print(source.value));
-/// });
-///
-/// source.value++; // Prints: 1, 1
-/// dispose();
-/// source.value++; // Does't print anything
-/// ```
-EffectScope effectScope(void Function() callback) {
-  final scope = PresetEffectScope(flags: ReactiveFlags.none),
-      prevSub = setActiveSub(scope);
-  if (prevSub != null) {
-    link(scope, prevSub, 0);
-  }
-
+void trigger(void Function() fn) {
+  final sub = ReactiveNode(flags: ReactiveFlags.watching),
+      prevSub = setActiveSub(sub);
   try {
-    callback();
-    return scope;
+    fn();
   } finally {
     activeSub = prevSub;
-  }
-}
-
-/*------------------------ Types def -----------------------*/
-
-/// A readonly signal.
-abstract interface class Signal<T> {
-  /// Returns the current value of the signal.
-  T call();
-}
-
-/// A writable signal.
-abstract interface class WritableSignal<T> extends Signal<T> {
-  /// Sets the value of the signal.
-  @override
-  T call([T? newValue, bool nulls]);
-}
-
-/// A computed signal.
-abstract interface class Computed<T> implements Signal<T> {}
-
-/// A reactive effect.
-abstract interface class Effect {
-  /// Calls the effect on dispose.
-  void dispose();
-}
-
-/// A reactive effect scope.
-abstract interface class EffectScope {
-  /// Calls the scope on dispose, notifying all effects.
-  void dispose();
-}
-
-/*--------------------- Preset Impls ---------------------*/
-
-/// Preset writable signal implementation.
-class PresetWritableSignal<T> extends ReactiveNode
-    implements WritableSignal<T> {
-  PresetWritableSignal({
-    super.flags = ReactiveFlags.mutable,
-    required T initialValue,
-  })  : currentValue = initialValue,
-        pendingValue = initialValue;
-
-  T currentValue;
-  T pendingValue;
-
-  @override
-  T call([T? newValue, bool nulls = false]) {
-    if (newValue != null || (null is T && nulls)) {
-      if (pendingValue != (pendingValue = newValue as T)) {
-        flags = ReactiveFlags.mutable | ReactiveFlags.dirty;
-        if (subs case final Link link) {
-          propagate(link);
-          if (batchDepth == 0) flush();
-        }
-      }
-
-      return newValue;
-    }
-
-    /*----------------- getter 👇 ------------------------*/
-
-    if ((flags & ReactiveFlags.dirty) != 0 && shouldUpdated()) {
-      final subs = this.subs;
-      if (subs != null) shallowPropagate(subs);
-    }
-
-    ReactiveNode? sub = activeSub;
-    while (sub != null) {
-      if ((sub.flags & (ReactiveFlags.mutable | ReactiveFlags.watching)) != 0) {
-        link(this, sub, cycle);
-        break;
-      }
-
-      sub = sub.subs?.sub;
-    }
-
-    return currentValue;
-  }
-
-  @pragma('vm:prefer-inline')
-  @pragma('wasm:prefer-inline')
-  @pragma('dart2js:prefer-inline')
-  bool shouldUpdated() {
-    flags = ReactiveFlags.mutable;
-    if (currentValue != pendingValue) {
-      currentValue = pendingValue;
-      return true;
-    }
-
-    return false;
-  }
-}
-
-/// Preset computed signal implementation.
-class PresetComputed<T> extends ReactiveNode implements Computed<T> {
-  PresetComputed({super.flags = 0 /* None */, required this.getter});
-
-  T? cachedValue;
-  final T Function(T? previousValue) getter;
-
-  @override
-  T call() {
-    final flags = this.flags;
-    if ((flags & ReactiveFlags.dirty) != 0 ||
-        ((flags & ReactiveFlags.pending) != 0 &&
-            (checkDirty(deps!, this) ||
-                // Always false, infinity is a value that can never be reached
-                (this.flags = flags & -33 /* ~Pending */) ==
-                    double.infinity))) {
-      if (shouldUpdated()) {
-        final subs = this.subs;
-        if (subs != null) {
-          shallowPropagate(subs);
-        }
-      }
-    } else if (flags == 0 /* None */) {
-      this.flags = ReactiveFlags.mutable;
-      final prevSub = setActiveSub(this);
-      try {
-        cachedValue = getter(null);
-      } finally {
-        activeSub = prevSub;
+    while (sub.deps != null) {
+      final link = sub.deps!, dep = link.dep;
+      unlink(link, sub);
+      if (dep.subs case final Link subs) {
+        propagate(subs);
+        shallowPropagate(subs);
       }
     }
-
-    final sub = activeSub;
-    if (sub != null) {
-      link(this, sub, cycle);
-    }
-
-    return cachedValue as T;
-  }
-
-  bool shouldUpdated() {
-    ++cycle;
-    depsTail = null;
-    flags = ReactiveFlags.mutable | ReactiveFlags.recursedCheck;
-
-    final prevSub = setActiveSub(this);
-    try {
-      final oldValue = cachedValue;
-      return oldValue != (cachedValue = getter(oldValue));
-    } finally {
-      activeSub = prevSub;
-      flags &= ~ReactiveFlags.recursedCheck;
-      purgeDeps(this);
-    }
+    if (batchDepth == 0) flush();
   }
 }
 
-abstract interface class LinkedEffect implements ReactiveNode {
-  LinkedEffect? nextEffect;
-}
-
-/// Preset effect implementation.
-class PresetEffect extends ReactiveNode implements LinkedEffect, Effect {
-  PresetEffect({super.flags = ReactiveFlags.watching, required this.callback});
-
-  final void Function() callback;
-
-  @override
-  LinkedEffect? nextEffect;
-
-  @override
-  @pragma('vm:prefer-inline')
-  @pragma('wasm:prefer-inline')
-  @pragma('dart2js:prefer-inline')
-  void dispose() => effectOper(this);
-}
-
-/// Preset effect scope implementation.
-class PresetEffectScope extends ReactiveNode
-    implements LinkedEffect, EffectScope {
-  PresetEffectScope({super.flags = ReactiveFlags.none});
-
-  @override
-  LinkedEffect? nextEffect;
-
-  @override
-  @pragma('vm:prefer-inline')
-  @pragma('wasm:prefer-inline')
-  @pragma('dart2js:prefer-inline')
-  void dispose() => effectOper(this);
-}
-
-/*--------------------- Internal Impls ---------------------*/
-
-class PresetReactiveSystem extends ReactiveSystem {
-  const PresetReactiveSystem();
-
-  @override
-  void notify(ReactiveNode effect) {
-    int insertIndex = queuedLength, firstInsertedIndex = insertIndex;
-    do {
-      effect.flags &= ~ReactiveFlags.watching;
-      queued[insertIndex++] = effect as PresetEffect;
-      final next = effect.subs?.sub;
-      if (next == null || (effect.flags & ReactiveFlags.watching) == 0) {
-        break;
-      }
-    } while (true);
-
-    queuedLength = insertIndex;
-
-    while (firstInsertedIndex < --insertIndex) {
-      final left = queued[firstInsertedIndex];
-      queued[firstInsertedIndex++] = queued[insertIndex];
-      queued[insertIndex] = left;
-    }
-  }
-
-  @override
-  void unwatched(ReactiveNode node) {
-    if ((node.flags & ReactiveFlags.mutable) == 0) {
-      effectOper(node);
-    } else if (node.depsTail != null) {
-      node
-        ..depsTail = null
-        ..flags = ReactiveFlags.mutable | ReactiveFlags.dirty;
-      purgeDeps(node);
-    }
-  }
-
-  @override
-  @pragma('vm:prefer-inline')
-  @pragma('wasm:prefer-inline')
-  @pragma('dart2js:prefer-inline')
-  bool update(ReactiveNode node) {
-    return switch (node) {
-      PresetWritableSignal(:final shouldUpdated) => shouldUpdated(),
-      PresetComputed(:final shouldUpdated) => shouldUpdated(),
-      _ => false,
-    };
+bool updateComputed<T>(ComputedNode<T> c) {
+  ++cycle;
+  c.depsTail = null;
+  c.flags = ReactiveFlags.mutable | ReactiveFlags.recursedCheck;
+  final prevSub = setActiveSub(c);
+  try {
+    final oldValue = c.value;
+    return oldValue != (c.value = c.getter(oldValue));
+  } finally {
+    activeSub = prevSub;
+    c.flags &= ~ReactiveFlags.recursedCheck;
+    purgeDeps(c);
   }
 }
 
-void run(ReactiveNode e) {
+@pragma('vm:prefer-inline')
+@pragma('dart2js:tryInline')
+@pragma('wasm:prefer-inline')
+bool updateSignal<T>(SignalNode<T> s) {
+  s.flags = ReactiveFlags.mutable;
+  return s.currentValue != (s.currentValue = s.pendingValue);
+}
+
+void run(EffectNode e) {
   final flags = e.flags;
-  if ((flags & ReactiveFlags.dirty) != 0 ||
-      ((flags & ReactiveFlags.pending) != 0 && checkDirty(e.deps!, e))) {
+  if ((flags & ReactiveFlags.dirty) != ReactiveFlags.none ||
+      ((flags & ReactiveFlags.pending) != ReactiveFlags.none &&
+          checkDirty(e.deps!, e))) {
     ++cycle;
     e.depsTail = null;
     e.flags = ReactiveFlags.watching | ReactiveFlags.recursedCheck;
-
     final prevSub = setActiveSub(e);
     try {
-      (e as PresetEffect).callback();
+      e.fn();
     } finally {
       activeSub = prevSub;
       e.flags &= ~ReactiveFlags.recursedCheck;
       purgeDeps(e);
     }
   } else {
-    e.flags = ReactiveFlags.watching;
+    e.flags &= ~ReactiveFlags.watching;
   }
 }
 
@@ -428,17 +236,82 @@ void flush() {
     queued[notifyIndex++] = null;
     run(effect);
   }
-
-  notifyIndex = queuedLength = 0;
+  notifyIndex = 0;
+  queuedLength = 0;
 }
 
-void effectOper(ReactiveNode e) {
-  e
-    ..depsTail = null
-    ..flags = ReactiveFlags.none;
-  purgeDeps(e);
-  if (e.subs case final Link sub) {
-    unlink(sub);
+T computedOper<T>(ComputedNode<T> c) {
+  final flags = c.flags;
+  if ((flags & ReactiveFlags.dirty) != ReactiveFlags.none ||
+      ((flags & ReactiveFlags.pending) != ReactiveFlags.none &&
+          (checkDirty(c.deps!, c) ||
+              identical(c.flags = flags & ~ReactiveFlags.pending, false)))) {
+    if (updateComputed(c)) {
+      if (c.subs case final Link subs) {
+        shallowPropagate(subs);
+      }
+    }
+  } else if (flags == ReactiveFlags.none) {
+    c.flags = ReactiveFlags.mutable | ReactiveFlags.recursedCheck;
+    final prevSub = setActiveSub(c);
+    try {
+      c.value = c.getter(null);
+    } finally {
+      activeSub = prevSub;
+      c.flags &= ~ReactiveFlags.recursedCheck;
+    }
+  }
+
+  if (activeSub case final ReactiveNode sub) {
+    link(c, sub, cycle);
+  }
+
+  return c.value as T;
+}
+
+T signalOper<T>(SignalNode<T> s, T? newValue, bool nulls) {
+  if (newValue != null || (null is T && nulls)) {
+    if (s.pendingValue != (s.pendingValue = newValue as T)) {
+      s.flags = ReactiveFlags.mutable | ReactiveFlags.dirty;
+      if (s.subs case final Link subs) {
+        propagate(subs);
+        if (batchDepth == 0) flush();
+      }
+    }
+
+    return newValue;
+  } else {
+    if ((s.flags & ReactiveFlags.dirty) != ReactiveFlags.none) {
+      if (updateSignal(s)) {
+        if (s.subs case final Link subs) {
+          shallowPropagate(subs);
+        }
+      }
+    }
+    ReactiveNode? sub = activeSub;
+    while (sub != null) {
+      if ((sub.flags & (ReactiveFlags.mutable | ReactiveFlags.watching)) !=
+          ReactiveFlags.none) {
+        link(s, sub, cycle);
+        break;
+      }
+      sub = sub.subs?.sub;
+    }
+    return s.currentValue;
+  }
+}
+
+@pragma('vm:prefer-inline')
+@pragma('dart2js:tryInline')
+@pragma('wasm:prefer-inline')
+void effectOper(EffectNode e) => effectScopeOper(e);
+
+void effectScopeOper(ReactiveNode node) {
+  node.depsTail = null;
+  node.flags = ReactiveFlags.none;
+  purgeDeps(node);
+  if (node.subs case final Link subs) {
+    unlink(subs);
   }
 }
 
@@ -447,5 +320,17 @@ void purgeDeps(ReactiveNode sub) {
   Link? dep = depsTail != null ? depsTail.nextDep : sub.deps;
   while (dep != null) {
     dep = unlink(dep, sub);
+  }
+}
+
+extension on List<EffectNode?> {
+  @pragma('vm:prefer-inline')
+  @pragma('dart2js:tryInline')
+  @pragma('wasm:prefer-inline')
+  void safeInsert(int index, EffectNode? value) {
+    if (index >= 1024 || index >= length) {
+      addAll(List.filled(index - length + 1, null));
+    }
+    insert(index, value);
   }
 }

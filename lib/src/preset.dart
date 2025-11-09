@@ -69,7 +69,7 @@ void notify(ReactiveNode effect) {
 }
 
 void unwatched(ReactiveNode node) {
-  if ((node.flags & ReactiveFlags.mutable) == ReactiveFlags.none) {
+  if ((node.flags & ReactiveFlags.mutable) == 0) {
     effectScopeOper(node);
   } else if (node.depsTail != null) {
     node.depsTail = null;
@@ -136,17 +136,19 @@ T Function() computed<T>(T Function(T?) getter) {
 @pragma('wasm:prefer-inline')
 void Function() effect(void Function() fn) {
   final e = EffectNode(
-          fn: fn, flags: ReactiveFlags.watching | ReactiveFlags.recursedCheck),
-      prevSub = setActiveSub(e);
-  if (prevSub != null) link(e, prevSub, 0);
-
+    fn: fn,
+    flags: ReactiveFlags.watching | ReactiveFlags.recursedCheck,
+  );
+  final prevSub = setActiveSub(e);
+  if (prevSub != null) {
+    link(e, prevSub, 0);
+  }
   try {
-    fn();
+    e.fn();
   } finally {
     activeSub = prevSub;
     e.flags &= ~ReactiveFlags.recursedCheck;
   }
-
   return () => effectOper(e);
 }
 

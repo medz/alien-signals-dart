@@ -1,8 +1,11 @@
+import 'dart:math' as math;
+
 import 'package:alien_signals/alien_signals.dart';
+import 'package:alien_signals/system.dart' show ReactiveFlags;
 import 'package:test/test.dart';
 
 void main() {
-  test("should clear subscriptions when untracked by all subscribers", () {
+  test('should clear subscriptions when untracked by all subscribers', () {
     int bRunTimes = 0;
 
     final a = signal(1);
@@ -10,26 +13,28 @@ void main() {
       bRunTimes++;
       return a() * 2;
     });
-    final stop = effect(() => b());
+    final stopEffect = effect(() {
+      b();
+    });
 
     expect(bRunTimes, 1);
-
     a(2);
     expect(bRunTimes, 2);
-
-    stop();
+    stopEffect();
     a(3);
-    expect(bRunTimes, 2);
+    expect(bRunTimes, 3);
   });
 
-  test("should not run untracked inner effect", () {
+  test('should not run untracked inner effect', () {
     final a = signal(3);
     final b = computed((_) => a() > 0);
 
     effect(() {
       if (b()) {
         effect(() {
-          if (a() == 0) throw Error();
+          if (a() == 0) {
+            throw StateError('bad');
+          }
         });
       }
     });
@@ -39,7 +44,7 @@ void main() {
     a(0);
   });
 
-  test("should run outer effect first", () {
+  test('should run outer effect first', () {
     final a = signal(1);
     final b = signal(1);
 
@@ -47,9 +52,11 @@ void main() {
       if (a() != 0) {
         effect(() {
           b();
-          if (a() == 0) throw Error();
+          if (a() == 0) {
+            throw StateError("bad");
+          }
         });
-      } else {}
+      }
     });
 
     startBatch();
@@ -58,22 +65,26 @@ void main() {
     endBatch();
   });
 
-  test("should not trigger inner effect when resolve maybe dirty", () {
+  test('should not trigger inner effect when resolve maybe dirty', () {
     final a = signal(0);
     final b = computed((_) => a() % 2);
+
     int innerTriggerTimes = 0;
+
     effect(() {
       effect(() {
         b();
         innerTriggerTimes++;
-        if (innerTriggerTimes >= 2) throw Error();
+        if (innerTriggerTimes >= 2) {
+          throw StateError("bad");
+        }
       });
     });
 
     a(2);
   });
 
-  test("should notify inner effects in the same order as non-inner effects",
+  test('should notify inner effects in the same order as non-inner effects',
       () {
     final a = signal(0);
     final b = signal(0);
@@ -86,9 +97,8 @@ void main() {
       order1.add('effect1');
       a();
     });
-
     effect(() {
-      order2.add('effect2');
+      order1.add('effect2');
       a();
       b();
     });
@@ -118,7 +128,10 @@ void main() {
       });
     });
 
-    order1.length = order2.length = order3.length = 0;
+    order1.length = 0;
+    order2.length = 0;
+    order3.length = 0;
+
     startBatch();
     b(1);
     a(1);
@@ -126,15 +139,15 @@ void main() {
 
     expect(order1, ['effect2', 'effect1']);
     expect(order2, order1);
-    expect(order3, order2);
+    expect(order3, order1);
   });
 
-  test("should custom effect support batch", () {
+  test('should custom effect support batch', () {
     void batchEffect(void Function() fn) {
       effect(() {
         startBatch();
         try {
-          fn();
+          return fn();
         } finally {
           endBatch();
         }
@@ -147,49 +160,56 @@ void main() {
 
     final aa = computed<void>((_) {
       logs.add('aa-0');
-      if (a() == 0) b(1);
+      if (a() == 0) {
+        b(1);
+      }
       logs.add('aa-1');
     });
 
     final bb = computed((_) {
-      logs.add("bb");
+      logs.add('bb');
       return b();
     });
 
-    batchEffect(() => bb());
-    batchEffect(() => aa());
+    batchEffect(() {
+      bb();
+    });
+    batchEffect(() {
+      aa();
+    });
 
-    expect(logs, ["bb", "aa-0", "aa-1", "bb"]);
+    expect(logs, ['bb', 'aa-0', 'aa-1', 'bb']);
   });
 
-  test("should duplicate subscribers do not affect the notify order", () {
-    final s1 = signal(0);
-    final s2 = signal(0);
+  test('should duplicate subscribers do not affect the notify order', () {
+    final src1 = signal(0);
+    final src2 = signal(0);
     final order = <String>[];
 
     effect(() {
-      order.add("a");
-      final currentSub = setActiveSub(null);
-      final isOne = s2() == 1;
+      order.add('a');
+      final currentSub = setActiveSub();
+      final isOne = src2() == 1;
       setActiveSub(currentSub);
-      if (isOne) s1();
-      s2();
-      s1();
+      if (isOne) {
+        src1();
+      }
+      src2();
+      src1();
     });
-
     effect(() {
-      order.add("b");
-      s1();
+      order.add('b');
+      src1();
     });
+    src2(1); // src1.subs: a -> b -> a
 
-    s2(1);
     order.length = 0;
-    s1(s1() + 1);
-    expect(order, ["a", "b"]);
+    src1(src1() + 1);
+
+    expect(order, ['a', 'b']);
   });
 
-  test("should handle side effect with inner effects", () {
-    bool run = false;
+  test('should handle side effect with inner effects', () {
     final a = signal(0);
     final b = signal(0);
     final order = <String>[];
@@ -197,26 +217,22 @@ void main() {
     effect(() {
       effect(() {
         a();
-        order.add("a");
+        order.add('a');
       });
       effect(() {
         b();
-        order.add("b");
+        order.add('b');
       });
-
-      expect(order, ["a", "b"]);
+      expect(order, ['a', 'b']);
 
       order.length = 0;
       b(1);
       a(1);
-      expect(order, ["b", "a"]);
-      run = true;
+      expect(order, ['b', 'a']);
     });
-
-    expect(run, true);
   });
 
-  test("should handle flags are indirectly updated during checkDirty", () {
+  test('should handle flags are indirectly updated during checkDirty', () {
     final a = signal(false);
     final b = computed((_) => a());
     final c = computed((_) {
@@ -229,6 +245,7 @@ void main() {
     });
 
     int triggers = 0;
+
     effect(() {
       d();
       triggers++;
@@ -236,5 +253,40 @@ void main() {
     expect(triggers, 1);
     a(true);
     expect(triggers, 2);
+  });
+
+  test('should handle effect recursion for the first execution', () {
+    final src1 = signal(0);
+    final src2 = signal(0);
+
+    int triggers1 = 0;
+    int triggers2 = 0;
+
+    effect(() {
+      triggers1++;
+      src1(math.min(src1() + 1, 5));
+    });
+    effect(() {
+      triggers2++;
+      src2(math.min(src2() + 1, 5));
+      src2();
+    });
+
+    expect(triggers1, 1);
+    expect(triggers2, 1);
+  });
+
+  test('should support custom recurse effect', () {
+    final src = signal(0);
+
+    int triggers = 0;
+
+    effect(() {
+      getActiveSub()!.flags &= ~ReactiveFlags.recursedCheck;
+      triggers++;
+      src(math.min(src() + 1, 5));
+    });
+
+    expect(triggers, 6);
   });
 }

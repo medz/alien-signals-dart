@@ -75,7 +75,7 @@ final class Stack<T> {
   required final void Function(ReactiveNode node) notify,
   required final void Function(ReactiveNode node) unwatched,
 }) {
-  void link(ReactiveNode dep, ReactiveNode sub, int version) {
+  void link(final ReactiveNode dep, final ReactiveNode sub, final int version) {
     final prevDep = sub.depsTail;
     if (prevDep != null && prevDep.dep == dep) {
       return;
@@ -116,11 +116,11 @@ final class Stack<T> {
 
   Link? unlink(final Link link, [ReactiveNode? sub]) {
     sub ??= link.sub;
-    final dep = link.dep,
-        prevDep = link.prevDep,
-        nextDep = link.nextDep,
-        prevSub = link.prevSub,
-        nextSub = link.nextDep;
+    final dep = link.dep;
+    final prevDep = link.prevDep;
+    final nextDep = link.nextDep;
+    final nextSub = link.nextSub;
+    final prevSub = link.prevSub;
     if (nextDep != null) {
       nextDep.prevDep = prevDep;
     } else {

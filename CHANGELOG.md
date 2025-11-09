@@ -1,3 +1,7 @@
+## 2.0.0-beta.2
+
+- Optimize notify effect queueing with batch processing
+
 ## 2.0.0-beta.1
 
 - sync upstream 3.1.0

@@ -338,9 +338,7 @@ extension on List<EffectNode?> {
   @pragma('dart2js:tryInline')
   @pragma('wasm:prefer-inline')
   void safeSet(int index, EffectNode? value) {
-    if (index >= 1024 || index >= length) {
-      addAll(List.filled(index - length + 1, null));
-    }
+    if (index >= length) length = index + 1;
     this[index] = value;
   }
 }

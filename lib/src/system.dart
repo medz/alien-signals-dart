@@ -114,7 +114,7 @@ final class Stack<T> {
     }
   }
 
-  Link? unlink(Link link, [ReactiveNode? sub]) {
+  Link? unlink(final Link link, [ReactiveNode? sub]) {
     sub ??= link.sub;
     final dep = link.dep,
         prevDep = link.prevDep,
@@ -144,7 +144,7 @@ final class Stack<T> {
     return nextDep;
   }
 
-  bool isValidLink(Link checkLink, ReactiveNode sub) {
+  bool isValidLink(final Link checkLink, final ReactiveNode sub) {
     Link? link = sub.depsTail;
     while (link != null) {
       if (link == checkLink) {

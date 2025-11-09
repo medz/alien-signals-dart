@@ -21,14 +21,14 @@ void scope() {
   print("\n=========== Effect Scope ===========");
 
   final count = signal(1);
-  final scope = effectScope(() {
+  final stop = effectScope(() {
     effect(() {
       print("Count is: ${count()}");
     }); // Count is: 1
   });
 
   count(2); // Count is: 2
-  scope.dispose();
+  stop();
   count(3); // Not printed
 }
 

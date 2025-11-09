@@ -1,19 +1,12 @@
-/// Alien signals preset library.
-library;
-
-export "src/preset.dart"
+export 'preset.dart'
     show
-        Signal,
-        WritableSignal,
-        Computed,
-        Effect,
-        EffectScope,
-        getBatchDepth,
         getActiveSub,
         setActiveSub,
+        getBatchDepth,
         startBatch,
         endBatch,
         signal,
         computed,
         effect,
-        effectScope;
+        effectScope,
+        trigger;

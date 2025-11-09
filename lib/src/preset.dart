@@ -69,19 +69,30 @@ bool update(ReactiveNode node) {
 }
 
 void notify(ReactiveNode effect) {
-  effect.flags &= ~ReactiveFlags.watching;
-  final sub = effect.subs?.sub;
-  if (sub != null &&
-      (sub.flags & ReactiveFlags.watching) != ReactiveFlags.none) {
-    notify(sub);
-  }
+  // Collect all effects in the chain into a temporary list
+  final batch = <LinkedEffect>[];
 
-  (effect as LinkedEffect).nextEffect = null;
-  if (queuedEffectsTail == null) {
-    queuedEffects = queuedEffectsTail = effect;
-  } else {
-    queuedEffectsTail!.nextEffect = effect;
-    queuedEffects = effect;
+  do {
+    effect.flags &= ~ReactiveFlags.watching;
+    batch.add(effect as LinkedEffect);
+    final next = effect.subs?.sub;
+    if (next == null ||
+        ((effect = next).flags & ReactiveFlags.watching) ==
+            ReactiveFlags.none) {
+      break;
+    }
+  } while (true);
+
+  // Insert them in reverse order (last to first)
+  for (int i = batch.length - 1; i >= 0; i--) {
+    final e = batch[i];
+    e.nextEffect = null;
+    if (queuedEffectsTail == null) {
+      queuedEffects = queuedEffectsTail = e;
+    } else {
+      queuedEffectsTail!.nextEffect = e;
+      queuedEffectsTail = e;
+    }
   }
 
   // int insertIndex = queuedLength;

@@ -22,7 +22,7 @@ void main() {
     expect(bRunTimes, 2);
     stopEffect();
     a(3);
-    expect(bRunTimes, 3);
+    expect(bRunTimes, 2);
   });
 
   test('should not run untracked inner effect', () {

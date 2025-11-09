@@ -156,9 +156,11 @@ void Function() effect(void Function() fn) {
 @pragma('dart2js:tryInline')
 @pragma('wasm:prefer-inline')
 void Function() effectScope(void Function() fn) {
-  final e = ReactiveNode(flags: ReactiveFlags.none), prevSub = setActiveSub(e);
-  if (prevSub != null) link(e, prevSub, 0);
-
+  final e = ReactiveNode(flags: ReactiveFlags.none);
+  final prevSub = setActiveSub(e);
+  if (prevSub != null) {
+    link(e, prevSub, 0);
+  }
   try {
     fn();
   } finally {
@@ -225,7 +227,7 @@ void run(EffectNode e) {
       purgeDeps(e);
     }
   } else {
-    e.flags &= ~ReactiveFlags.watching;
+    e.flags = ReactiveFlags.watching;
   }
 }
 
@@ -269,7 +271,7 @@ T computedOper<T>(ComputedNode<T> c) {
 }
 
 T signalOper<T>(SignalNode<T> s, T? newValue, bool nulls) {
-  if (newValue != null || (null is T && nulls)) {
+  if (newValue != null || nulls) {
     if (s.pendingValue != (s.pendingValue = newValue as T)) {
       s.flags = ReactiveFlags.mutable | ReactiveFlags.dirty;
       if (s.subs case final Link subs) {

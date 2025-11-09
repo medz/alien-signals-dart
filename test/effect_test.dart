@@ -10,14 +10,14 @@ void main() {
       bRunTimes++;
       return a() * 2;
     });
-    final Effect(:dispose) = effect(() => b());
+    final stop = effect(() => b());
 
     expect(bRunTimes, 1);
 
     a(2);
     expect(bRunTimes, 2);
 
-    dispose();
+    stop();
     a(3);
     expect(bRunTimes, 2);
   });

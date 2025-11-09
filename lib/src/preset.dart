@@ -209,9 +209,8 @@ bool updateSignal<T>(SignalNode<T> s) {
 
 void run(EffectNode e) {
   final flags = e.flags;
-  if ((flags & ReactiveFlags.dirty) != ReactiveFlags.none ||
-      ((flags & ReactiveFlags.pending) != ReactiveFlags.none &&
-          checkDirty(e.deps!, e))) {
+  if ((flags & ReactiveFlags.dirty) != 0 ||
+      ((flags & ReactiveFlags.pending) != 0 && checkDirty(e.deps!, e))) {
     ++cycle;
     e.depsTail = null;
     e.flags = ReactiveFlags.watching | ReactiveFlags.recursedCheck;
@@ -240,8 +239,8 @@ void flush() {
 
 T computedOper<T>(ComputedNode<T> c) {
   final flags = c.flags;
-  if ((flags & ReactiveFlags.dirty) != ReactiveFlags.none ||
-      ((flags & ReactiveFlags.pending) != ReactiveFlags.none &&
+  if ((flags & ReactiveFlags.dirty) != 0 ||
+      ((flags & ReactiveFlags.pending) != 0 &&
           (checkDirty(c.deps!, c) ||
               identical(c.flags = flags & ~ReactiveFlags.pending, false)))) {
     if (updateComputed(c)) {

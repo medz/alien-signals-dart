@@ -40,11 +40,9 @@ class EffectNode extends LinkedEffect {
 }
 
 int cycle = 0, batchDepth = 0;
-// int notifyIndex = 0, queuedLength = 0;
 ReactiveNode? activeSub;
 LinkedEffect? queuedEffects;
 LinkedEffect? queuedEffectsTail;
-// final queued = List<EffectNode?>.filled(1024, null, growable: true);
 
 final system = createReactiveSystem(
       update: update,
@@ -267,14 +265,6 @@ void flush() {
     }
     run(effect as EffectNode);
   }
-
-  // while (notifyIndex < queuedLength) {
-  //   final effect = queued[notifyIndex]!;
-  //   queued[notifyIndex++] = null;
-  //   run(effect);
-  // }
-  // notifyIndex = 0;
-  // queuedLength = 0;
 }
 
 T computedOper<T>(ComputedNode<T> c) {
@@ -364,13 +354,3 @@ void purgeDeps(ReactiveNode sub) {
     dep = unlink(dep, sub);
   }
 }
-
-// extension on List<EffectNode?> {
-//   @pragma('vm:prefer-inline')
-//   @pragma('dart2js:tryInline')
-//   @pragma('wasm:prefer-inline')
-//   void safeSet(int index, EffectNode? value) {
-//     if (index >= length) length = index + 1;
-//     this[index] = value;
-//   }
-// }

@@ -169,16 +169,15 @@ final class Stack<T> {
                   ReactiveFlags.recursed |
                   ReactiveFlags.dirty |
                   ReactiveFlags.pending)) ==
-          ReactiveFlags.none) {
+          0) {
         sub.flags = flags | ReactiveFlags.pending;
       } else if ((flags &
               (ReactiveFlags.recursedCheck | ReactiveFlags.recursed)) ==
-          ReactiveFlags.none) {
+          0) {
         flags = ReactiveFlags.none;
-      } else if ((flags & ReactiveFlags.recursedCheck) == ReactiveFlags.none) {
+      } else if ((flags & ReactiveFlags.recursedCheck) == 0) {
         sub.flags = (flags & ~ReactiveFlags.recursed) | ReactiveFlags.pending;
-      } else if ((flags & (ReactiveFlags.dirty | ReactiveFlags.pending)) ==
-              ReactiveFlags.pending &&
+      } else if ((flags & (ReactiveFlags.dirty | ReactiveFlags.pending)) == 0 &&
           isValidLink(link, sub)) {
         sub.flags = flags | (ReactiveFlags.recursed | ReactiveFlags.pending);
         flags &= ReactiveFlags.mutable;
@@ -186,11 +185,11 @@ final class Stack<T> {
         flags = ReactiveFlags.none;
       }
 
-      if ((flags & ReactiveFlags.watching) != ReactiveFlags.none) {
+      if ((flags & ReactiveFlags.watching) != 0) {
         notify(sub);
       }
 
-      if ((flags & ReactiveFlags.mutable) != ReactiveFlags.none) {
+      if ((flags & ReactiveFlags.mutable) != 0) {
         final subSubs = sub.subs;
         if (subSubs != null) {
           final nextSub = (link = subSubs).nextSub;
@@ -205,6 +204,7 @@ final class Stack<T> {
       if (next != null) {
         link = next;
         next = link.nextSub;
+        continue;
       }
 
       while (stack != null) {
@@ -252,7 +252,7 @@ final class Stack<T> {
       final dep = link.dep;
       final flags = dep.flags;
 
-      if ((sub.flags & ReactiveFlags.dirty) != ReactiveFlags.none) {
+      if ((sub.flags & ReactiveFlags.dirty) != 0) {
         dirty = true;
       } else if ((flags & (ReactiveFlags.mutable | ReactiveFlags.dirty)) ==
           (ReactiveFlags.mutable | ReactiveFlags.dirty)) {

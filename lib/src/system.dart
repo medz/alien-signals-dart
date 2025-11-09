@@ -208,8 +208,8 @@ final class Stack<T> {
       }
 
       while (stack != null) {
-        final value = stack.value;
-        stack = stack.prev;
+        final Stack(:value, :prev) = stack;
+        stack = prev;
         if (value != null) {
           link = value;
           next = link.nextSub;
@@ -282,7 +282,7 @@ final class Stack<T> {
         }
       }
 
-      while ((checkDepth--) != 0) {
+      while ((checkDepth--) > 0) {
         final firstSub = sub.subs!;
         final hasMultipleSubs = firstSub.nextSub != null;
         if (hasMultipleSubs) {

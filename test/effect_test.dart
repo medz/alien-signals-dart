@@ -4,6 +4,7 @@ import 'package:test/test.dart';
 void main() {
   test("should clear subscriptions when untracked by all subscribers", () {
     int bRunTimes = 0;
+
     final a = signal(1);
     final b = computed((_) {
       bRunTimes++;
@@ -43,12 +44,12 @@ void main() {
     final b = signal(1);
 
     effect(() {
-      if (a() > 0) {
+      if (a() != 0) {
         effect(() {
           b();
           if (a() == 0) throw Error();
         });
-      }
+      } else {}
     });
 
     startBatch();
@@ -72,61 +73,60 @@ void main() {
     a(2);
   });
 
-  test("should trigger inner effects in sequence", () {
+  test("should notify inner effects in the same order as non-inner effects",
+      () {
     final a = signal(0);
     final b = signal(0);
     final c = computed((_) => a() - b());
-    final order = <String>[];
+    final order1 = <String>[];
+    final order2 = <String>[];
+    final order3 = <String>[];
+
+    effect(() {
+      order1.add('effect1');
+      a();
+    });
+
+    effect(() {
+      order2.add('effect2');
+      a();
+      b();
+    });
 
     effect(() {
       c();
-
       effect(() {
-        order.add("first inner");
+        order2.add('effect1');
         a();
       });
-
       effect(() {
-        order.add("last inner");
+        order2.add('effect2');
         a();
         b();
       });
     });
-
-    order.length = 0;
-    startBatch();
-    a(1);
-    b(1);
-    endBatch();
-
-    expect(order, ["first inner", "last inner"]);
-  });
-
-  test("should trigger inner effects in sequence in effect scope", () {
-    final a = signal(0);
-    final b = signal(0);
-    final order = <String>[];
 
     effectScope(() {
       effect(() {
-        order.add("first inner");
+        order3.add('effect1');
         a();
       });
-
       effect(() {
-        order.add("last inner");
+        order3.add('effect2');
         a();
         b();
       });
     });
 
-    order.length = 0;
+    order1.length = order2.length = order3.length = 0;
     startBatch();
-    a(1);
     b(1);
+    a(1);
     endBatch();
 
-    expect(order, ["first inner", "last inner"]);
+    expect(order1, ['effect2', 'effect1']);
+    expect(order2, order1);
+    expect(order3, order2);
   });
 
   test("should custom effect support batch", () {

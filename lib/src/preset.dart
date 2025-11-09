@@ -3,7 +3,6 @@ import 'package:alien_signals/system.dart';
 /*------------------- Public variables --------------------*/
 /// Alien signals preset system
 const ReactiveSystem system = PresetReactiveSystem();
-int cycle = 0;
 
 /*------------------ Internal variables -------------------*/
 
@@ -13,10 +12,10 @@ final link = system.link,
     checkDirty = system.checkDirty,
     shallowPropagate = system.shallowPropagate;
 
-int batchDepth = 0;
+int cycle = 0, batchDepth = 0, notifyIndex = 0, queuedLength = 0;
 ReactiveNode? activeSub;
-LinkedEffect? queuedEffects;
-LinkedEffect? queuedEffectsTail;
+
+final queued = List<PresetEffect?>.filled(1024, null);
 
 /*----------------------- Public API -----------------------*/
 
@@ -357,10 +356,25 @@ class PresetReactiveSystem extends ReactiveSystem {
   const PresetReactiveSystem();
 
   @override
-  @pragma('vm:prefer-inline')
-  @pragma('wasm:prefer-inline')
-  @pragma('dart2js:prefer-inline')
-  void notify(ReactiveNode sub) => notifyEffect(sub);
+  void notify(ReactiveNode effect) {
+    int insertIndex = queuedLength, firstInsertedIndex = insertIndex;
+    do {
+      effect.flags &= ~ReactiveFlags.watching;
+      queued[insertIndex++] = effect as PresetEffect;
+      final next = effect.subs?.sub;
+      if (next == null || (effect.flags & ReactiveFlags.watching) == 0) {
+        break;
+      }
+    } while (true);
+
+    queuedLength = insertIndex;
+
+    while (firstInsertedIndex < --insertIndex) {
+      final left = queued[firstInsertedIndex];
+      queued[firstInsertedIndex++] = queued[insertIndex];
+      queued[insertIndex] = left;
+    }
+  }
 
   @override
   void unwatched(ReactiveNode node) {
@@ -387,27 +401,10 @@ class PresetReactiveSystem extends ReactiveSystem {
   }
 }
 
-void notifyEffect(ReactiveNode e) {
+void run(ReactiveNode e) {
   final flags = e.flags;
-  if ((flags & 64 /* Queued */) == 0) {
-    e.flags = flags | 64 /* Queued */;
-    final subs = e.subs;
-    if (subs != null) {
-      notifyEffect(subs.sub);
-    } else if (queuedEffectsTail != null) {
-      queuedEffectsTail = queuedEffectsTail!.nextEffect = e as LinkedEffect;
-    } else {
-      queuedEffectsTail = queuedEffects = e as LinkedEffect;
-    }
-  }
-}
-
-void run(ReactiveNode e, int flags) {
   if ((flags & ReactiveFlags.dirty) != 0 ||
-      ((flags & ReactiveFlags.pending) != 0 &&
-          (checkDirty(e.deps!, e) ||
-              // Always false, infinity is a value that can never be reached
-              (e.flags = flags & ~ReactiveFlags.pending) == double.infinity))) {
+      ((flags & ReactiveFlags.pending) != 0 && checkDirty(e.deps!, e))) {
     ++cycle;
     e.depsTail = null;
     e.flags = ReactiveFlags.watching | ReactiveFlags.recursedCheck;
@@ -421,29 +418,18 @@ void run(ReactiveNode e, int flags) {
       purgeDeps(e);
     }
   } else {
-    Link? link = e.deps;
-    while (link != null) {
-      final dep = link.dep;
-      final depFlags = dep.flags;
-      if ((depFlags & 64 /* Queued */) != 0) {
-        run(dep, dep.flags = depFlags & -65 /* ~Queued */);
-      }
-      link = link.nextDep;
-    }
+    e.flags = ReactiveFlags.watching;
   }
 }
 
 void flush() {
-  while (queuedEffects != null) {
-    final effect = queuedEffects!;
-    if ((queuedEffects = effect.nextEffect) != null) {
-      effect.nextEffect = null;
-    } else {
-      queuedEffectsTail = null;
-    }
-
-    run(effect, effect.flags &= -65 /* ~Queued */);
+  while (notifyIndex < queuedLength) {
+    final effect = queued[notifyIndex]!;
+    queued[notifyIndex++] = null;
+    run(effect);
   }
+
+  notifyIndex = queuedLength = 0;
 }
 
 void effectOper(ReactiveNode e) {

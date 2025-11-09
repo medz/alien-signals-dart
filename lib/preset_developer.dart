@@ -7,7 +7,6 @@ export 'src/preset.dart'
     show
         system,
         cycle,
-        notifyEffect,
         run,
         flush,
         effectOper,

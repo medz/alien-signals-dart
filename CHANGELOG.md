@@ -1,11 +1,13 @@
+## 2.0.0
+
+- Refactor signal API to use function-based updates
+
 ## 1.0.3
 
 - Restrict preset developer exports to public API
 - Rename update method to shouldUpdated
 
 ## 1.0.1
-
-Status: Unreleased (WIP)
 
 - Change signal interface to use `call()` instead of `.value` getter/setter
 

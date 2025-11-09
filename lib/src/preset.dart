@@ -14,9 +14,10 @@ class ComputedNode<T> extends ReactiveNode {
   final T Function(T?) getter;
   T? value;
 
-  bool run() {
-    return value != (value = getter(value));
-  }
+  @pragma('vm:prefer-inline')
+  @pragma('dart2js:tryInline')
+  @pragma('wasm:prefer-inline')
+  bool run() => value != (value = getter(value));
 
   ComputedNode({required super.flags, required this.getter});
 }

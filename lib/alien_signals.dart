@@ -1,4 +1,4 @@
-export 'preset.dart'
+export 'src/preset.dart'
     show
         getActiveSub,
         setActiveSub,

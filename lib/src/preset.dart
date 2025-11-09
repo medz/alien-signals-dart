@@ -47,16 +47,14 @@ bool update(ReactiveNode node) {
 }
 
 void notify(ReactiveNode effect) {
-  int insertIndex = queuedLength, firstInsertedIndex = insertIndex;
+  int insertIndex = queuedLength;
+  int firstInsertedIndex = insertIndex;
 
   do {
     effect.flags &= ~ReactiveFlags.watching;
-    queued.safeInsert(insertIndex, effect as EffectNode);
-
+    queued.safeSet(insertIndex++, effect as EffectNode);
     final next = effect.subs?.sub;
-    if (next == null ||
-        ((effect = next).flags & ReactiveFlags.watching) ==
-            ReactiveFlags.none) {
+    if (next == null || ((effect = next).flags & ReactiveFlags.watching) == 0) {
       break;
     }
   } while (true);
@@ -327,10 +325,10 @@ extension on List<EffectNode?> {
   @pragma('vm:prefer-inline')
   @pragma('dart2js:tryInline')
   @pragma('wasm:prefer-inline')
-  void safeInsert(int index, EffectNode? value) {
+  void safeSet(int index, EffectNode? value) {
     if (index >= 1024 || index >= length) {
       addAll(List.filled(index - length + 1, null));
     }
-    insert(index, value);
+    this[index] = value;
   }
 }

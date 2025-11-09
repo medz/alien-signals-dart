@@ -179,7 +179,8 @@ void trigger(void Function() fn) {
     while (sub.deps != null) {
       final link = sub.deps!, dep = link.dep;
       unlink(link, sub);
-      if (dep.subs case final Link subs) {
+      final subs = dep.subs;
+      if (subs != null) {
         propagate(subs);
         shallowPropagate(subs);
       }
@@ -248,7 +249,8 @@ T computedOper<T>(ComputedNode<T> c) {
           (checkDirty(c.deps!, c) ||
               identical(c.flags = flags & ~ReactiveFlags.pending, false)))) {
     if (updateComputed(c)) {
-      if (c.subs case final Link subs) {
+      final subs = c.subs;
+      if (subs != null) {
         shallowPropagate(subs);
       }
     }
@@ -263,7 +265,8 @@ T computedOper<T>(ComputedNode<T> c) {
     }
   }
 
-  if (activeSub case final ReactiveNode sub) {
+  final sub = activeSub;
+  if (sub != null) {
     link(c, sub, cycle);
   }
 
@@ -274,7 +277,8 @@ T signalOper<T>(SignalNode<T> s, T? newValue, bool nulls) {
   if (newValue != null || nulls) {
     if (s.pendingValue != (s.pendingValue = newValue as T)) {
       s.flags = ReactiveFlags.mutable | ReactiveFlags.dirty;
-      if (s.subs case final Link subs) {
+      final subs = s.subs;
+      if (subs != null) {
         propagate(subs);
         if (batchDepth == 0) flush();
       }
@@ -284,7 +288,8 @@ T signalOper<T>(SignalNode<T> s, T? newValue, bool nulls) {
   } else {
     if ((s.flags & ReactiveFlags.dirty) != ReactiveFlags.none) {
       if (updateSignal(s)) {
-        if (s.subs case final Link subs) {
+        final subs = s.subs;
+        if (subs != null) {
           shallowPropagate(subs);
         }
       }
@@ -311,7 +316,8 @@ void effectScopeOper(ReactiveNode node) {
   node.depsTail = null;
   node.flags = ReactiveFlags.none;
   purgeDeps(node);
-  if (node.subs case final Link subs) {
+  final subs = node.subs;
+  if (subs != null) {
     unlink(subs);
   }
 }

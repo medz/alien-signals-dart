@@ -14,6 +14,10 @@ class ComputedNode<T> extends ReactiveNode {
   final T Function(T?) getter;
   T? value;
 
+  bool run() {
+    return value != (value = getter(value));
+  }
+
   ComputedNode({required super.flags, required this.getter});
 }
 
@@ -195,8 +199,7 @@ bool updateComputed<T>(ComputedNode<T> c) {
   c.flags = ReactiveFlags.mutable | ReactiveFlags.recursedCheck;
   final prevSub = setActiveSub(c);
   try {
-    final oldValue = c.value;
-    return oldValue != (c.value = c.getter(oldValue));
+    return c.run();
   } finally {
     activeSub = prevSub;
     c.flags &= ~ReactiveFlags.recursedCheck;

@@ -2,45 +2,46 @@ import 'package:alien_signals/alien_signals.dart';
 import 'package:test/test.dart';
 
 void main() {
-  test("should not trigger after stop", () {
+  test('should not trigger after stop', () {
+    final count = signal(1);
     int triggers = 0;
-    final count = signal(0);
-    final EffectScope(:dispose) = effectScope(() {
+
+    final stopScope = effectScope(() {
       effect(() {
         triggers++;
         count();
       });
-
       expect(triggers, 1);
+
       count(2);
       expect(triggers, 2);
     });
 
     count(3);
     expect(triggers, 3);
-    dispose();
+    stopScope();
     count(4);
     expect(triggers, 3);
   });
 
-  test("should dispose inner effects if created in an effect", () {
-    final s = signal(1);
+  test('should dispose inner effects if created in an effect', () {
+    final source = signal(1);
+
     int triggers = 0;
 
     effect(() {
-      final EffectScope(:dispose) = effectScope(() {
+      final dispose = effectScope(() {
         effect(() {
-          s();
+          source();
           triggers++;
         });
       });
       expect(triggers, 1);
 
-      s(2);
+      source(2);
       expect(triggers, 2);
-
       dispose();
-      s(3);
+      source(3);
       expect(triggers, 2);
     });
   });
@@ -48,8 +49,10 @@ void main() {
   test(
       'should track signal updates in an inner scope when accessed by an outer effect',
       () {
-    final source = signal(0);
+    final source = signal(1);
+
     int triggers = 0;
+
     effect(() {
       effectScope(() {
         source();
@@ -57,8 +60,8 @@ void main() {
       triggers++;
     });
 
-    expect(triggers, equals(1));
+    expect(triggers, 1);
     source(2);
-    expect(triggers, equals(2));
+    expect(triggers, 2);
   });
 }

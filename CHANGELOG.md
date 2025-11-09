@@ -1,6 +1,9 @@
-## 2.0.0
+## 2.0.0-beta.1
 
-- Refactor signal API to use function-based updates
+- sync upstream 3.1.0
+- rewrite the function-based reactive system and restrict the scope of the code.
+- redesigning the surface API export of pure functions
+- export the original preset
 
 ## 1.0.3
 

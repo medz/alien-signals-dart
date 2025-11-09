@@ -69,7 +69,7 @@ final class Stack<T> {
   Link? Function(Link link, [ReactiveNode sub]) unlink,
   void Function(Link link) propagate,
   void Function(Link link) shallowPropagate,
-  bool Function(Link link, ReactiveNode sub) checkDirty
+  bool Function(Link link, ReactiveNode sub) checkDirty,
 }) createReactiveSystem({
   required final bool Function(ReactiveNode node) update,
   required final void Function(ReactiveNode node) notify,

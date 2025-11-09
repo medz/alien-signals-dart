@@ -1,3 +1,7 @@
+## 2.0.0-beta.3
+
+- pref: Optimize effect notification performance
+
 ## 2.0.0-beta.2
 
 - Optimize notify effect queueing with batch processing

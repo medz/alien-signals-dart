@@ -222,8 +222,9 @@ final class Stack<T> {
   }
 
   void shallowPropagate(Link link) {
+    Link? curr = link;
     do {
-      final sub = link.sub;
+      final sub = curr!.sub;
       final flags = sub.flags;
       if ((flags & (ReactiveFlags.pending | ReactiveFlags.dirty)) ==
           ReactiveFlags.pending) {
@@ -233,13 +234,7 @@ final class Stack<T> {
           notify(sub);
         }
       }
-
-      if (link.nextSub case final Link nextSub) {
-        link = nextSub;
-        continue;
-      }
-      break;
-    } while (true);
+    } while ((curr = curr.nextSub) != null);
   }
 
   bool checkDirty(Link link, ReactiveNode sub) {

@@ -1,5 +1,16 @@
 import 'package:alien_signals/system.dart';
 
+class LinkedEffect extends ReactiveNode {
+  LinkedEffect? nextEffect;
+
+  LinkedEffect(
+      {required super.flags,
+      super.deps,
+      super.depsTail,
+      super.subs,
+      super.subsTail});
+}
+
 class SignalNode<T> extends ReactiveNode {
   T currentValue;
   T pendingValue;
@@ -22,18 +33,22 @@ class ComputedNode<T> extends ReactiveNode {
   ComputedNode({required super.flags, required this.getter});
 }
 
-class EffectNode extends ReactiveNode {
+class EffectNode extends LinkedEffect {
   final void Function() fn;
 
   EffectNode({required super.flags, required this.fn});
 }
 
-int cycle = 0, batchDepth = 0, notifyIndex = 0, queuedLength = 0;
+int cycle = 0, batchDepth = 0;
 ReactiveNode? activeSub;
+LinkedEffect? queuedEffects;
+LinkedEffect? queuedEffectsTail;
 
-final queued = List<EffectNode?>.filled(1024, null, growable: true),
-    system = createReactiveSystem(
-        update: update, notify: notify, unwatched: unwatched),
+final system = createReactiveSystem(
+      update: update,
+      notify: notify,
+      unwatched: unwatched,
+    ),
     link = system.link,
     unlink = system.unlink,
     propagate = system.propagate,
@@ -52,27 +67,42 @@ bool update(ReactiveNode node) {
 }
 
 void notify(ReactiveNode effect) {
-  int insertIndex = queuedLength;
-  int firstInsertedIndex = insertIndex;
-
-  do {
-    effect.flags &= ~ReactiveFlags.watching;
-    queued.safeSet(insertIndex++, effect as EffectNode);
-    final next = effect.subs?.sub;
-    if (next == null ||
-        ((effect = next).flags & ReactiveFlags.watching) ==
-            ReactiveFlags.none) {
-      break;
-    }
-  } while (true);
-
-  queuedLength = insertIndex;
-
-  while (firstInsertedIndex < --insertIndex) {
-    final left = queued[firstInsertedIndex];
-    queued[firstInsertedIndex++] = queued[insertIndex];
-    queued[insertIndex] = left;
+  effect.flags &= ~ReactiveFlags.watching;
+  final sub = effect.subs?.sub;
+  if (sub != null &&
+      (sub.flags & ReactiveFlags.watching) != ReactiveFlags.none) {
+    notify(sub);
   }
+
+  (effect as LinkedEffect).nextEffect = null;
+  if (queuedEffectsTail == null) {
+    queuedEffects = queuedEffectsTail = effect;
+  } else {
+    queuedEffectsTail!.nextEffect = effect;
+    queuedEffects = effect;
+  }
+
+  // int insertIndex = queuedLength;
+  // int firstInsertedIndex = insertIndex;
+
+  // do {
+  //   effect.flags &= ~ReactiveFlags.watching;
+  //   queued.safeSet(insertIndex++, effect as EffectNode);
+  //   final next = effect.subs?.sub;
+  //   if (next == null ||
+  //       ((effect = next).flags & ReactiveFlags.watching) ==
+  //           ReactiveFlags.none) {
+  //     break;
+  //   }
+  // } while (true);
+
+  // queuedLength = insertIndex;
+
+  // while (firstInsertedIndex < --insertIndex) {
+  //   final left = queued[firstInsertedIndex];
+  //   queued[firstInsertedIndex++] = queued[insertIndex];
+  //   queued[insertIndex] = left;
+  // }
 }
 
 void unwatched(ReactiveNode node) {
@@ -240,13 +270,23 @@ void run(EffectNode e) {
 }
 
 void flush() {
-  while (notifyIndex < queuedLength) {
-    final effect = queued[notifyIndex]!;
-    queued[notifyIndex++] = null;
-    run(effect);
+  while (queuedEffects != null) {
+    final effect = queuedEffects!;
+    if ((queuedEffects = effect.nextEffect) != null) {
+      effect.nextEffect = null;
+    } else {
+      queuedEffectsTail = null;
+    }
+    run(effect as EffectNode);
   }
-  notifyIndex = 0;
-  queuedLength = 0;
+
+  // while (notifyIndex < queuedLength) {
+  //   final effect = queued[notifyIndex]!;
+  //   queued[notifyIndex++] = null;
+  //   run(effect);
+  // }
+  // notifyIndex = 0;
+  // queuedLength = 0;
 }
 
 T computedOper<T>(ComputedNode<T> c) {
@@ -337,12 +377,12 @@ void purgeDeps(ReactiveNode sub) {
   }
 }
 
-extension on List<EffectNode?> {
-  @pragma('vm:prefer-inline')
-  @pragma('dart2js:tryInline')
-  @pragma('wasm:prefer-inline')
-  void safeSet(int index, EffectNode? value) {
-    if (index >= length) length = index + 1;
-    this[index] = value;
-  }
-}
+// extension on List<EffectNode?> {
+//   @pragma('vm:prefer-inline')
+//   @pragma('dart2js:tryInline')
+//   @pragma('wasm:prefer-inline')
+//   void safeSet(int index, EffectNode? value) {
+//     if (index >= length) length = index + 1;
+//     this[index] = value;
+//   }
+// }

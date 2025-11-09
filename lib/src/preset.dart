@@ -40,9 +40,11 @@ class EffectNode extends LinkedEffect {
 }
 
 int cycle = 0, batchDepth = 0;
+// int notifyIndex = 0, queuedLength = 0;
 ReactiveNode? activeSub;
 LinkedEffect? queuedEffects;
 LinkedEffect? queuedEffectsTail;
+// final queued = List<EffectNode?>.filled(1024, null, growable: true);
 
 final system = createReactiveSystem(
       update: update,

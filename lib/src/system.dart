@@ -1,26 +1,26 @@
-extension type const ReactiveFlags._(int _) {
-  static const none = ReactiveFlags._(0);
-  static const mutable = ReactiveFlags._(1);
-  static const watching = ReactiveFlags._(2);
-  static const recursedCheck = ReactiveFlags._(4);
-  static const recursed = ReactiveFlags._(8);
-  static const dirty = ReactiveFlags._(16);
-  static const pending = ReactiveFlags._(32);
+extension type const ReactiveFlags(int value) implements int {
+  static const none = ReactiveFlags(0);
+  static const mutable = ReactiveFlags(1);
+  static const watching = ReactiveFlags(2);
+  static const recursedCheck = ReactiveFlags(4);
+  static const recursed = ReactiveFlags(8);
+  static const dirty = ReactiveFlags(16);
+  static const pending = ReactiveFlags(32);
 
   @pragma('vm:prefer-inline')
   @pragma('dart2js:tryInline')
   @pragma('wasm:prefer-inline')
-  ReactiveFlags operator |(ReactiveFlags other) => ReactiveFlags._(_ | other._);
+  ReactiveFlags operator |(int other) => ReactiveFlags(value | other);
 
   @pragma('vm:prefer-inline')
   @pragma('dart2js:tryInline')
   @pragma('wasm:prefer-inline')
-  ReactiveFlags operator &(ReactiveFlags other) => ReactiveFlags._(_ & other._);
+  ReactiveFlags operator &(int other) => ReactiveFlags(value & other);
 
   @pragma('vm:prefer-inline')
   @pragma('dart2js:tryInline')
   @pragma('wasm:prefer-inline')
-  ReactiveFlags operator ~() => ReactiveFlags._(~_);
+  ReactiveFlags operator ~() => ReactiveFlags(~value);
 }
 
 class ReactiveNode {
@@ -75,33 +75,33 @@ final class Stack<T> {
   required final void Function(ReactiveNode node) notify,
   required final void Function(ReactiveNode node) unwatched,
 }) {
-  void link(final ReactiveNode dep, final ReactiveNode sub, final int version) {
+  void link(ReactiveNode dep, ReactiveNode sub, int version) {
     final prevDep = sub.depsTail;
     if (prevDep != null && prevDep.dep == dep) {
       return;
     }
-
     final nextDep = prevDep != null ? prevDep.nextDep : sub.deps;
     if (nextDep != null && nextDep.dep == dep) {
       nextDep.version = version;
       sub.depsTail = nextDep;
       return;
     }
-
     final prevSub = dep.subsTail;
     if (prevSub != null && prevSub.version == version && prevSub.sub == sub) {
       return;
     }
-
     final newLink = sub.depsTail = dep.subsTail = Link(
-        version: version,
-        dep: dep,
-        sub: sub,
-        prevDep: prevDep,
-        nextDep: nextDep,
-        prevSub: prevSub);
-
-    if (nextDep != null) nextDep.prevDep = newLink;
+      version: version,
+      dep: dep,
+      sub: sub,
+      prevDep: prevDep,
+      nextDep: nextDep,
+      prevSub: prevSub,
+      nextSub: null,
+    );
+    if (nextDep != null) {
+      nextDep.prevDep = newLink;
+    }
     if (prevDep != null) {
       prevDep.nextDep = newLink;
     } else {

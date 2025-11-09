@@ -41,9 +41,9 @@ final queued = List<EffectNode?>.filled(1024, null, growable: true),
 bool update(ReactiveNode node) {
   if (node.depsTail == null) {
     return updateComputed(node as ComputedNode);
+  } else {
+    return updateSignal(node as SignalNode);
   }
-
-  return updateSignal(node as SignalNode);
 }
 
 void notify(ReactiveNode effect) {

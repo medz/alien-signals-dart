@@ -59,7 +59,9 @@ void notify(ReactiveNode effect) {
     effect.flags &= ~ReactiveFlags.watching;
     queued.safeSet(insertIndex++, effect as EffectNode);
     final next = effect.subs?.sub;
-    if (next == null || ((effect = next).flags & ReactiveFlags.watching) == 0) {
+    if (next == null ||
+        ((effect = next).flags & ReactiveFlags.watching) ==
+            ReactiveFlags.none) {
       break;
     }
   } while (true);
@@ -74,7 +76,7 @@ void notify(ReactiveNode effect) {
 }
 
 void unwatched(ReactiveNode node) {
-  if ((node.flags & ReactiveFlags.mutable) == 0) {
+  if ((node.flags & ReactiveFlags.mutable) == ReactiveFlags.none) {
     effectScopeOper(node);
   } else if (node.depsTail != null) {
     node.depsTail = null;
@@ -218,8 +220,9 @@ bool updateSignal<T>(SignalNode<T> s) {
 
 void run(EffectNode e) {
   final flags = e.flags;
-  if ((flags & ReactiveFlags.dirty) != 0 ||
-      ((flags & ReactiveFlags.pending) != 0 && checkDirty(e.deps!, e))) {
+  if ((flags & ReactiveFlags.dirty) != ReactiveFlags.none ||
+      ((flags & ReactiveFlags.pending) != ReactiveFlags.none &&
+          checkDirty(e.deps!, e))) {
     ++cycle;
     e.depsTail = null;
     e.flags = ReactiveFlags.watching | ReactiveFlags.recursedCheck;
@@ -248,8 +251,8 @@ void flush() {
 
 T computedOper<T>(ComputedNode<T> c) {
   final flags = c.flags;
-  if ((flags & ReactiveFlags.dirty) != 0 ||
-      ((flags & ReactiveFlags.pending) != 0 &&
+  if ((flags & ReactiveFlags.dirty) != ReactiveFlags.none ||
+      ((flags & ReactiveFlags.pending) != ReactiveFlags.none &&
           (checkDirty(c.deps!, c) ||
               identical(c.flags = flags & ~ReactiveFlags.pending, false)))) {
     if (updateComputed(c)) {

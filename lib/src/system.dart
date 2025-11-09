@@ -1,26 +1,26 @@
-extension type const ReactiveFlags(int value) implements int {
-  static const none = ReactiveFlags(0);
-  static const mutable = ReactiveFlags(1);
-  static const watching = ReactiveFlags(2);
-  static const recursedCheck = ReactiveFlags(4);
-  static const recursed = ReactiveFlags(8);
-  static const dirty = ReactiveFlags(16);
-  static const pending = ReactiveFlags(32);
+extension type const ReactiveFlags._(int _) {
+  static const none = ReactiveFlags._(0);
+  static const mutable = ReactiveFlags._(1);
+  static const watching = ReactiveFlags._(2);
+  static const recursedCheck = ReactiveFlags._(4);
+  static const recursed = ReactiveFlags._(8);
+  static const dirty = ReactiveFlags._(16);
+  static const pending = ReactiveFlags._(32);
 
   @pragma('vm:prefer-inline')
   @pragma('dart2js:tryInline')
   @pragma('wasm:prefer-inline')
-  ReactiveFlags operator |(int other) => ReactiveFlags(value | other);
+  ReactiveFlags operator |(ReactiveFlags other) => ReactiveFlags._(_ | other._);
 
   @pragma('vm:prefer-inline')
   @pragma('dart2js:tryInline')
   @pragma('wasm:prefer-inline')
-  ReactiveFlags operator &(int other) => ReactiveFlags(value & other);
+  ReactiveFlags operator &(ReactiveFlags other) => ReactiveFlags._(_ & other._);
 
   @pragma('vm:prefer-inline')
   @pragma('dart2js:tryInline')
   @pragma('wasm:prefer-inline')
-  ReactiveFlags operator ~() => ReactiveFlags(~value);
+  ReactiveFlags operator ~() => ReactiveFlags._(~_);
 }
 
 class ReactiveNode {
@@ -169,15 +169,16 @@ final class Stack<T> {
                   ReactiveFlags.recursed |
                   ReactiveFlags.dirty |
                   ReactiveFlags.pending)) ==
-          0) {
+          ReactiveFlags.none) {
         sub.flags = flags | ReactiveFlags.pending;
       } else if ((flags &
               (ReactiveFlags.recursedCheck | ReactiveFlags.recursed)) ==
-          0) {
+          ReactiveFlags.none) {
         flags = ReactiveFlags.none;
-      } else if ((flags & ReactiveFlags.recursedCheck) == 0) {
+      } else if ((flags & ReactiveFlags.recursedCheck) == ReactiveFlags.none) {
         sub.flags = (flags & ~ReactiveFlags.recursed) | ReactiveFlags.pending;
-      } else if ((flags & (ReactiveFlags.dirty | ReactiveFlags.pending)) == 0 &&
+      } else if ((flags & (ReactiveFlags.dirty | ReactiveFlags.pending)) ==
+              ReactiveFlags.none &&
           isValidLink(link, sub)) {
         sub.flags = flags | (ReactiveFlags.recursed | ReactiveFlags.pending);
         flags &= ReactiveFlags.mutable;
@@ -185,11 +186,11 @@ final class Stack<T> {
         flags = ReactiveFlags.none;
       }
 
-      if ((flags & ReactiveFlags.watching) != 0) {
+      if ((flags & ReactiveFlags.watching) != ReactiveFlags.none) {
         notify(sub);
       }
 
-      if ((flags & ReactiveFlags.mutable) != 0) {
+      if ((flags & ReactiveFlags.mutable) != ReactiveFlags.none) {
         final subSubs = sub.subs;
         if (subSubs != null) {
           final nextSub = (link = subSubs).nextSub;
@@ -247,7 +248,7 @@ final class Stack<T> {
       final dep = link.dep;
       final flags = dep.flags;
 
-      if ((sub.flags & ReactiveFlags.dirty) != 0) {
+      if ((sub.flags & ReactiveFlags.dirty) != ReactiveFlags.none) {
         dirty = true;
       } else if ((flags & (ReactiveFlags.mutable | ReactiveFlags.dirty)) ==
           (ReactiveFlags.mutable | ReactiveFlags.dirty)) {

@@ -39,7 +39,7 @@ final queued = List<EffectNode?>.filled(1024, null, growable: true),
 @pragma('dart2js:tryInline')
 @pragma('wasm:prefer-inline')
 bool update(ReactiveNode node) {
-  if (node.depsTail == null) {
+  if (node.depsTail != null) {
     return updateComputed(node as ComputedNode);
   } else {
     return updateSignal(node as SignalNode);

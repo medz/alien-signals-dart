@@ -1,5 +1,24 @@
 import 'package:alien_signals/system.dart';
 
+int cycle = 0, batchDepth = 0;
+ReactiveNode? activeSub;
+LinkedEffect? queuedEffects;
+LinkedEffect? queuedEffectsTail;
+
+@pragma('vm:prefer-inline')
+@pragma('dart2js:tryInline')
+@pragma('wasm:prefer-inline')
+final system = createReactiveSystem(
+      update: update,
+      notify: notify,
+      unwatched: unwatched,
+    ),
+    link = system.link,
+    unlink = system.unlink,
+    propagate = system.propagate,
+    checkDirty = system.checkDirty,
+    shallowPropagate = system.shallowPropagate;
+
 class LinkedEffect extends ReactiveNode {
   LinkedEffect? nextEffect;
 
@@ -119,25 +138,6 @@ class EffectNode extends LinkedEffect {
 
   EffectNode({required super.flags, required this.fn});
 }
-
-int cycle = 0, batchDepth = 0;
-ReactiveNode? activeSub;
-LinkedEffect? queuedEffects;
-LinkedEffect? queuedEffectsTail;
-
-@pragma('vm:prefer-inline')
-@pragma('dart2js:tryInline')
-@pragma('wasm:prefer-inline')
-final system = createReactiveSystem(
-      update: update,
-      notify: notify,
-      unwatched: unwatched,
-    ),
-    link = system.link,
-    unlink = system.unlink,
-    propagate = system.propagate,
-    checkDirty = system.checkDirty,
-    shallowPropagate = system.shallowPropagate;
 
 @pragma('vm:prefer-inline')
 @pragma('dart2js:tryInline')

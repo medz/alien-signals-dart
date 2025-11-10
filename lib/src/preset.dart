@@ -41,7 +41,8 @@ class SignalNode<T> extends ReactiveNode {
 
   void set(T newValue) {
     if (pendingValue != (pendingValue = newValue)) {
-      flags = ReactiveFlags.mutable | ReactiveFlags.dirty;
+      flags =
+          17 /*ReactiveFlags.mutable | ReactiveFlags.dirty*/ as ReactiveFlags;
       final subs = this.subs;
       if (subs != null) {
         propagate(subs);
@@ -61,7 +62,8 @@ class SignalNode<T> extends ReactiveNode {
     }
     ReactiveNode? sub = activeSub;
     while (sub != null) {
-      if ((sub.flags & (ReactiveFlags.mutable | ReactiveFlags.watching)) !=
+      if ((sub.flags &
+              3 /*(ReactiveFlags.mutable | ReactiveFlags.watching)*/) !=
           ReactiveFlags.none) {
         link(this, sub, cycle);
         break;
@@ -91,8 +93,8 @@ class ComputedNode<T> extends ReactiveNode {
     if ((flags & ReactiveFlags.dirty) != ReactiveFlags.none ||
         ((flags & ReactiveFlags.pending) != ReactiveFlags.none &&
             (checkDirty(deps!, this) ||
-                identical(
-                    this.flags = flags & ~ReactiveFlags.pending, false)))) {
+                identical(this.flags = flags & -33 /*~ReactiveFlags.pending*/,
+                    false)))) {
       if (update()) {
         final subs = this.subs;
         if (subs != null) {
@@ -100,13 +102,14 @@ class ComputedNode<T> extends ReactiveNode {
         }
       }
     } else if (flags == ReactiveFlags.none) {
-      this.flags = ReactiveFlags.mutable | ReactiveFlags.recursedCheck;
+      this.flags = 5 /*ReactiveFlags.mutable | ReactiveFlags.recursedCheck*/
+          as ReactiveFlags;
       final prevSub = setActiveSub(this);
       try {
         value = getter(null);
       } finally {
         activeSub = prevSub;
-        this.flags &= ~ReactiveFlags.recursedCheck;
+        this.flags &= -5 /*~ReactiveFlags.recursedCheck*/;
       }
     }
 
@@ -127,7 +130,7 @@ class ComputedNode<T> extends ReactiveNode {
       return value != (value = getter(value));
     } finally {
       activeSub = prevSub;
-      flags &= ~ReactiveFlags.recursedCheck;
+      flags &= -5 /*~ReactiveFlags.recursedCheck*/;
       purgeDeps(this);
     }
   }
@@ -155,7 +158,7 @@ void notify(ReactiveNode effect) {
   final LinkedEffect tail = effect as LinkedEffect;
 
   do {
-    effect.flags &= ~ReactiveFlags.watching;
+    effect.flags &= -3 /*~ReactiveFlags.watching*/;
     (effect as LinkedEffect).nextEffect = head;
     head = effect;
 
@@ -180,7 +183,8 @@ void unwatched(ReactiveNode node) {
     stop(node);
   } else if (node.depsTail != null) {
     node.depsTail = null;
-    node.flags = ReactiveFlags.mutable | ReactiveFlags.dirty;
+    node.flags =
+        17 /*ReactiveFlags.mutable | ReactiveFlags.dirty*/ as ReactiveFlags;
     purgeDeps(node);
   }
 }
@@ -243,13 +247,14 @@ void run(EffectNode e) {
           checkDirty(e.deps!, e))) {
     ++cycle;
     e.depsTail = null;
-    e.flags = ReactiveFlags.watching | ReactiveFlags.recursedCheck;
+    e.flags = 6 /*ReactiveFlags.watching | ReactiveFlags.recursedCheck*/
+        as ReactiveFlags;
     final prevSub = setActiveSub(e);
     try {
       e.fn();
     } finally {
       activeSub = prevSub;
-      e.flags &= ~ReactiveFlags.recursedCheck;
+      e.flags &= -5 /*~ReactiveFlags.recursedCheck*/;
       purgeDeps(e);
     }
   } else {

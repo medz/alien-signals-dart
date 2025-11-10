@@ -165,22 +165,22 @@ final class Stack<T> {
       ReactiveFlags flags = sub.flags;
 
       if ((flags &
-              (ReactiveFlags.recursedCheck |
-                  ReactiveFlags.recursed |
-                  ReactiveFlags.dirty |
-                  ReactiveFlags.pending)) ==
+              60 /*ReactiveFlags.recursedCheck | ReactiveFlags.recursed | ReactiveFlags.dirty | ReactiveFlags.pending*/
+          ) ==
           ReactiveFlags.none) {
         sub.flags = flags | ReactiveFlags.pending;
       } else if ((flags &
-              (ReactiveFlags.recursedCheck | ReactiveFlags.recursed)) ==
+              12 /*ReactiveFlags.recursedCheck | ReactiveFlags.recursed*/) ==
           ReactiveFlags.none) {
         flags = ReactiveFlags.none;
       } else if ((flags & ReactiveFlags.recursedCheck) == ReactiveFlags.none) {
-        sub.flags = (flags & ~ReactiveFlags.recursed) | ReactiveFlags.pending;
-      } else if ((flags & (ReactiveFlags.dirty | ReactiveFlags.pending)) ==
+        sub.flags =
+            (flags & -9 /*~ReactiveFlags.recursed*/) | ReactiveFlags.pending;
+      } else if ((flags & 48 /*ReactiveFlags.dirty | ReactiveFlags.pending*/) ==
               ReactiveFlags.none &&
           isValidLink(link, sub)) {
-        sub.flags = flags | (ReactiveFlags.recursed | ReactiveFlags.pending);
+        sub.flags =
+            flags | 40 /*(ReactiveFlags.recursed | ReactiveFlags.pending)*/;
         flags &= ReactiveFlags.mutable;
       } else {
         flags = ReactiveFlags.none;
@@ -227,10 +227,11 @@ final class Stack<T> {
     do {
       final sub = curr!.sub;
       final flags = sub.flags;
-      if ((flags & (ReactiveFlags.pending | ReactiveFlags.dirty)) ==
+      if ((flags & 48 /*(ReactiveFlags.pending | ReactiveFlags.dirty)*/) ==
           ReactiveFlags.pending) {
         sub.flags = flags | ReactiveFlags.dirty;
-        if ((flags & (ReactiveFlags.watching | ReactiveFlags.recursedCheck)) ==
+        if ((flags &
+                6 /*(ReactiveFlags.watching | ReactiveFlags.recursedCheck)*/) ==
             ReactiveFlags.watching) {
           notify(sub);
         }
@@ -250,8 +251,9 @@ final class Stack<T> {
 
       if ((sub.flags & ReactiveFlags.dirty) != ReactiveFlags.none) {
         dirty = true;
-      } else if ((flags & (ReactiveFlags.mutable | ReactiveFlags.dirty)) ==
-          (ReactiveFlags.mutable | ReactiveFlags.dirty)) {
+      } else if ((flags &
+              17 /*(ReactiveFlags.mutable | ReactiveFlags.dirty)*/) ==
+          17 /*(ReactiveFlags.mutable | ReactiveFlags.dirty)*/) {
         if (update(dep)) {
           final subs = dep.subs!;
           if (subs.nextSub != null) {
@@ -259,8 +261,9 @@ final class Stack<T> {
           }
           dirty = true;
         }
-      } else if ((flags & (ReactiveFlags.mutable | ReactiveFlags.pending)) ==
-          (ReactiveFlags.mutable | ReactiveFlags.pending)) {
+      } else if ((flags &
+              33 /*(ReactiveFlags.mutable | ReactiveFlags.pending)*/) ==
+          33 /*(ReactiveFlags.mutable | ReactiveFlags.pending)*/) {
         if (link.nextSub != null || link.prevSub != null) {
           stack = Stack(value: link, prev: stack);
         }
@@ -297,7 +300,7 @@ final class Stack<T> {
           }
           dirty = false;
         } else {
-          sub.flags &= ~ReactiveFlags.pending;
+          sub.flags &= -33 /*~ReactiveFlags.pending*/;
         }
         sub = link.sub;
         final nextDep = link.nextDep;

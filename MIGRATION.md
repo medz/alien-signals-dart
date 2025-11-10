@@ -73,6 +73,24 @@ final depth = getBatchDepth();
 final sub = getActiveSub();
 ```
 
+#### 4. ReactiveSystem Class Removal
+
+The `ReactiveSystem` class and `PresetReactiveSystem` implementation have been removed in favor of a functional approach:
+
+```dart
+// ❌ Version 1.x - Class-based system
+const ReactiveSystem system = PresetReactiveSystem();
+
+// ✅ Version 2.0 - Functional factory
+final system = createReactiveSystem(
+  update: update,
+  notify: notify,
+  unwatched: unwatched,
+);
+```
+
+**Impact**: This is an internal change that most users won't encounter directly. The reactive system is now created and managed internally by the library. If you were extending or customizing the reactive system, you'll need to use the new `createReactiveSystem()` function approach.
+
 ### New Features
 
 #### The `trigger` Function
@@ -182,9 +200,11 @@ For each occurrence, either:
 1. **Remove if unnecessary** - Most application code doesn't need these
 2. **Add explicit import** - If genuinely required:
    ```dart
-   import 'package:alien_signals/preset.dart'
+   import 'package:alien_signals/preset.dart' 
      show getBatchDepth, getActiveSub, setActiveSub;
    ```
+
+**ReactiveSystem Usage**: If your code directly uses `ReactiveSystem` or `PresetReactiveSystem`, this is likely advanced usage. The system is now created internally using `createReactiveSystem()`. Consider whether you truly need direct system access or if the high-level API suffices.
 
 #### Step 4: Leverage New Features
 

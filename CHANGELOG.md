@@ -21,6 +21,16 @@ Version 2.0 represents a complete architectural overhaul of `alien_signals`, int
   - `getBatchDepth()`, `getActiveSub()`, `setActiveSub()` now require explicit import from `preset.dart`
   - Most applications should not need these APIs
 
+#### Reactive System Changes
+- **BREAKING**: `ReactiveSystem` class removed in favor of functional approach
+  ```dart
+  // Before: const ReactiveSystem system = PresetReactiveSystem();
+  // After:  final system = createReactiveSystem(...);
+  ```
+  - The reactive system is now created using `createReactiveSystem()` factory function
+  - This change improves tree-shaking and allows for better customization
+  - Most users won't interact with this directly as it's handled internally
+
 ### ✨ New Features
 
 #### Manual Trigger Function

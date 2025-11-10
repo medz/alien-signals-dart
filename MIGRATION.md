@@ -2,193 +2,242 @@
 
 This guide helps you migrate from earlier versions of `alien_signals` to latest version
 
-## Migration from 0.x to 1.0
+## Migration from 1.x to 2.0
 
-The 1.0.1 release introduces several breaking changes to improve API consistency and performance. This guide will help you update your code.
+Version 2.0 represents a complete architectural refactoring of `alien_signals` that introduces a cleaner API surface and improved performance characteristics. This guide covers the breaking changes and provides detailed migration instructions.
 
-### 🔄 API Changes
+### Overview of Changes
 
-#### Effect and EffectScope Disposal
+The 2.0 release restructures the library into two layers:
+- **Surface API** (`surface.dart`): The high-level, user-facing API with clean interfaces
+- **Preset System** (`preset.dart`): The low-level reactive engine implementation
 
-**Before (0.x):**
+This separation provides better encapsulation while maintaining full backward compatibility for core functionality.
+
+### Breaking Changes
+
+#### 1. Effect Disposal Pattern
+
+The disposal mechanism has been unified to use callable objects instead of methods, aligning with functional programming patterns.
+
 ```dart
-final dispose = effect(() {
-  print(count());
-});
-dispose(); // Function call
-
-final scope = effectScope(() { /* ... */ });
-scope(); // Function call
-```
-
-**After (1.0):**
-```dart
-final e = effect(() {
-  print(count());
-});
+// ❌ Version 1.x
+final e = effect(() => print(count()));
 e.dispose(); // Method call
 
-final scope = effectScope(() { /* ... */ });
+final scope = effectScope(() { /* effects */ });
 scope.dispose(); // Method call
+
+// ✅ Version 2.0
+final e = effect(() => print(count()));
+e(); // Callable - stops the effect
+
+final scope = effectScope(() { /* effects */ });
+scope(); // Callable - stops all effects in scope
 ```
 
-### 🏗️ System-Level Changes
+**Rationale**: This change provides a more concise API and better aligns with Dart's callable object pattern.
 
-#### Batch Operations
+#### 2. Library Export Restructure
 
-**Before (0.x):**
+The main library exports have been reorganized to provide a cleaner separation of concerns.
+
 ```dart
-// Using batchDepth field
-if (batchDepth > 0) {
-  // ...
-}
+// Version 1.x exports (from alien_signals.dart)
+export 'src/preset.dart' show
+    Signal, WritableSignal, Computed, Effect, EffectScope,  // interfaces
+    signal, computed, effect, effectScope,                   // factories
+    getBatchDepth, getActiveSub, setActiveSub,              // low-level
+    startBatch, endBatch;                                    // batch control
+
+// Version 2.0 exports (from alien_signals.dart)
+export 'src/surface.dart';  // All user-facing APIs
+export 'src/preset.dart' show startBatch, endBatch, trigger;  // Only essential controls
 ```
 
-**After (1.0):**
+**Impact**: Low-level APIs (`getBatchDepth`, `getActiveSub`, `setActiveSub`) are no longer part of the default exports.
+
+#### 3. Access to Low-Level APIs
+
+If your code depends on low-level reactive system APIs, you now need explicit imports:
+
 ```dart
-// Using getBatchDepth() function
-if (getBatchDepth() > 0) {
-  // ...
-}
-```
-
-#### Active Subscription Management
-
-**Before (0.x):**
-```dart
-// Old function names
-getCurrentSub();
-setCurrentSub(sub);
-
-// Removed APIs
-getCurrentScope();
-setCurrentScope(scope);
-```
-
-**After (1.0):**
-```dart
-// New function names
-getActiveSub();
-setActiveSub(sub);
-```
-
-#### Removed APIs
-
-The following APIs have been removed in 1.0:
-
-- `startTracking()` and `endTracking()` - Use inline cycle management instead
-- `pauseTracking()` and `resumeTracking()` - No direct replacement
-- `ReactiveFlags` enum - Replaced with int-based flags
-
-### 📦 Import Changes
-
-#### System-Level Access
-
-**Before (0.x):**
-```dart
+// ❌ Version 1.x - Available by default
 import 'package:alien_signals/alien_signals.dart';
+final depth = getBatchDepth();
+final sub = getActiveSub();
+
+// ✅ Version 2.0 - Requires explicit import
+import 'package:alien_signals/preset.dart' show getBatchDepth, getActiveSub, setActiveSub;
+final depth = getBatchDepth();
+final sub = getActiveSub();
 ```
 
-**After (1.0):**
+### New Features
+
+#### The `trigger` Function
+
+Version 2.0 introduces `trigger()` for manually initiating reactive updates without creating persistent effects:
+
 ```dart
-import 'package:alien_signals/system.dart'; // Still available for low-level access
+final firstName = signal('John');
+final lastName = signal('Doe');
+final fullName = computed(() => '${firstName()} ${lastName()}');
+
+// Manually trigger all fullName subscribers
+trigger(() {
+  fullName(); // Access within trigger causes propagation
+});
 ```
 
-### 🛠️ Step-by-Step Migration
+Use cases:
+- Testing reactive flows
+- Forcing UI updates
+- Integrating with non-reactive code
 
-#### 1. Update Dependencies
+### Architecture Changes
 
-Update your `pubspec.yaml`:
+#### Layer Separation
+
+The codebase is now organized into distinct layers:
+
+```
+┌─────────────────────────────────────┐
+│         surface.dart                │ ← User-facing API
+│  (Signal, Computed, Effect, etc.)   │
+├─────────────────────────────────────┤
+│         preset.dart                 │ ← Reactive engine
+│  (SignalNode, ComputedNode, etc.)   │
+├─────────────────────────────────────┤
+│         system.dart                 │ ← Core algorithms
+│  (Link, ReactiveNode, etc.)         │
+└─────────────────────────────────────┘
+```
+
+#### Implementation Inheritance
+
+The surface implementations now properly extend preset nodes:
+
+```dart
+// Version 2.0 internal structure (simplified)
+class SignalNode<T> extends ReactiveNode { /* preset.dart */ }
+class _SignalImpl<T> extends SignalNode<T> implements WritableSignal<T> { /* surface.dart */ }
+
+class ComputedNode<T> extends ReactiveNode { /* preset.dart */ }
+class _ComputedImpl<T> extends ComputedNode<T> implements Computed<T> { /* surface.dart */ }
+
+class EffectNode extends LinkedEffect { /* preset.dart */ }
+class _EffectImpl extends EffectNode implements Effect { /* surface.dart */ }
+```
+
+This hierarchy provides better code reuse and maintainability.
+
+### Migration Guide
+
+#### Step 1: Update Your Dependencies
 
 ```yaml
 dependencies:
-  alien_signals: ^1.0.1
+  alien_signals: ^2.0.0
 ```
 
-#### 2. Update Imports
+Run `dart pub upgrade` to fetch the latest version.
 
-Replace deprecated imports:
+#### Step 2: Update All Disposal Calls
+
+Search your codebase for `.dispose()` calls and replace them:
 
 ```dart
-// Add this
-import 'package:alien_signals/system.dart';
+// Search for this pattern
+effectInstance.dispose();
+scopeInstance.dispose();
+
+// Replace with
+effectInstance();
+scopeInstance();
 ```
 
-#### 3. Update Effect Disposal
+**Automated approach** (using sed or similar):
+```bash
+# For effects
+sed -i 's/\.dispose()/()/' **/*.dart
 
-Update effect and scope disposal:
+# Review changes before committing
+git diff
+```
+
+#### Step 3: Handle Low-Level API Usage
+
+Audit your codebase for low-level API usage:
 
 ```dart
-// Find: disposeFn()
-// Replace with: disposeFn.dispose()
-
-// Find: scopeFn()
-// Replace with: scopeFn.dispose()
+// Check for these functions:
+getBatchDepth()
+getActiveSub()
+setActiveSub()
 ```
 
-#### 4. Update System Function Calls
+For each occurrence, either:
 
-Replace deprecated system functions:
+1. **Remove if unnecessary** - Most application code doesn't need these
+2. **Add explicit import** - If genuinely required:
+   ```dart
+   import 'package:alien_signals/preset.dart'
+     show getBatchDepth, getActiveSub, setActiveSub;
+   ```
+
+#### Step 4: Leverage New Features
+
+Consider adopting the new `trigger()` function where appropriate:
 
 ```dart
-// Find: batchDepth
-// Replace with: getBatchDepth()
+// Replace manual effect creation/disposal patterns
+final tempEffect = effect(() => someComputation());
+tempEffect();  // Immediately dispose
 
-// Find: getCurrentSub()
-// Replace with: getActiveSub()
-
-// Find: setCurrentSub(sub)
-// Replace with: setActiveSub(sub)
+// With the cleaner trigger approach
+trigger(() => someComputation());
 ```
 
-### 🧪 Testing Your Migration
+#### Step 5: Verify Your Application
 
-After migration, ensure your code works correctly:
+1. **Run tests**: `dart test`
+2. **Check for warnings**: `dart analyze`
+3. **Test reactive flows**: Ensure all signals, computed values, and effects work correctly
+4. **Performance testing**: Verify that performance characteristics meet expectations
 
-1. **Run Tests**: Execute your existing test suite
-2. **Check Performance**: The new version should be faster
-3. **Verify Reactivity**: Ensure all signal updates trigger expected reactions
+### Performance Improvements
 
-### 💡 Benefits of 1.0
+Version 2.0 includes several performance enhancements:
 
-After migration, you'll benefit from:
+- **Aggressive inlining**: Strategic use of `@pragma` annotations for hot paths
+- **Reduced allocations**: Optimized link management in the dependency graph
+- **Better cycle detection**: Improved algorithm for detecting circular dependencies
+- **Memory efficiency**: Cleaner separation reduces memory footprint
 
-- **Better Performance**: Optimized reactive system with cycle-based tracking
-- **Cleaner API**: More Dart-idiomatic property-based access
-- **Type Safety**: Better nullability handling without extra parameters
-- **Stability**: Production-ready stable API
+### Troubleshooting
 
-### 🔍 Common Migration Issues
+| Issue | Solution |
+|-------|----------|
+| `The method 'dispose' isn't defined` | Replace `.dispose()` with `()` |
+| `The getter 'getBatchDepth' isn't defined` | Add `import 'package:alien_signals/preset.dart' show getBatchDepth;` |
+| `The getter 'getActiveSub' isn't defined` | Add `import 'package:alien_signals/preset.dart' show getActiveSub;` |
+| Effects not triggering | Ensure you're calling the signal within a reactive context |
+| Memory leaks | Verify all effects are properly disposed with `()` |
 
-#### Issue: Effect Disposal
+### Best Practices for 2.0
 
-**Problem:**
-```dart
-final e = effect(() { /* ... */ });
-e(); // Error: not callable
-```
+1. **Prefer the surface API**: Use the high-level API unless you have specific low-level requirements
+2. **Dispose effects properly**: Always call `effect()` when an effect is no longer needed
+3. **Use effect scopes**: Group related effects for easier cleanup
+4. **Leverage trigger**: Use `trigger()` for one-time reactive operations
+5. **Avoid low-level APIs**: The surface API should cover most use cases
 
-**Solution:**
-```dart
-final e = effect(() { /* ... */ });
-e.dispose(); // Correct method call
-```
+### Further Resources
 
-### 📚 Additional Resources
-
-- [API Documentation](https://pub.dev/documentation/alien_signals/latest/)
-- [Examples](example/)
-- [GitHub Issues](https://github.com/medz/alien-signals-dart/issues)
-
-### 🆘 Need Help?
-
-If you encounter issues during migration:
-
-1. Check this guide again for common solutions
-2. Review the [API documentation](https://pub.dev/documentation/alien_signals/latest/)
-3. Open an issue on [GitHub](https://github.com/medz/alien-signals-dart/issues)
-4. Join the discussion in our community channels
+- [Complete API Reference](https://pub.dev/documentation/alien_signals/latest/)
+- [Performance Benchmarks](https://github.com/medz/dart-reactivity-benchmark)
 
 ---
 
-**Note**: This migration guide covers the major changes from 0.x to 1.0. For migrations from specific beta versions, please refer to the individual changelog entries in [CHANGELOG.md](CHANGELOG.md).
+**Need Help?** Open an issue on [GitHub](https://github.com/medz/alien-signals-dart/issues).

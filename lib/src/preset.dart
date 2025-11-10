@@ -59,11 +59,11 @@ final system = createReactiveSystem(
 @pragma('dart2js:tryInline')
 @pragma('wasm:prefer-inline')
 bool update(ReactiveNode node) {
-  if (node.depsTail != null) {
-    return updateComputed(node as ComputedNode);
-  } else {
-    return updateSignal(node as SignalNode);
-  }
+  return switch (node) {
+    ComputedNode() => updateComputed(node),
+    SignalNode() => updateSignal(node),
+    _ => false,
+  };
 }
 
 void notify(ReactiveNode effect) {

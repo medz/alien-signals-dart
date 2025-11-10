@@ -22,6 +22,13 @@ WritableSignal<T> signal<T>(T initialValue) {
       pendingValue: initialValue);
 }
 
+@pragma('vm:prefer-inline')
+@pragma('dart2js:tryInline')
+@pragma('wasm:prefer-inline')
+Computed<T> computed<T>(T Function(T?) getter) {
+  return _ComputedImpl(getter: getter, flags: ReactiveFlags.none);
+}
+
 final class _SignalImpl<T> extends SignalNode<T> implements WritableSignal<T> {
   _SignalImpl(
       {required super.flags,
@@ -39,4 +46,14 @@ final class _SignalImpl<T> extends SignalNode<T> implements WritableSignal<T> {
     }
     return get();
   }
+}
+
+final class _ComputedImpl<T> extends ComputedNode<T> implements Computed<T> {
+  _ComputedImpl({required super.flags, required super.getter});
+
+  @override
+  @pragma('vm:prefer-inline')
+  @pragma('dart2js:tryInline')
+  @pragma('wasm:prefer-inline')
+  T call() => get();
 }

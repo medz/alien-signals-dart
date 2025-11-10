@@ -219,17 +219,6 @@ void endBatch() {
 @pragma('vm:prefer-inline')
 @pragma('dart2js:tryInline')
 @pragma('wasm:prefer-inline')
-T Function() computed<T>(T Function(T?) getter) {
-  final c = ComputedNode(
-    getter: getter,
-    flags: ReactiveFlags.none,
-  );
-  return c.get;
-}
-
-@pragma('vm:prefer-inline')
-@pragma('dart2js:tryInline')
-@pragma('wasm:prefer-inline')
 void Function() effect(void Function() fn) {
   final e = EffectNode(
     fn: fn,

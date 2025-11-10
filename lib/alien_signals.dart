@@ -5,7 +5,6 @@ export 'src/preset.dart'
         getBatchDepth,
         startBatch,
         endBatch,
-        computed,
         effect,
         effectScope,
         trigger;

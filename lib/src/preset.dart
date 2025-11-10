@@ -19,6 +19,40 @@ class SignalNode<T> extends ReactiveNode {
       {required super.flags,
       required this.currentValue,
       required this.pendingValue});
+
+  T call([T? newValue, bool nulls = false]) {
+    if (newValue != null || nulls) {
+      if (pendingValue != (pendingValue = newValue as T)) {
+        flags = ReactiveFlags.mutable | ReactiveFlags.dirty;
+        final subs = this.subs;
+        if (subs != null) {
+          propagate(subs);
+          if (batchDepth == 0) flush();
+        }
+      }
+
+      return newValue;
+    } else {
+      if ((flags & ReactiveFlags.dirty) != ReactiveFlags.none) {
+        if (updateSignal(this)) {
+          final subs = this.subs;
+          if (subs != null) {
+            shallowPropagate(subs);
+          }
+        }
+      }
+      ReactiveNode? sub = activeSub;
+      while (sub != null) {
+        if ((sub.flags & (ReactiveFlags.mutable | ReactiveFlags.watching)) !=
+            ReactiveFlags.none) {
+          link(this, sub, cycle);
+          break;
+        }
+        sub = sub.subs?.sub;
+      }
+      return currentValue;
+    }
+  }
 }
 
 class ComputedNode<T> extends ReactiveNode {
@@ -31,6 +65,38 @@ class ComputedNode<T> extends ReactiveNode {
   bool run() => value != (value = getter(value));
 
   ComputedNode({required super.flags, required this.getter});
+
+  T get() {
+    final flags = this.flags;
+    if ((flags & ReactiveFlags.dirty) != ReactiveFlags.none ||
+        ((flags & ReactiveFlags.pending) != ReactiveFlags.none &&
+            (checkDirty(deps!, this) ||
+                identical(
+                    this.flags = flags & ~ReactiveFlags.pending, false)))) {
+      if (updateComputed(this)) {
+        final subs = this.subs;
+        if (subs != null) {
+          shallowPropagate(subs);
+        }
+      }
+    } else if (flags == ReactiveFlags.none) {
+      this.flags = ReactiveFlags.mutable | ReactiveFlags.recursedCheck;
+      final prevSub = setActiveSub(this);
+      try {
+        value = getter(null);
+      } finally {
+        activeSub = prevSub;
+        this.flags &= ~ReactiveFlags.recursedCheck;
+      }
+    }
+
+    final sub = activeSub;
+    if (sub != null) {
+      link(this, sub, cycle);
+    }
+
+    return value!;
+  }
 }
 
 class EffectNode extends LinkedEffect {
@@ -93,7 +159,7 @@ void notify(ReactiveNode effect) {
 
 void unwatched(ReactiveNode node) {
   if ((node.flags & ReactiveFlags.mutable) == ReactiveFlags.none) {
-    effectScopeOper(node);
+    stop(node);
   } else if (node.depsTail != null) {
     node.depsTail = null;
     node.flags = ReactiveFlags.mutable | ReactiveFlags.dirty;
@@ -140,7 +206,7 @@ T Function([T? newValue, bool nulls]) signal<T>(T initialValue) {
       currentValue: initialValue,
       pendingValue: initialValue,
       flags: ReactiveFlags.mutable);
-  return ([value, nulls = false]) => signalOper(s, value, nulls);
+  return s.call;
 }
 
 @pragma('vm:prefer-inline')
@@ -151,7 +217,7 @@ T Function() computed<T>(T Function(T?) getter) {
     getter: getter,
     flags: ReactiveFlags.none,
   );
-  return () => computedOper(c);
+  return c.get;
 }
 
 @pragma('vm:prefer-inline')
@@ -172,7 +238,7 @@ void Function() effect(void Function() fn) {
     activeSub = prevSub;
     e.flags &= ~ReactiveFlags.recursedCheck;
   }
-  return () => effectOper(e);
+  return () => stop(e);
 }
 
 @pragma('vm:prefer-inline')
@@ -189,7 +255,7 @@ void Function() effectScope(void Function() fn) {
   } finally {
     activeSub = prevSub;
   }
-  return () => effectScopeOper(e);
+  return () => stop(e);
 }
 
 void trigger(void Function() fn) {
@@ -267,77 +333,7 @@ void flush() {
   }
 }
 
-T computedOper<T>(ComputedNode<T> c) {
-  final flags = c.flags;
-  if ((flags & ReactiveFlags.dirty) != ReactiveFlags.none ||
-      ((flags & ReactiveFlags.pending) != ReactiveFlags.none &&
-          (checkDirty(c.deps!, c) ||
-              identical(c.flags = flags & ~ReactiveFlags.pending, false)))) {
-    if (updateComputed(c)) {
-      final subs = c.subs;
-      if (subs != null) {
-        shallowPropagate(subs);
-      }
-    }
-  } else if (flags == ReactiveFlags.none) {
-    c.flags = ReactiveFlags.mutable | ReactiveFlags.recursedCheck;
-    final prevSub = setActiveSub(c);
-    try {
-      c.value = c.getter(null);
-    } finally {
-      activeSub = prevSub;
-      c.flags &= ~ReactiveFlags.recursedCheck;
-    }
-  }
-
-  final sub = activeSub;
-  if (sub != null) {
-    link(c, sub, cycle);
-  }
-
-  return c.value as T;
-}
-
-T signalOper<T>(SignalNode<T> s, T? newValue, bool nulls) {
-  if (newValue != null || nulls) {
-    if (s.pendingValue != (s.pendingValue = newValue as T)) {
-      s.flags = ReactiveFlags.mutable | ReactiveFlags.dirty;
-      final subs = s.subs;
-      if (subs != null) {
-        propagate(subs);
-        if (batchDepth == 0) flush();
-      }
-    }
-
-    return newValue;
-  } else {
-    if ((s.flags & ReactiveFlags.dirty) != ReactiveFlags.none) {
-      if (updateSignal(s)) {
-        final subs = s.subs;
-        if (subs != null) {
-          shallowPropagate(subs);
-        }
-      }
-    }
-    ReactiveNode? sub = activeSub;
-    while (sub != null) {
-      if ((sub.flags & (ReactiveFlags.mutable | ReactiveFlags.watching)) !=
-          ReactiveFlags.none) {
-        link(s, sub, cycle);
-        break;
-      }
-      sub = sub.subs?.sub;
-    }
-    return s.currentValue;
-  }
-}
-
-@pragma('vm:prefer-inline')
-@pragma('dart2js:tryInline')
-@pragma('wasm:prefer-inline')
-void effectOper(EffectNode e) => effectScopeOper(e);
-
-void effectScopeOper(ReactiveNode node) {
+void stop(ReactiveNode node) {
   node.depsTail = null;
   node.flags = ReactiveFlags.none;
   purgeDeps(node);

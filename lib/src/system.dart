@@ -222,7 +222,7 @@ final class Stack<T> {
     }
     final prevSub = dep.subsTail;
     if (prevSub != null &&
-        identical(prevSub.version, version) &&
+        prevSub.version == version &&
         identical(prevSub.sub, sub)) {
       return;
     }

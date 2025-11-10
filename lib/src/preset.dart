@@ -20,44 +20,42 @@ class SignalNode<T> extends ReactiveNode {
       required this.currentValue,
       required this.pendingValue});
 
-  T call([T? newValue, bool nulls = false]) {
-    if (newValue != null || nulls) {
-      if (pendingValue != (pendingValue = newValue as T)) {
-        flags = ReactiveFlags.mutable | ReactiveFlags.dirty;
+  void set(T newValue) {
+    if (pendingValue != (pendingValue = newValue)) {
+      flags = ReactiveFlags.mutable | ReactiveFlags.dirty;
+      final subs = this.subs;
+      if (subs != null) {
+        propagate(subs);
+        if (batchDepth == 0) flush();
+      }
+    }
+  }
+
+  T get() {
+    if ((flags & ReactiveFlags.dirty) != ReactiveFlags.none) {
+      if (update()) {
         final subs = this.subs;
         if (subs != null) {
-          propagate(subs);
-          if (batchDepth == 0) flush();
+          shallowPropagate(subs);
         }
       }
-
-      return newValue;
-    } else {
-      if ((flags & ReactiveFlags.dirty) != ReactiveFlags.none) {
-        if (didUpdateSignal()) {
-          final subs = this.subs;
-          if (subs != null) {
-            shallowPropagate(subs);
-          }
-        }
-      }
-      ReactiveNode? sub = activeSub;
-      while (sub != null) {
-        if ((sub.flags & (ReactiveFlags.mutable | ReactiveFlags.watching)) !=
-            ReactiveFlags.none) {
-          link(this, sub, cycle);
-          break;
-        }
-        sub = sub.subs?.sub;
-      }
-      return currentValue;
     }
+    ReactiveNode? sub = activeSub;
+    while (sub != null) {
+      if ((sub.flags & (ReactiveFlags.mutable | ReactiveFlags.watching)) !=
+          ReactiveFlags.none) {
+        link(this, sub, cycle);
+        break;
+      }
+      sub = sub.subs?.sub;
+    }
+    return currentValue;
   }
 
   @pragma('vm:prefer-inline')
   @pragma('dart2js:tryInline')
   @pragma('wasm:prefer-inline')
-  bool didUpdateSignal() {
+  bool update() {
     flags = ReactiveFlags.mutable;
     return currentValue != (currentValue = pendingValue);
   }
@@ -76,7 +74,7 @@ class ComputedNode<T> extends ReactiveNode {
             (checkDirty(deps!, this) ||
                 identical(
                     this.flags = flags & ~ReactiveFlags.pending, false)))) {
-      if (didUpdateComputed()) {
+      if (update()) {
         final subs = this.subs;
         if (subs != null) {
           shallowPropagate(subs);
@@ -101,7 +99,7 @@ class ComputedNode<T> extends ReactiveNode {
     return value!;
   }
 
-  bool didUpdateComputed() {
+  bool update() {
     ++cycle;
     depsTail = null;
     flags = ReactiveFlags.mutable | ReactiveFlags.recursedCheck;
@@ -127,6 +125,9 @@ ReactiveNode? activeSub;
 LinkedEffect? queuedEffects;
 LinkedEffect? queuedEffectsTail;
 
+@pragma('vm:prefer-inline')
+@pragma('dart2js:tryInline')
+@pragma('wasm:prefer-inline')
 final system = createReactiveSystem(
       update: update,
       notify: notify,
@@ -143,8 +144,8 @@ final system = createReactiveSystem(
 @pragma('wasm:prefer-inline')
 bool update(ReactiveNode node) {
   return switch (node) {
-    ComputedNode() => node.didUpdateComputed(),
-    SignalNode() => node.didUpdateSignal(),
+    ComputedNode() => node.update(),
+    SignalNode() => node.update(),
     _ => false,
   };
 }
@@ -223,7 +224,13 @@ T Function([T? newValue, bool nulls]) signal<T>(T initialValue) {
       currentValue: initialValue,
       pendingValue: initialValue,
       flags: ReactiveFlags.mutable);
-  return s.call;
+  return ([newValue, setNull = false]) {
+    if (newValue != null || setNull) {
+      s.set(newValue as T);
+      return newValue;
+    }
+    return s.get();
+  };
 }
 
 @pragma('vm:prefer-inline')

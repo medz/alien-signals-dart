@@ -137,14 +137,15 @@ final class Link {
   /// Used for traversing all dependencies of a subscriber.
   Link? nextDep;
 
-  Link(
-      {required this.version,
-      required this.dep,
-      required this.sub,
-      this.prevSub,
-      this.nextSub,
-      this.prevDep,
-      this.nextDep});
+  Link({
+    required this.version,
+    required this.dep,
+    required this.sub,
+    this.prevSub,
+    this.nextSub,
+    this.prevDep,
+    this.nextDep,
+  });
 }
 
 final class Stack<T> {
@@ -199,7 +200,7 @@ final class Stack<T> {
 /// ```
 ({
   void Function(ReactiveNode dep, ReactiveNode sub, int version) link,
-  Link? Function(Link link, [ReactiveNode sub]) unlink,
+  Link? Function(Link link, ReactiveNode sub) unlink,
   void Function(Link link) propagate,
   void Function(Link link) shallowPropagate,
   bool Function(Link link, ReactiveNode sub) checkDirty,
@@ -247,8 +248,7 @@ final class Stack<T> {
     }
   }
 
-  Link? unlink(final Link link, [ReactiveNode? sub]) {
-    sub ??= link.sub;
+  Link? unlink(final Link link, final ReactiveNode sub) {
     final dep = link.dep;
     final prevDep = link.prevDep;
     final nextDep = link.nextDep;

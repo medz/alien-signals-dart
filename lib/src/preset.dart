@@ -447,13 +447,13 @@ void run(EffectNode e) {
 /// called manually to force immediate effect execution.
 void flush() {
   while (queuedEffects != null) {
-    final effect = queuedEffects!;
+    final effect = queuedEffects as EffectNode;
     if ((queuedEffects = effect.nextEffect) != null) {
       effect.nextEffect = null;
     } else {
       queuedEffectsTail = null;
     }
-    run(effect as EffectNode);
+    run(effect);
   }
 }
 
@@ -471,7 +471,7 @@ void stop(ReactiveNode node) {
   purgeDeps(node);
   final subs = node.subs;
   if (subs != null) {
-    unlink(subs);
+    unlink(subs, subs.sub);
   }
 }
 

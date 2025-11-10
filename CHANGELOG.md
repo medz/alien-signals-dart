@@ -1,17 +1,83 @@
-## 2.0.0-beta.3
+## 2.0.0
 
-- pref: Optimize effect notification performance
+Status: Unreleased
 
-## 2.0.0-beta.2
+🚀 **Major Architecture Refactoring**
 
-- Optimize notify effect queueing with batch processing
+Version 2.0 represents a complete architectural overhaul of `alien_signals`, introducing a cleaner separation between the user-facing API and the reactive engine implementation. This release improves performance, maintainability, and developer experience while maintaining core functionality.
 
-## 2.0.0-beta.1
+### 💥 Breaking Changes
 
-- sync upstream 3.1.0
-- rewrite the function-based reactive system and restrict the scope of the code.
-- redesigning the surface API export of pure functions
-- export the original preset
+#### API Surface Restructuring
+- **BREAKING**: Effect and EffectScope disposal now uses callable syntax `()` instead of `.dispose()` method
+  ```dart
+  // Before: effect.dispose()
+  // After:   effect()
+  ```
+- **BREAKING**: Library exports reorganized into layers:
+  - Main exports now come from `surface.dart` (Signal, WritableSignal, Computed, Effect, EffectScope, signal, computed, effect, effectScope)
+  - Batch controls remain in preset exports (startBatch, endBatch, trigger)
+- **BREAKING**: Low-level APIs no longer exported by default:
+  - `getBatchDepth()`, `getActiveSub()`, `setActiveSub()` now require explicit import from `preset.dart`
+  - Most applications should not need these APIs
+
+### ✨ New Features
+
+#### Manual Trigger Function
+- **NEW**: Added `trigger()` function for imperatively initiating reactive updates
+  ```dart
+  trigger(() {
+    // Signal accesses here will propagate to subscribers
+    someSignal();
+  });
+  ```
+  - Useful for testing, forced updates, and non-reactive code integration
+  - Creates temporary reactive context without persistent effects
+
+### 🏗️ Architecture Improvements
+
+#### Layer Separation
+- Complete separation into three distinct layers:
+  - `surface.dart`: High-level user-facing API with clean interfaces
+  - `preset.dart`: Reactive engine with node implementations (SignalNode, ComputedNode, EffectNode)
+  - `system.dart`: Core algorithms and data structures (Link, ReactiveNode, ReactiveFlags)
+- Better encapsulation with private implementation classes (`_SignalImpl`, `_ComputedImpl`, `_EffectImpl`, `_EffectScopeImpl`)
+- Improved inheritance hierarchy with surface implementations properly extending preset nodes
+
+### ⚡ Performance Enhancements
+
+- **Aggressive inlining**: Strategic `@pragma` annotations on hot paths for better performance
+- **Optimized dependency tracking**: Improved cycle management and link traversal
+- **Reduced allocations**: More efficient memory usage in the reactive graph
+- **Better cycle detection**: Enhanced algorithm for circular dependency detection
+
+### 📝 Documentation
+
+- **Comprehensive API documentation**: Added detailed doc comments for all public APIs
+- **Migration guide**: Complete guide for upgrading from 1.x to 2.0
+- **Code examples**: Updated all examples to use new API patterns
+
+### 🔧 Internal Changes
+
+- Removed legacy code and deprecated patterns
+- Improved type safety and null handling
+- Cleaner separation of concerns between modules
+- More maintainable codebase structure
+
+### 📦 Migration
+
+See [MIGRATION.md](MIGRATION.md#migration-from-1x-to-20) for detailed migration instructions from 1.x.
+
+Key migration points:
+1. Replace `.dispose()` with `()` for effects and scopes
+2. Add explicit imports for low-level APIs if needed
+3. Consider using new `trigger()` function for one-time reactive operations
+
+### 🙏 Acknowledgments
+
+Thanks to all contributors and users who provided feedback that shaped this major release.
+
+---
 
 ## 1.0.3
 

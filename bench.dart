@@ -21,7 +21,7 @@ class Bench extends ReactiveFramework {
   @override
   Signal<T> signal<T>(T value) {
     final s = alien_signals.signal(value);
-    return createSignal(s, (value) => s(value, true));
+    return createSignal(s.call, s.call);
   }
 
   @override

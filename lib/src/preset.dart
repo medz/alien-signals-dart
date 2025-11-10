@@ -115,7 +115,7 @@ class ComputedNode<T> extends ReactiveNode {
       link(this, sub, cycle);
     }
 
-    return value!;
+    return value as T;
   }
 
   bool update() {
@@ -214,23 +214,6 @@ void startBatch() => ++batchDepth;
 @pragma('wasm:prefer-inline')
 void endBatch() {
   if ((--batchDepth) == 0) flush();
-}
-
-@pragma('vm:prefer-inline')
-@pragma('dart2js:tryInline')
-@pragma('wasm:prefer-inline')
-T Function([T? newValue, bool nulls]) signal<T>(T initialValue) {
-  final s = SignalNode(
-      currentValue: initialValue,
-      pendingValue: initialValue,
-      flags: ReactiveFlags.mutable);
-  return ([newValue, setNull = false]) {
-    if (newValue != null || setNull) {
-      s.set(newValue as T);
-      return newValue;
-    }
-    return s.get();
-  };
 }
 
 @pragma('vm:prefer-inline')

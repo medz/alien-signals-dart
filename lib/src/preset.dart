@@ -111,6 +111,7 @@ class SignalNode<T> extends ReactiveNode {
   /// subscriber if one exists.
   ///
   /// Returns the current committed value.
+  @pragma('vm:align-loops')
   T get() {
     if ((flags & ReactiveFlags.dirty) != ReactiveFlags.none) {
       if (update()) {
@@ -142,7 +143,7 @@ class SignalNode<T> extends ReactiveNode {
   @pragma('wasm:prefer-inline')
   bool update() {
     flags = ReactiveFlags.mutable;
-    return currentValue != (currentValue = pendingValue);
+    return !identical(currentValue, currentValue = pendingValue);
   }
 }
 
@@ -220,7 +221,7 @@ class ComputedNode<T> extends ReactiveNode {
     flags = ReactiveFlags.mutable | ReactiveFlags.recursedCheck;
     final prevSub = setActiveSub(this);
     try {
-      return value != (value = getter(value));
+      return !identical(value, value = getter(value));
     } finally {
       activeSub = prevSub;
       flags &= -5 /*~ReactiveFlags.recursedCheck*/;
@@ -271,6 +272,7 @@ bool update(ReactiveNode node) {
 ///
 /// This batching mechanism prevents redundant computations
 /// and ensures effects run in a consistent order.
+@pragma('vm:align-loops')
 void notify(ReactiveNode effect) {
   LinkedEffect? head;
   final LinkedEffect tail = effect as LinkedEffect;
@@ -387,6 +389,7 @@ void endBatch() {
 ///   count(); // Access triggers propagation to subscribers
 /// });
 /// ```
+@pragma('vm:align-loops')
 void trigger(void Function() fn) {
   final sub = ReactiveNode(flags: ReactiveFlags.watching),
       prevSub = setActiveSub(sub);
@@ -445,6 +448,10 @@ void run(EffectNode e) {
 ///
 /// Called automatically when a batch completes or can be
 /// called manually to force immediate effect execution.
+@pragma('vm:align-loops')
+@pragma('vm:prefer-inline')
+@pragma('dart2js:tryInline')
+@pragma('wasm:prefer-inline')
 void flush() {
   while (queuedEffects != null) {
     final effect = queuedEffects as EffectNode;
@@ -481,6 +488,10 @@ void stop(ReactiveNode node) {
 /// dependencies that were not accessed in the latest run.
 /// This keeps the dependency graph clean and prevents
 /// unnecessary updates from old dependencies.
+@pragma('vm:align-loops')
+@pragma('vm:prefer-inline')
+@pragma('dart2js:tryInline')
+@pragma('wasm:prefer-inline')
 void purgeDeps(ReactiveNode sub) {
   final depsTail = sub.depsTail;
   Link? dep = depsTail != null ? depsTail.nextDep : sub.deps;

@@ -211,17 +211,19 @@ final class Stack<T> {
 }) {
   void link(final ReactiveNode dep, final ReactiveNode sub, final int version) {
     final prevDep = sub.depsTail;
-    if (prevDep != null && prevDep.dep == dep) {
+    if (prevDep != null && identical(prevDep.dep, dep)) {
       return;
     }
     final nextDep = prevDep != null ? prevDep.nextDep : sub.deps;
-    if (nextDep != null && nextDep.dep == dep) {
+    if (nextDep != null && identical(nextDep.dep, dep)) {
       nextDep.version = version;
       sub.depsTail = nextDep;
       return;
     }
     final prevSub = dep.subsTail;
-    if (prevSub != null && prevSub.version == version && prevSub.sub == sub) {
+    if (prevSub != null &&
+        identical(prevSub.version, version) &&
+        identical(prevSub.sub, sub)) {
       return;
     }
     final newLink = sub.depsTail = dep.subsTail = Link(
@@ -277,10 +279,11 @@ final class Stack<T> {
     return nextDep;
   }
 
+  @pragma('vm:align-loops')
   bool isValidLink(final Link checkLink, final ReactiveNode sub) {
     Link? link = sub.depsTail;
     while (link != null) {
-      if (link == checkLink) {
+      if (identical(link, checkLink)) {
         return true;
       }
       link = link.prevDep;
@@ -288,6 +291,7 @@ final class Stack<T> {
     return false;
   }
 
+  @pragma('vm:align-loops')
   void propagate(Link link) {
     Link? next = link.nextSub;
     Stack<Link?>? stack;
@@ -355,6 +359,7 @@ final class Stack<T> {
     } while (true);
   }
 
+  @pragma('vm:align-loops')
   void shallowPropagate(Link link) {
     Link? curr = link;
     do {
@@ -372,6 +377,7 @@ final class Stack<T> {
     } while ((curr = curr.nextSub) != null);
   }
 
+  @pragma('vm:align-loops')
   bool checkDirty(Link link, ReactiveNode sub) {
     Stack<Link>? stack;
     int checkDepth = 0;

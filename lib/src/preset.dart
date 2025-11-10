@@ -219,27 +219,6 @@ void endBatch() {
 @pragma('vm:prefer-inline')
 @pragma('dart2js:tryInline')
 @pragma('wasm:prefer-inline')
-void Function() effect(void Function() fn) {
-  final e = EffectNode(
-    fn: fn,
-    flags: ReactiveFlags.watching | ReactiveFlags.recursedCheck,
-  );
-  final prevSub = setActiveSub(e);
-  if (prevSub != null) {
-    link(e, prevSub, 0);
-  }
-  try {
-    e.fn();
-  } finally {
-    activeSub = prevSub;
-    e.flags &= ~ReactiveFlags.recursedCheck;
-  }
-  return () => stop(e);
-}
-
-@pragma('vm:prefer-inline')
-@pragma('dart2js:tryInline')
-@pragma('wasm:prefer-inline')
 void Function() effectScope(void Function() fn) {
   final e = ReactiveNode(flags: ReactiveFlags.none);
   final prevSub = setActiveSub(e);

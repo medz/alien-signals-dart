@@ -5,7 +5,6 @@ export 'src/preset.dart'
         getBatchDepth,
         startBatch,
         endBatch,
-        effect,
         effectScope,
         trigger;
 export 'src/surface.dart';

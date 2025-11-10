@@ -12,7 +12,7 @@ void main() {
 
     expect(length(), 0);
     arr().add(1);
-    trigger(arr);
+    trigger(() => arr());
     expect(length(), 1);
   });
 

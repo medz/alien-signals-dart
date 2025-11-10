@@ -1,10 +1,2 @@
-export 'src/preset.dart'
-    show
-        getActiveSub,
-        setActiveSub,
-        getBatchDepth,
-        startBatch,
-        endBatch,
-        effectScope,
-        trigger;
+export 'src/preset.dart' show startBatch, endBatch, trigger;
 export 'src/surface.dart';

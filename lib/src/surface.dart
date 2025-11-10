@@ -7,6 +7,7 @@ import 'package:alien_signals/preset.dart'
         SignalNode,
         ComputedNode,
         EffectNode;
+import 'package:alien_signals/src/system.dart';
 import 'package:alien_signals/system.dart' show ReactiveFlags;
 
 abstract interface class Signal<T> {
@@ -21,6 +22,10 @@ abstract interface class WritableSignal<T> implements Signal<T> {
 abstract interface class Computed<T> implements Signal<T> {}
 
 abstract interface class Effect {
+  void call();
+}
+
+abstract interface class EffectScope {
   void call();
 }
 
@@ -57,6 +62,22 @@ Effect effect(void Function() fn) {
   return e;
 }
 
+@pragma('vm:prefer-inline')
+@pragma('dart2js:tryInline')
+@pragma('wasm:prefer-inline')
+EffectScope effectScope(void Function() fn) {
+  final e = _EffectScopeImpl(flags: ReactiveFlags.none);
+  final prevSub = setActiveSub(e);
+  if (prevSub != null) link(e, prevSub, 0);
+
+  try {
+    fn();
+  } finally {
+    activeSub = prevSub;
+  }
+  return e;
+}
+
 final class _SignalImpl<T> extends SignalNode<T> implements WritableSignal<T> {
   _SignalImpl(
       {required super.flags,
@@ -88,6 +109,18 @@ final class _ComputedImpl<T> extends ComputedNode<T> implements Computed<T> {
 
 final class _EffectImpl extends EffectNode implements Effect {
   _EffectImpl({required super.flags, required super.fn});
+
+  @override
+  @pragma('vm:prefer-inline')
+  @pragma('dart2js:tryInline')
+  @pragma('wasm:prefer-inline')
+  void call() {
+    stop(this);
+  }
+}
+
+class _EffectScopeImpl extends ReactiveNode implements EffectScope {
+  _EffectScopeImpl({required super.flags});
 
   @override
   @pragma('vm:prefer-inline')

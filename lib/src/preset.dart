@@ -216,23 +216,6 @@ void endBatch() {
   if ((--batchDepth) == 0) flush();
 }
 
-@pragma('vm:prefer-inline')
-@pragma('dart2js:tryInline')
-@pragma('wasm:prefer-inline')
-void Function() effectScope(void Function() fn) {
-  final e = ReactiveNode(flags: ReactiveFlags.none);
-  final prevSub = setActiveSub(e);
-  if (prevSub != null) {
-    link(e, prevSub, 0);
-  }
-  try {
-    fn();
-  } finally {
-    activeSub = prevSub;
-  }
-  return () => stop(e);
-}
-
 void trigger(void Function() fn) {
   final sub = ReactiveNode(flags: ReactiveFlags.watching),
       prevSub = setActiveSub(sub);

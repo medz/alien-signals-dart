@@ -1,6 +1,7 @@
 import 'dart:math' as math;
 
 import 'package:alien_signals/alien_signals.dart';
+import 'package:alien_signals/preset.dart';
 import 'package:alien_signals/system.dart' show ReactiveFlags;
 import 'package:test/test.dart';
 

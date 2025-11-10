@@ -1,26 +1,26 @@
-extension type const ReactiveFlags._(int _) {
-  static const none = ReactiveFlags._(0);
-  static const mutable = ReactiveFlags._(1);
-  static const watching = ReactiveFlags._(2);
-  static const recursedCheck = ReactiveFlags._(4);
-  static const recursed = ReactiveFlags._(8);
-  static const dirty = ReactiveFlags._(16);
-  static const pending = ReactiveFlags._(32);
+extension type const ReactiveFlags._(int _) implements int {
+  static const none = 0 as ReactiveFlags;
+  static const mutable = 1 as ReactiveFlags;
+  static const watching = 2 as ReactiveFlags;
+  static const recursedCheck = 4 as ReactiveFlags;
+  static const recursed = 8 as ReactiveFlags;
+  static const dirty = 16 as ReactiveFlags;
+  static const pending = 32 as ReactiveFlags;
 
   @pragma('vm:prefer-inline')
   @pragma('dart2js:tryInline')
   @pragma('wasm:prefer-inline')
-  ReactiveFlags operator |(ReactiveFlags other) => ReactiveFlags._(_ | other._);
+  ReactiveFlags operator |(int other) => _ | other as ReactiveFlags;
 
   @pragma('vm:prefer-inline')
   @pragma('dart2js:tryInline')
   @pragma('wasm:prefer-inline')
-  ReactiveFlags operator &(ReactiveFlags other) => ReactiveFlags._(_ & other._);
+  ReactiveFlags operator &(int other) => _ & other as ReactiveFlags;
 
   @pragma('vm:prefer-inline')
   @pragma('dart2js:tryInline')
   @pragma('wasm:prefer-inline')
-  ReactiveFlags operator ~() => ReactiveFlags._(~_);
+  ReactiveFlags operator ~() => ~_ as ReactiveFlags;
 }
 
 class ReactiveNode {

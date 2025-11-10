@@ -7,8 +7,7 @@ import 'package:alien_signals/preset.dart'
         SignalNode,
         ComputedNode,
         EffectNode;
-import 'package:alien_signals/src/system.dart';
-import 'package:alien_signals/system.dart' show ReactiveFlags;
+import 'package:alien_signals/system.dart' show ReactiveFlags, ReactiveNode;
 
 abstract interface class Signal<T> {
   T call();

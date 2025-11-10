@@ -1,10 +1,37 @@
+/// Bit flags that represent the state of reactive nodes in the system.
+///
+/// These flags are used to track various states and behaviors of reactive
+/// nodes during the dependency tracking and update propagation process.
+/// Multiple flags can be combined using bitwise operations.
+///
+/// The flags are designed to be efficient and allow for quick state checks
+/// using bitwise operations.
 extension type const ReactiveFlags._(int _) implements int {
+  /// No flags set. The default state.
   static const none = 0 as ReactiveFlags;
+
+  /// Indicates that this node is mutable (can be written to).
+  /// Typically set for signals but not for computed values.
   static const mutable = 1 as ReactiveFlags;
+
+  /// Indicates that this node is actively watching its dependencies.
+  /// When set, the node will be notified of dependency changes.
   static const watching = 2 as ReactiveFlags;
+
+  /// Used during recursion checking to detect circular dependencies.
+  /// Temporarily set while checking for recursion.
   static const recursedCheck = 4 as ReactiveFlags;
+
+  /// Indicates that this node has been visited during recursion detection.
+  /// Helps prevent infinite loops in circular dependency scenarios.
   static const recursed = 8 as ReactiveFlags;
+
+  /// Indicates that this node's value is outdated and needs recomputation.
+  /// Set when dependencies change and cleared after successful update.
   static const dirty = 16 as ReactiveFlags;
+
+  /// Indicates that this node has pending updates to process.
+  /// Used during batch updates to mark nodes that need processing.
   static const pending = 32 as ReactiveFlags;
 
   @pragma('vm:prefer-inline')
@@ -23,11 +50,41 @@ extension type const ReactiveFlags._(int _) implements int {
   ReactiveFlags operator ~() => ~_ as ReactiveFlags;
 }
 
+/// Base class for all reactive nodes in the dependency tracking system.
+///
+/// A ReactiveNode represents any value that can participate in the reactive
+/// dependency graph. This includes signals, computed values, and effects.
+///
+/// Each node maintains two sets of connections:
+/// - Dependencies (deps): Other nodes that this node depends on
+/// - Subscribers (subs): Other nodes that depend on this node
+///
+/// The dependency tracking system uses doubly-linked lists to efficiently
+/// manage these relationships, allowing for O(1) insertion and removal.
+///
+/// Example node types that extend ReactiveNode:
+/// - SignalNode: Holds a mutable value
+/// - ComputedNode: Derives its value from other nodes
+/// - EffectNode: Runs side effects when dependencies change
 class ReactiveNode {
+  /// Bit flags representing the current state of this node.
+  /// See [ReactiveFlags] for possible values.
   ReactiveFlags flags;
+
+  /// Head of the linked list of dependencies (nodes this node depends on).
+  /// Null if this node has no dependencies.
   Link? deps;
+
+  /// Tail of the linked list of dependencies for O(1) append operations.
+  /// Points to the last dependency link.
   Link? depsTail;
+
+  /// Head of the linked list of subscribers (nodes that depend on this node).
+  /// Null if no other nodes depend on this one.
   Link? subs;
+
+  /// Tail of the linked list of subscribers for O(1) append operations.
+  /// Points to the last subscriber link.
   Link? subsTail;
 
   ReactiveNode(
@@ -38,13 +95,46 @@ class ReactiveNode {
       this.subsTail});
 }
 
+/// Represents a dependency relationship between two reactive nodes.
+///
+/// A Link connects a dependency (dep) to a subscriber (sub), forming an edge
+/// in the reactive dependency graph. Each link is part of two doubly-linked
+/// lists:
+/// - The dependency list of the subscriber node
+/// - The subscriber list of the dependency node
+///
+/// This dual-list structure allows for efficient traversal and modification
+/// of the dependency graph from both directions.
+///
+/// The version tracking ensures that stale dependencies are properly updated
+/// or removed during reactive computations.
 final class Link {
+  /// Version number for tracking staleness of this dependency relationship.
+  /// Used to determine if the link is still valid or needs updating.
   int version;
+
+  /// The dependency node (the node being depended upon).
+  /// This is the source of data that the subscriber reads from.
   ReactiveNode dep;
+
+  /// The subscriber node (the node that depends on dep).
+  /// This node will be notified when dep changes.
   ReactiveNode sub;
+
+  /// Previous link in the subscriber list of the dependency node.
+  /// Used for traversing all subscribers of a dependency.
   Link? prevSub;
+
+  /// Next link in the subscriber list of the dependency node.
+  /// Used for traversing all subscribers of a dependency.
   Link? nextSub;
+
+  /// Previous link in the dependency list of the subscriber node.
+  /// Used for traversing all dependencies of a subscriber.
   Link? prevDep;
+
+  /// Next link in the dependency list of the subscriber node.
+  /// Used for traversing all dependencies of a subscriber.
   Link? nextDep;
 
   Link(
@@ -64,6 +154,49 @@ final class Stack<T> {
   Stack({required this.value, this.prev});
 }
 
+/// Creates a reactive system with all the core operations for managing
+/// reactive dependencies and updates.
+///
+/// This factory function returns a record containing the fundamental
+/// operations needed to maintain a reactive dependency graph:
+///
+/// - **link**: Establishes a dependency relationship between two nodes
+/// - **unlink**: Removes a dependency relationship
+/// - **propagate**: Recursively propagates changes through the dependency graph
+/// - **shallowPropagate**: Propagates changes to immediate subscribers only
+/// - **checkDirty**: Checks if a node needs updating based on its dependencies
+///
+/// The system uses a push-pull hybrid approach:
+/// - Push: Changes are propagated to mark affected nodes as dirty
+/// - Pull: Values are only recomputed when actually accessed
+///
+/// This ensures efficiency by avoiding unnecessary computations while
+/// maintaining consistency across the reactive graph.
+///
+/// Parameters:
+/// - [update]: Callback to update a node's value. Returns true if the value changed.
+/// - [notify]: Callback to notify that a node needs processing (e.g., queue an effect).
+/// - [unwatched]: Callback invoked when a node no longer has any subscribers.
+///
+/// Returns a record containing the core reactive system operations:
+/// - `link`: Function to create a dependency link between nodes
+/// - `unlink`: Function to remove a dependency link
+/// - `propagate`: Function to propagate changes recursively
+/// - `shallowPropagate`: Function to propagate changes to immediate subscribers
+/// - `checkDirty`: Function to check if a node needs updating
+///
+/// Example usage:
+/// ```dart
+/// final system = createReactiveSystem(
+///   update: (node) => updateSignal(node),
+///   notify: (node) => scheduleEffect(node),
+///   unwatched: (node) => cleanupNode(node),
+/// );
+///
+/// // Use the system operations
+/// system.link(depNode, subNode, version);
+/// system.propagate(someLink);
+/// ```
 ({
   void Function(ReactiveNode dep, ReactiveNode sub, int version) link,
   Link? Function(Link link, [ReactiveNode sub]) unlink,

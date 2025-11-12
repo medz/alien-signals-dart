@@ -1,4 +1,4 @@
-## 2.0.0
+## 2.0.0-rc.3
 
 Status: Unreleased
 

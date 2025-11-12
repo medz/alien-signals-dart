@@ -155,63 +155,98 @@ final class Stack<T> {
   Stack({required this.value, this.prev});
 }
 
-/// Creates a reactive system with all the core operations for managing
-/// reactive dependencies and updates.
+/// Abstract base class for implementing a reactive system.
 ///
-/// This factory function returns a record containing the fundamental
-/// operations needed to maintain a reactive dependency graph:
+/// The ReactiveSystem manages the core operations for maintaining a reactive
+/// dependency graph, including linking nodes, propagating changes, and
+/// checking for updates.
 ///
-/// - **link**: Establishes a dependency relationship between two nodes
-/// - **unlink**: Removes a dependency relationship
-/// - **propagate**: Recursively propagates changes through the dependency graph
-/// - **shallowPropagate**: Propagates changes to immediate subscribers only
-/// - **checkDirty**: Checks if a node needs updating based on its dependencies
+/// This class provides the fundamental infrastructure for reactive state
+/// management, using a push-pull hybrid approach:
+/// - **Push phase**: Changes propagate through the graph to mark affected nodes
+/// - **Pull phase**: Values are lazily computed only when accessed
 ///
-/// The system uses a push-pull hybrid approach:
-/// - Push: Changes are propagated to mark affected nodes as dirty
-/// - Pull: Values are only recomputed when actually accessed
+/// ## Implementation Requirements
 ///
-/// This ensures efficiency by avoiding unnecessary computations while
-/// maintaining consistency across the reactive graph.
+/// Subclasses must implement three key methods:
+/// - [update]: Updates a node's value and returns whether it changed
+/// - [notify]: Schedules a node for processing (e.g., queuing an effect)
+/// - [unwatched]: Handles cleanup when a node loses all subscribers
 ///
-/// Parameters:
-/// - [update]: Callback to update a node's value. Returns true if the value changed.
-/// - [notify]: Callback to notify that a node needs processing (e.g., queue an effect).
-/// - [unwatched]: Callback invoked when a node no longer has any subscribers.
+/// ## Provided Operations
 ///
-/// Returns a record containing the core reactive system operations:
-/// - `link`: Function to create a dependency link between nodes
-/// - `unlink`: Function to remove a dependency link
-/// - `propagate`: Function to propagate changes recursively
-/// - `shallowPropagate`: Function to propagate changes to immediate subscribers
-/// - `checkDirty`: Function to check if a node needs updating
+/// The class provides complete implementations of:
+/// - [link]: Establishes dependency relationships between nodes
+/// - [unlink]: Removes dependency relationships
+/// - [propagate]: Recursively propagates changes through the graph
+/// - [shallowPropagate]: Propagates changes to immediate subscribers only
+/// - [checkDirty]: Determines if a node needs updating
+/// - [isValidLink]: Validates link integrity
 ///
-/// Example usage:
+/// ## Example Implementation
+///
 /// ```dart
-/// final system = createReactiveSystem(
-///   update: (node) => updateSignal(node),
-///   notify: (node) => scheduleEffect(node),
-///   unwatched: (node) => cleanupNode(node),
-/// );
+/// class MyReactiveSystem extends ReactiveSystem {
+///   @override
+///   bool update(ReactiveNode node) {
+///     // Update node value, return true if changed
+///     return node.updateValue();
+///   }
 ///
-/// // Use the system operations
-/// system.link(depNode, subNode, version);
-/// system.propagate(someLink);
+///   @override
+///   void notify(ReactiveNode node) {
+///     // Queue node for processing
+///     queueEffect(node);
+///   }
+///
+///   @override
+///   void unwatched(ReactiveNode node) {
+///     // Clean up node when no longer watched
+///     node.cleanup();
+///   }
+/// }
 /// ```
-// ({
-//   void Function(ReactiveNode dep, ReactiveNode sub, int version) link,
-//   Link? Function(Link link, ReactiveNode sub) unlink,
-//   void Function(Link link) propagate,
-//   void Function(Link link) shallowPropagate,
-//   bool Function(Link link, ReactiveNode sub) checkDirty,
-// }) createReactiveSystem({
 abstract class ReactiveSystem {
   const ReactiveSystem();
 
+  /// Updates a reactive node's value.
+  ///
+  /// This method should recompute the node's value if necessary and
+  /// return `true` if the value changed, `false` otherwise.
+  ///
+  /// Typically called during dependency checking and propagation to
+  /// ensure nodes have current values.
   bool update(ReactiveNode node);
+
+  /// Notifies that a reactive node needs processing.
+  ///
+  /// This method is called when a node (typically an effect) needs to
+  /// be scheduled for execution. The implementation should queue the
+  /// node for later processing or execute it immediately depending on
+  /// the system's batching strategy.
   void notify(ReactiveNode node);
+
+  /// Handles cleanup when a node loses all subscribers.
+  ///
+  /// Called when a dependency node no longer has any nodes depending on it.
+  /// This is an opportunity to perform cleanup, stop computations, or
+  /// release resources associated with the unwatched node.
   void unwatched(ReactiveNode node);
 
+  /// Creates or updates a dependency link between two nodes.
+  ///
+  /// Establishes that [sub] depends on [dep], creating a bidirectional
+  /// link in the dependency graph. The [version] parameter tracks the
+  /// freshness of this dependency relationship.
+  ///
+  /// This method efficiently handles:
+  /// - Deduplication: Avoids creating duplicate links
+  /// - Version updates: Updates existing links with new versions
+  /// - Reordering: Moves accessed dependencies to the tail for optimization
+  ///
+  /// The implementation maintains two doubly-linked lists:
+  /// - deps/depsTail on the subscriber for its dependencies
+  /// - subs/subsTail on the dependency for its subscribers
   void link(final ReactiveNode dep, final ReactiveNode sub, final int version) {
     final prevDep = sub.depsTail;
     if (prevDep != null && identical(prevDep.dep, dep)) {
@@ -253,6 +288,16 @@ abstract class ReactiveSystem {
     }
   }
 
+  /// Removes a dependency link from the graph.
+  ///
+  /// Disconnects the relationship represented by [link], removing it from
+  /// both the dependency's subscriber list and the subscriber's dependency list.
+  ///
+  /// If the dependency node has no remaining subscribers after unlinking,
+  /// [unwatched] is called to handle cleanup.
+  ///
+  /// Returns the next link in the subscriber's dependency list, or `null`
+  /// if this was the last dependency.
   Link? unlink(final Link link, final ReactiveNode sub) {
     final dep = link.dep;
     final prevDep = link.prevDep;
@@ -282,6 +327,20 @@ abstract class ReactiveSystem {
     return nextDep;
   }
 
+  /// Propagates changes recursively through the dependency graph.
+  ///
+  /// Starting from [link], traverses the graph depth-first to mark all
+  /// affected nodes as dirty or pending. Handles circular dependencies
+  /// and recursion detection.
+  ///
+  /// This method:
+  /// - Marks dependent nodes as pending or dirty
+  /// - Notifies watching effects for scheduling
+  /// - Recursively propagates through mutable nodes
+  /// - Uses an explicit stack to avoid call stack overflow
+  ///
+  /// The propagation stops at non-mutable nodes (like effects) or when
+  /// circular dependencies are detected.
   @pragma('vm:align-loops')
   void propagate(Link link) {
     Link? next = link.nextSub;
@@ -350,6 +409,14 @@ abstract class ReactiveSystem {
     } while (true);
   }
 
+  /// Propagates changes to immediate subscribers only.
+  ///
+  /// Unlike [propagate], this method only marks direct subscribers as dirty
+  /// without recursive traversal. Used when a node's value has been confirmed
+  /// to change and all immediate dependents need notification.
+  ///
+  /// Typically called after successful updates to notify immediate subscribers
+  /// that their dependency has changed.
   @pragma('vm:align-loops')
   void shallowPropagate(Link link) {
     Link? curr = link;
@@ -368,6 +435,17 @@ abstract class ReactiveSystem {
     } while ((curr = curr.nextSub) != null);
   }
 
+  /// Checks if a node is dirty by examining its dependencies.
+  ///
+  /// Traverses [sub]'s dependencies starting from [link] to determine if
+  /// any have changed. If a dependency is dirty or pending, recursively
+  /// checks its dependencies.
+  ///
+  /// This pull-based checking ensures values are only recomputed when
+  /// actually needed, avoiding unnecessary calculations.
+  ///
+  /// Returns `true` if any dependency has changed, requiring [sub] to update,
+  /// or `false` if all dependencies are clean.
   @pragma('vm:align-loops')
   bool checkDirty(Link link, ReactiveNode sub) {
     Stack<Link>? stack;
@@ -444,6 +522,13 @@ abstract class ReactiveSystem {
     } while (true);
   }
 
+  /// Validates that a link belongs to a node's dependency list.
+  ///
+  /// Checks if [checkLink] is present in [sub]'s dependency chain.
+  /// Used during propagation to ensure link integrity and detect
+  /// stale references.
+  ///
+  /// Returns `true` if the link is valid, `false` otherwise.
   @pragma('vm:align-loops')
   bool isValidLink(final Link checkLink, final ReactiveNode sub) {
     Link? link = sub.depsTail;

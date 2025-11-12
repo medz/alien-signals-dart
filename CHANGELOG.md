@@ -22,14 +22,15 @@ Version 2.0 represents a complete architectural overhaul of `alien_signals`, int
   - Most applications should not need these APIs
 
 #### Reactive System Changes
-- **BREAKING**: `ReactiveSystem` class removed in favor of functional approach
+- **BREAKING**: `ReactiveSystem` refactored from concrete implementation to abstract class
   ```dart
   // Before: const ReactiveSystem system = PresetReactiveSystem();
-  // After:  final system = createReactiveSystem(...);
+  // After:  abstract class ReactiveSystem { ... }
   ```
-  - The reactive system is now created using `createReactiveSystem()` factory function
-  - This change improves tree-shaking and allows for better customization
-  - Most users won't interact with this directly as it's handled internally
+  - `ReactiveSystem` is now an abstract base class for custom implementations
+  - The preset system internally extends this abstract class
+  - Enables advanced users to create custom reactive systems by extending `ReactiveSystem`
+  - Most users won't interact with this directly as it's handled internally by the library
 
 ### ✨ New Features
 

@@ -246,6 +246,44 @@ class EffectNode extends LinkedEffect {
   EffectNode({required super.flags, required this.fn});
 }
 
+/// Default implementation of the reactive system for Alien Signals.
+///
+/// PresetReactiveSystem provides the standard reactive behavior used by
+/// the alien_signals library. It implements the abstract [ReactiveSystem]
+/// methods to manage signal updates, effect scheduling, and dependency cleanup.
+///
+/// This implementation features:
+/// - **Type-based dispatch**: Uses pattern matching to handle different node types
+/// - **Effect batching**: Queues effects for efficient batch execution
+/// - **Lazy cleanup**: Delays dependency cleanup for mutable nodes until needed
+/// - **Automatic propagation**: Handles change propagation through the reactive graph
+///
+/// The system maintains global state including:
+/// - Effect queue ([queuedEffects]/[queuedEffectsTail])
+/// - Batch depth tracking ([batchDepth])
+/// - Active subscriber tracking ([activeSub])
+/// - Version tracking ([cycle])
+///
+/// ## Internal Operation
+///
+/// When a signal changes:
+/// 1. The change propagates through [propagate] to mark dependents
+/// 2. Effects are queued via [notify] for batch execution
+/// 3. When batch completes, [flush] executes all queued effects
+/// 4. Each effect's dependencies are tracked during execution
+///
+/// ## Usage
+///
+/// This class is used internally by the library and is instantiated as
+/// a singleton constant:
+///
+/// ```dart
+/// const system = PresetReactiveSystem();
+/// ```
+///
+/// Most users don't interact with this class directly - they use the
+/// high-level API functions like `signal()`, `computed()`, and `effect()`
+/// which internally use this system.
 class PresetReactiveSystem extends ReactiveSystem {
   const PresetReactiveSystem();
 

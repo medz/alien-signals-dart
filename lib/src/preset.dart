@@ -31,12 +31,12 @@ LinkedEffect? queuedEffectsTail;
 @pragma('vm:prefer-inline')
 @pragma('dart2js:tryInline')
 @pragma('wasm:prefer-inline')
-final system = createReactiveSystem(
-      update: update,
-      notify: notify,
-      unwatched: unwatched,
-    ),
-    link = system.link,
+const system = PresetReactiveSystem();
+
+@pragma('vm:prefer-inline')
+@pragma('dart2js:tryInline')
+@pragma('wasm:prefer-inline')
+final link = system.link,
     unlink = system.unlink,
     propagate = system.propagate,
     checkDirty = system.checkDirty,
@@ -246,71 +246,78 @@ class EffectNode extends LinkedEffect {
   EffectNode({required super.flags, required this.fn});
 }
 
-/// Updates a reactive node's value.
-///
-/// Dispatches to the appropriate update method based on node type.
-/// For [ComputedNode] and [SignalNode], calls their update methods.
-/// For other node types, returns false (no update needed).
-///
-/// Returns `true` if the node's value changed, `false` otherwise.
-@pragma('vm:prefer-inline')
-@pragma('dart2js:tryInline')
-@pragma('wasm:prefer-inline')
-bool update(ReactiveNode node) {
-  return switch (node) {
-    ComputedNode() => node.update(),
-    SignalNode() => node.update(),
-    _ => false,
-  };
-}
+class PresetReactiveSystem extends ReactiveSystem {
+  const PresetReactiveSystem();
 
-/// Queues an effect for execution.
-///
-/// Adds the effect and any watching parent effects to the
-/// execution queue. Effects are executed together when
-/// [flush] is called or when a batch completes.
-///
-/// This batching mechanism prevents redundant computations
-/// and ensures effects run in a consistent order.
-@pragma('vm:align-loops')
-void notify(ReactiveNode effect) {
-  LinkedEffect? head;
-  final LinkedEffect tail = effect as LinkedEffect;
-
-  do {
-    effect.flags &= -3 /*~ReactiveFlags.watching*/;
-    (effect as LinkedEffect).nextEffect = head;
-    head = effect;
-
-    final next = effect.subs?.sub;
-    if (next == null ||
-        ((effect = next).flags & ReactiveFlags.watching) ==
-            ReactiveFlags.none) {
-      break;
-    }
-  } while (true);
-
-  if (queuedEffectsTail == null) {
-    queuedEffects = queuedEffectsTail = head;
-  } else {
-    queuedEffectsTail!.nextEffect = head;
-    queuedEffectsTail = tail;
+  /// Updates a reactive node's value.
+  ///
+  /// Dispatches to the appropriate update method based on node type.
+  /// For [ComputedNode] and [SignalNode], calls their update methods.
+  /// For other node types, returns false (no update needed).
+  ///
+  /// Returns `true` if the node's value changed, `false` otherwise.
+  @override
+  @pragma('vm:prefer-inline')
+  @pragma('dart2js:tryInline')
+  @pragma('wasm:prefer-inline')
+  bool update(ReactiveNode node) {
+    return switch (node) {
+      ComputedNode() => node.update(),
+      SignalNode() => node.update(),
+      _ => false,
+    };
   }
-}
 
-/// Called when a node no longer has any subscribers.
-///
-/// For non-mutable nodes (like effects), stops them completely.
-/// For mutable nodes (like signals), marks them as dirty and
-/// clears their dependencies for lazy re-evaluation.
-void unwatched(ReactiveNode node) {
-  if ((node.flags & ReactiveFlags.mutable) == ReactiveFlags.none) {
-    stop(node);
-  } else if (node.depsTail != null) {
-    node.depsTail = null;
-    node.flags =
-        17 /*ReactiveFlags.mutable | ReactiveFlags.dirty*/ as ReactiveFlags;
-    purgeDeps(node);
+  /// Queues an effect for execution.
+  ///
+  /// Adds the effect and any watching parent effects to the
+  /// execution queue. Effects are executed together when
+  /// [flush] is called or when a batch completes.
+  ///
+  /// This batching mechanism prevents redundant computations
+  /// and ensures effects run in a consistent order.
+  @override
+  @pragma('vm:align-loops')
+  void notify(ReactiveNode effect) {
+    LinkedEffect? head;
+    final LinkedEffect tail = effect as LinkedEffect;
+
+    do {
+      effect.flags &= -3 /*~ReactiveFlags.watching*/;
+      (effect as LinkedEffect).nextEffect = head;
+      head = effect;
+
+      final next = effect.subs?.sub;
+      if (next == null ||
+          ((effect = next).flags & ReactiveFlags.watching) ==
+              ReactiveFlags.none) {
+        break;
+      }
+    } while (true);
+
+    if (queuedEffectsTail == null) {
+      queuedEffects = queuedEffectsTail = head;
+    } else {
+      queuedEffectsTail!.nextEffect = head;
+      queuedEffectsTail = tail;
+    }
+  }
+
+  /// Called when a node no longer has any subscribers.
+  ///
+  /// For non-mutable nodes (like effects), stops them completely.
+  /// For mutable nodes (like signals), marks them as dirty and
+  /// clears their dependencies for lazy re-evaluation.
+  @override
+  void unwatched(ReactiveNode node) {
+    if ((node.flags & ReactiveFlags.mutable) == ReactiveFlags.none) {
+      stop(node);
+    } else if (node.depsTail != null) {
+      node.depsTail = null;
+      node.flags =
+          17 /*ReactiveFlags.mutable | ReactiveFlags.dirty*/ as ReactiveFlags;
+      purgeDeps(node);
+    }
   }
 }
 

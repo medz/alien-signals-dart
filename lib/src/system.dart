@@ -198,17 +198,20 @@ final class Stack<T> {
 /// system.link(depNode, subNode, version);
 /// system.propagate(someLink);
 /// ```
-({
-  void Function(ReactiveNode dep, ReactiveNode sub, int version) link,
-  Link? Function(Link link, ReactiveNode sub) unlink,
-  void Function(Link link) propagate,
-  void Function(Link link) shallowPropagate,
-  bool Function(Link link, ReactiveNode sub) checkDirty,
-}) createReactiveSystem({
-  required final bool Function(ReactiveNode node) update,
-  required final void Function(ReactiveNode node) notify,
-  required final void Function(ReactiveNode node) unwatched,
-}) {
+// ({
+//   void Function(ReactiveNode dep, ReactiveNode sub, int version) link,
+//   Link? Function(Link link, ReactiveNode sub) unlink,
+//   void Function(Link link) propagate,
+//   void Function(Link link) shallowPropagate,
+//   bool Function(Link link, ReactiveNode sub) checkDirty,
+// }) createReactiveSystem({
+abstract class ReactiveSystem {
+  const ReactiveSystem();
+
+  bool update(ReactiveNode node);
+  void notify(ReactiveNode node);
+  void unwatched(ReactiveNode node);
+
   void link(final ReactiveNode dep, final ReactiveNode sub, final int version) {
     final prevDep = sub.depsTail;
     if (prevDep != null && identical(prevDep.dep, dep)) {
@@ -277,18 +280,6 @@ final class Stack<T> {
       unwatched(dep);
     }
     return nextDep;
-  }
-
-  @pragma('vm:align-loops')
-  bool isValidLink(final Link checkLink, final ReactiveNode sub) {
-    Link? link = sub.depsTail;
-    while (link != null) {
-      if (identical(link, checkLink)) {
-        return true;
-      }
-      link = link.prevDep;
-    }
-    return false;
   }
 
   @pragma('vm:align-loops')
@@ -453,11 +444,15 @@ final class Stack<T> {
     } while (true);
   }
 
-  return (
-    link: link,
-    unlink: unlink,
-    propagate: propagate,
-    shallowPropagate: shallowPropagate,
-    checkDirty: checkDirty,
-  );
+  @pragma('vm:align-loops')
+  bool isValidLink(final Link checkLink, final ReactiveNode sub) {
+    Link? link = sub.depsTail;
+    while (link != null) {
+      if (identical(link, checkLink)) {
+        return true;
+      }
+      link = link.prevDep;
+    }
+    return false;
+  }
 }

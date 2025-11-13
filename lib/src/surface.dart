@@ -42,17 +42,20 @@ abstract interface class Signal<T> {
 /// print(count()); // prints: 5
 /// ```
 abstract interface class WritableSignal<T> implements Signal<T> {
-  /// Reads or writes the signal value.
+  /// Sets the value of this writable signal.
   ///
-  /// When called without arguments, returns the current value.
-  /// When called with a [value] argument, updates the signal to the new value.
+  /// This will update the signal's value and trigger notifications to all
+  /// dependent computations and effects.
   ///
-  /// The [nulls] parameter should be set to `true` when explicitly setting
-  /// a null value, to distinguish from calling without arguments.
+  /// Example:
+  /// ```dart
+  /// final count = signal(0);
+  /// count.set(5); // sets value to 5
+  /// print(count()); // prints: 5
+  /// ```
   ///
-  /// Returns the current value when reading, or the new value when writing.
-  @override
-  T call([T? value, bool nulls]);
+  /// - Parameter [value]: The new value to set.
+  void set(T value);
 }
 
 /// A reactive computed value that derives from other signals.
@@ -288,13 +291,7 @@ final class _SignalImpl<T> extends SignalNode<T> implements WritableSignal<T> {
   @pragma('vm:prefer-inline')
   @pragma('dart2js:tryInline')
   @pragma('wasm:prefer-inline')
-  T call([T? value, bool nulls = false]) {
-    if (value != null || nulls) {
-      set(value as T);
-      return value;
-    }
-    return get();
-  }
+  T call() => get();
 }
 
 final class _ComputedImpl<T> extends ComputedNode<T> implements Computed<T> {
@@ -314,9 +311,7 @@ final class _EffectImpl extends EffectNode implements Effect {
   @pragma('vm:prefer-inline')
   @pragma('dart2js:tryInline')
   @pragma('wasm:prefer-inline')
-  void call() {
-    stop(this);
-  }
+  void call() => stop(this);
 }
 
 class _EffectScopeImpl extends ReactiveNode implements EffectScope {
@@ -326,7 +321,5 @@ class _EffectScopeImpl extends ReactiveNode implements EffectScope {
   @pragma('vm:prefer-inline')
   @pragma('dart2js:tryInline')
   @pragma('wasm:prefer-inline')
-  void call() {
-    stop(this);
-  }
+  void call() => stop(this);
 }

@@ -38,7 +38,7 @@ abstract interface class Signal<T> {
 /// Example:
 /// ```dart
 /// final count = signal(0);
-/// count(5); // sets value to 5
+/// count.set(5); // sets value to 5
 /// print(count()); // prints: 5
 /// ```
 abstract interface class WritableSignal<T> implements Signal<T> {
@@ -138,7 +138,7 @@ abstract interface class EffectScope {
 /// ```dart
 /// final count = signal(0);
 /// print(count()); // reads: 0
-/// count(5);       // writes: 5
+/// count.set(5);   // writes: 5
 /// print(count()); // reads: 5
 /// ```
 ///

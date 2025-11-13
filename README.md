@@ -51,7 +51,7 @@ void main() {
   });
 
   // Update state - triggers all dependencies
-  count(1); // Output: Count: 1, Doubled: 2
+  count.set(1); // Output: Count: 1, Doubled: 2
 }
 ```
 

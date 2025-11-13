@@ -8,6 +8,24 @@ Version 2.0 represents a complete architectural overhaul of `alien_signals`, int
 
 ### 💥 Breaking Changes
 
+#### WritableSignal API Changes
+- **BREAKING**: WritableSignal now uses separate methods for reading and writing
+  ```dart
+  // Before (1.x): signal(value) for both read and write
+  final count = signal(0);
+  count(5);        // Set value
+  count(5, true);  // Set with nulls parameter
+  final val = count(); // Get value
+  
+  // After (2.0): Separate call() for read and set() for write
+  final count = signal(0);
+  count.set(5);    // Set value - clearer intent
+  final val = count(); // Get value - unchanged
+  ```
+  - Removed `nulls` parameter - no longer needed with explicit `set()` method
+  - `set()` method returns void instead of the value
+  - Clearer separation between read and write operations
+
 #### API Surface Restructuring
 - **BREAKING**: Effect and EffectScope disposal now uses callable syntax `()` instead of `.dispose()` method
   ```dart
@@ -80,9 +98,10 @@ Version 2.0 represents a complete architectural overhaul of `alien_signals`, int
 See [MIGRATION.md](MIGRATION.md#migration-from-1x-to-20) for detailed migration instructions from 1.x.
 
 Key migration points:
-1. Replace `.dispose()` with `()` for effects and scopes
-2. Add explicit imports for low-level APIs if needed
-3. Consider using new `trigger()` function for one-time reactive operations
+1. Replace `signal(value)` with `signal.set(value)` for write operations
+2. Replace `.dispose()` with `()` for effects and scopes
+3. Add explicit imports for low-level APIs if needed
+4. Consider using new `trigger()` function for one-time reactive operations
 
 ### 🙏 Acknowledgments
 

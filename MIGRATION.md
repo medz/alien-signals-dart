@@ -16,7 +16,33 @@ This separation provides better encapsulation while maintaining full backward co
 
 ### Breaking Changes
 
-#### 1. Effect Disposal Pattern
+#### 1. WritableSignal Read/Write Separation
+
+The WritableSignal API has been redesigned to separate read and write operations for clearer intent and better type safety.
+
+```dart
+// ❌ Version 1.x - Single call() method for both operations
+final count = signal(0);
+count(5);           // Set value
+count(5, true);     // Set with nulls parameter  
+final val = count(); // Get value
+
+// ✅ Version 2.0 - Separate methods for clarity
+final count = signal(0);
+count.set(5);       // Set value - explicit write operation
+final val = count(); // Get value - read-only operation
+```
+
+**Key changes:**
+- Write operations now use explicit `set()` method
+- Removed confusing `nulls` parameter
+- `set()` returns void (previously returned the value)
+- `call()` is now read-only for WritableSignal
+- Clearer separation of concerns
+
+**Rationale**: This change eliminates ambiguity about whether `call()` is reading or writing, making code more maintainable and easier to understand.
+
+#### 2. Effect Disposal Pattern
 
 The disposal mechanism has been unified to use callable objects instead of methods, aligning with functional programming patterns.
 
@@ -38,7 +64,7 @@ scope(); // Callable - stops all effects in scope
 
 **Rationale**: This change provides a more concise API and better aligns with Dart's callable object pattern.
 
-#### 2. Library Export Restructure
+#### 3. Library Export Restructure
 
 The main library exports have been reorganized to provide a cleaner separation of concerns.
 
@@ -57,7 +83,7 @@ export 'src/preset.dart' show startBatch, endBatch, trigger;  // Only essential 
 
 **Impact**: Low-level APIs (`getBatchDepth`, `getActiveSub`, `setActiveSub`) are no longer part of the default exports.
 
-#### 3. Access to Low-Level APIs
+#### 4. Access to Low-Level APIs
 
 If your code depends on low-level reactive system APIs, you now need explicit imports:
 
@@ -73,7 +99,7 @@ final depth = getBatchDepth();
 final sub = getActiveSub();
 ```
 
-#### 4. ReactiveSystem Refactoring
+#### 5. ReactiveSystem Refactoring
 
 The `ReactiveSystem` has been refactored from a concrete implementation to an abstract base class:
 
@@ -168,7 +194,31 @@ dependencies:
 
 Run `dart pub upgrade` to fetch the latest version.
 
-#### Step 2: Update All Disposal Calls
+#### Step 2: Update Signal Write Operations
+
+Search your codebase for signal write operations and update them:
+
+```dart
+// Find patterns like:
+signalInstance(value);
+signalInstance(value, true);
+signalInstance(null, true);
+
+// Replace with:
+signalInstance.set(value);
+signalInstance.set(value);
+signalInstance.set(null);
+```
+
+**Regular expression for finding:**
+```regex
+// Find signal writes (excluding reads)
+\b(\w+)\([^)]+\)(?!\s*[;,)])
+```
+
+**Note**: Be careful not to change read operations `signal()` which should remain unchanged.
+
+#### Step 3: Update All Disposal Calls
 
 Search your codebase for `.dispose()` calls and replace them:
 
@@ -191,7 +241,7 @@ sed -i 's/\.dispose()/()/' **/*.dart
 git diff
 ```
 
-#### Step 3: Handle Low-Level API Usage
+#### Step 4: Handle Low-Level API Usage
 
 Audit your codebase for low-level API usage:
 
@@ -213,7 +263,7 @@ For each occurrence, either:
 
 **ReactiveSystem Usage**: If your code directly uses `ReactiveSystem` or `PresetReactiveSystem`, this is likely advanced usage. The system is now an abstract class that can be extended for custom implementations. Consider whether you truly need direct system access or if the high-level API suffices. For custom reactive systems, extend the `ReactiveSystem` abstract class and implement the required methods.
 
-#### Step 4: Leverage New Features
+#### Step 5: Leverage New Features
 
 Consider adopting the new `trigger()` function where appropriate:
 
@@ -226,12 +276,145 @@ tempEffect();  // Immediately dispose
 trigger(() => someComputation());
 ```
 
-#### Step 5: Verify Your Application
+#### Step 6: Verify Your Application
 
 1. **Run tests**: `dart test`
 2. **Check for warnings**: `dart analyze`
 3. **Test reactive flows**: Ensure all signals, computed values, and effects work correctly
 4. **Performance testing**: Verify that performance characteristics meet expectations
+
+### Complete Migration Example
+
+Here's a comprehensive example showing all the changes from 1.x to 2.0:
+
+**Version 1.x Code:**
+```dart
+import 'package:alien_signals/alien_signals.dart';
+
+class TodoStore {
+  final todos = signal<List<String>>([]);
+  final filter = signal('all');
+  late final Computed<List<String>> filteredTodos;
+  late final Effect autoSaveEffect;
+  late final EffectScope scope;
+  
+  TodoStore() {
+    // Using low-level APIs
+    print('Batch depth: ${getBatchDepth()}');
+    
+    filteredTodos = computed((_) {
+      final allTodos = todos();
+      final currentFilter = filter();
+      
+      if (currentFilter == 'completed') {
+        return allTodos.where((t) => t.startsWith('[x]')).toList();
+      }
+      return allTodos;
+    });
+    
+    scope = effectScope(() {
+      autoSaveEffect = effect(() {
+        final items = todos();
+        saveToStorage(items);
+      });
+      
+      effect(() {
+        print('Filtered todos: ${filteredTodos()}');
+      });
+    });
+  }
+  
+  void addTodo(String todo) {
+    final current = todos();
+    todos([...current, todo]);  // Write with call()
+  }
+  
+  void setFilter(String newFilter) {
+    filter(newFilter);  // Write with call()
+  }
+  
+  void dispose() {
+    autoSaveEffect.dispose();  // Method call
+    scope.dispose();  // Method call
+  }
+  
+  void saveToStorage(List<String> items) {
+    // Save logic
+  }
+}
+```
+
+**Version 2.0 Code:**
+```dart
+import 'package:alien_signals/alien_signals.dart';
+// Explicit import for low-level APIs if needed
+import 'package:alien_signals/preset.dart' show getBatchDepth;
+
+class TodoStore {
+  final todos = signal<List<String>>([]);
+  final filter = signal('all');
+  late final Computed<List<String>> filteredTodos;
+  late final Effect autoSaveEffect;
+  late final EffectScope scope;
+  
+  TodoStore() {
+    // Using low-level APIs requires explicit import
+    print('Batch depth: ${getBatchDepth()}');
+    
+    filteredTodos = computed((_) {
+      final allTodos = todos();
+      final currentFilter = filter();
+      
+      if (currentFilter == 'completed') {
+        return allTodos.where((t) => t.startsWith('[x]')).toList();
+      }
+      return allTodos;
+    });
+    
+    scope = effectScope(() {
+      autoSaveEffect = effect(() {
+        final items = todos();
+        saveToStorage(items);
+      });
+      
+      effect(() {
+        print('Filtered todos: ${filteredTodos()}');
+      });
+    });
+  }
+  
+  void addTodo(String todo) {
+    final current = todos();
+    todos.set([...current, todo]);  // Write with set() method
+  }
+  
+  void setFilter(String newFilter) {
+    filter.set(newFilter);  // Write with set() method
+  }
+  
+  void dispose() {
+    autoSaveEffect();  // Function call
+    scope();  // Function call
+  }
+  
+  void saveToStorage(List<String> items) {
+    // Save logic
+  }
+  
+  // New feature: Manual trigger
+  void forceUpdate() {
+    trigger(() {
+      todos();  // Force propagation without creating an effect
+    });
+  }
+}
+```
+
+**Summary of changes in this example:**
+- ✅ Signal writes use `.set()` method instead of call with value
+- ✅ Effects and scopes are disposed with `()` instead of `.dispose()`
+- ✅ Low-level APIs require explicit import from `preset.dart`
+- ✅ Added new `trigger()` function for manual updates
 
 ### Performance Improvements
 
@@ -246,6 +429,7 @@ Version 2.0 includes several performance enhancements:
 
 | Issue | Solution |
 |-------|----------|
+| `Too many positional arguments` | Replace `signal(value)` with `signal.set(value)` for writes |
 | `The method 'dispose' isn't defined` | Replace `.dispose()` with `()` |
 | `The getter 'getBatchDepth' isn't defined` | Add `import 'package:alien_signals/preset.dart' show getBatchDepth;` |
 | `The getter 'getActiveSub' isn't defined` | Add `import 'package:alien_signals/preset.dart' show getActiveSub;` |
@@ -254,11 +438,12 @@ Version 2.0 includes several performance enhancements:
 
 ### Best Practices for 2.0
 
-1. **Prefer the surface API**: Use the high-level API unless you have specific low-level requirements
-2. **Dispose effects properly**: Always call `effect()` when an effect is no longer needed
-3. **Use effect scopes**: Group related effects for easier cleanup
-4. **Leverage trigger**: Use `trigger()` for one-time reactive operations
-5. **Avoid low-level APIs**: The surface API should cover most use cases
+1. **Use explicit write operations**: Always use `.set()` for signal writes for clarity
+2. **Prefer the surface API**: Use the high-level API unless you have specific low-level requirements
+3. **Dispose effects properly**: Always call `effect()` when an effect is no longer needed
+4. **Use effect scopes**: Group related effects for easier cleanup
+5. **Leverage trigger**: Use `trigger()` for one-time reactive operations
+6. **Avoid low-level APIs**: The surface API should cover most use cases
 
 ### Further Resources
 

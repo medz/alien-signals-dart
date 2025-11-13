@@ -20,9 +20,9 @@ void main() {
     expect(c(), 0);
     expect(computedTriggerTimes, 1);
 
-    s(1);
-    s(2);
-    s(3);
+    s.set(1);
+    s.set(2);
+    s.set(3);
     expect(c(), 0);
     expect(computedTriggerTimes, 1);
   });
@@ -43,28 +43,28 @@ void main() {
 
     expect(effectTriggerTimes, 1);
 
-    b(1);
+    b.set(1);
     expect(effectTriggerTimes, 2);
 
-    a(1);
-    a(2);
-    a(3);
+    a.set(1);
+    a.set(2);
+    a.set(3);
     expect(effectTriggerTimes, 2);
 
-    b(2);
+    b.set(2);
     expect(effectTriggerTimes, 3);
 
-    a(4);
-    a(5);
-    a(6);
+    a.set(4);
+    a.set(5);
+    a.set(6);
     expect(effectTriggerTimes, 3);
 
-    b(0);
+    b.set(0);
     expect(effectTriggerTimes, 4);
 
-    a(7);
-    a(8);
-    a(9);
+    a.set(7);
+    a.set(8);
+    a.set(9);
     expect(effectTriggerTimes, 4);
   });
 
@@ -82,9 +82,9 @@ void main() {
 
     expect(effectTriggerTimes, 1);
 
-    s(1);
-    s(2);
-    s(3);
+    s.set(1);
+    s.set(2);
+    s.set(3);
     expect(effectTriggerTimes, 1);
   });
 }

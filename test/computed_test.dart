@@ -9,9 +9,9 @@ void main() {
     final c3 = computed((_) => c2());
 
     c3();
-    src(1); // c1 -> dirty, c2 -> toCheckDirty, c3 -> toCheckDirty
+    src.set(1); // c1 -> dirty, c2 -> toCheckDirty, c3 -> toCheckDirty
     c2(); // c1 -> none, c2 -> none
-    src(3); // c1 -> dirty, c2 -> toCheckDirty
+    src.set(3); // c1 -> dirty, c2 -> toCheckDirty
 
     expect(c3(), 1);
   });
@@ -25,7 +25,7 @@ void main() {
     final d = computed((_) => b() + c());
 
     expect(d(), 0);
-    src(2);
+    src.set(2);
     expect(d(), 2);
   });
 
@@ -42,7 +42,7 @@ void main() {
     });
 
     expect(d(), false);
-    a(true);
+    a.set(true);
     expect(d(), true);
   });
 
@@ -56,8 +56,8 @@ void main() {
     });
     c1();
     expect(times, 1);
-    src(1);
-    src(0);
+    src.set(1);
+    src.set(0);
     c1();
     expect(times, 1);
   });

@@ -13,14 +13,14 @@ void main() {
       });
       expect(triggers, 1);
 
-      count(2);
+      count.set(2);
       expect(triggers, 2);
     });
 
-    count(3);
+    count.set(3);
     expect(triggers, 3);
     stopScope();
-    count(4);
+    count.set(4);
     expect(triggers, 3);
   });
 
@@ -38,10 +38,10 @@ void main() {
       });
       expect(triggers, 1);
 
-      source(2);
+      source.set(2);
       expect(triggers, 2);
       dispose();
-      source(3);
+      source.set(3);
       expect(triggers, 2);
     });
   });
@@ -61,7 +61,7 @@ void main() {
     });
 
     expect(triggers, 1);
-    source(2);
+    source.set(2);
     expect(triggers, 2);
   });
 }

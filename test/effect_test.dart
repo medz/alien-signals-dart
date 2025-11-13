@@ -19,10 +19,10 @@ void main() {
     });
 
     expect(bRunTimes, 1);
-    a(2);
+    a.set(2);
     expect(bRunTimes, 2);
     stopEffect();
-    a(3);
+    a.set(3);
     expect(bRunTimes, 2);
   });
 
@@ -40,9 +40,9 @@ void main() {
       }
     });
 
-    a(2);
-    a(1);
-    a(0);
+    a.set(2);
+    a.set(1);
+    a.set(0);
   });
 
   test('should run outer effect first', () {
@@ -61,8 +61,8 @@ void main() {
     });
 
     startBatch();
-    b(0);
-    a(0);
+    b.set(0);
+    a.set(0);
     endBatch();
   });
 
@@ -82,7 +82,7 @@ void main() {
       });
     });
 
-    a(2);
+    a.set(2);
   });
 
   test('should notify inner effects in the same order as non-inner effects',
@@ -134,8 +134,8 @@ void main() {
     order3.length = 0;
 
     startBatch();
-    b(1);
-    a(1);
+    b.set(1);
+    a.set(1);
     endBatch();
 
     expect(order1, ['effect2', 'effect1']);
@@ -162,7 +162,7 @@ void main() {
     final aa = computed<void>((_) {
       logs.add('aa-0');
       if (a() == 0) {
-        b(1);
+        b.set(1);
       }
       logs.add('aa-1');
     });
@@ -202,10 +202,10 @@ void main() {
       order.add('b');
       src1();
     });
-    src2(1); // src1.subs: a -> b -> a
+    src2.set(1); // src1.subs: a -> b -> a
 
     order.length = 0;
-    src1(src1() + 1);
+    src1.set(src1() + 1);
 
     expect(order, ['a', 'b']);
   });
@@ -227,8 +227,8 @@ void main() {
       expect(order, ['a', 'b']);
 
       order.length = 0;
-      b(1);
-      a(1);
+      b.set(1);
+      a.set(1);
       expect(order, ['b', 'a']);
     });
   });
@@ -252,7 +252,7 @@ void main() {
       triggers++;
     });
     expect(triggers, 1);
-    a(true);
+    a.set(true);
     expect(triggers, 2);
   });
 
@@ -265,11 +265,11 @@ void main() {
 
     effect(() {
       triggers1++;
-      src1(math.min(src1() + 1, 5));
+      src1.set(math.min(src1() + 1, 5));
     });
     effect(() {
       triggers2++;
-      src2(math.min(src2() + 1, 5));
+      src2.set(math.min(src2() + 1, 5));
       src2();
     });
 
@@ -285,7 +285,7 @@ void main() {
     effect(() {
       getActiveSub()!.flags &= ~ReactiveFlags.recursedCheck;
       triggers++;
-      src(math.min(src() + 1, 5));
+      src.set(math.min(src() + 1, 5));
     });
 
     expect(triggers, 6);

@@ -1,4 +1,1 @@
-/// Alien Signal preset library.
-library;
-
-export 'src/preset.dart';
+export 'src/preset.dart' hide system;

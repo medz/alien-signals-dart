@@ -20,15 +20,18 @@ class Bench extends ReactiveFramework {
 
   @override
   Signal<T> signal<T>(T value) {
-    final signal = alien_signals.signal(value);
-    return createSignal(signal.call, (value) => signal(() => value));
+    final s = alien_signals.signal(value);
+    return createSignal(s.call, s.set);
   }
 
   @override
   void withBatch<T>(T Function() fn) {
     alien_signals.startBatch();
-    fn();
-    alien_signals.endBatch();
+    try {
+      fn();
+    } finally {
+      alien_signals.endBatch();
+    }
   }
 
   @override

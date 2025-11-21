@@ -51,7 +51,7 @@ void main() {
   });
 
   // Update state - triggers all dependencies
-  count(1); // Output: Count: 1, Doubled: 2
+  count.set(1); // Output: Count: 1, Doubled: 2
 }
 ```
 
@@ -76,7 +76,7 @@ To install Alien Signals, add the following to your `pubspec.yaml`:
 
 ```yaml
 dependencies:
-  alien_signals: ^1.0.3
+  alien_signals: ^2.0.0
 ```
 
 Alternatively, you can run the following command:
@@ -88,8 +88,10 @@ dart pub add alien_signals
 ## 🌍 Community & Ecosystem
 
 ### Adoptions
+
 - **[Solidart](https://github.com/nank1ro/solidart)** - Signals for Flutter inspired by SolidJS
 - **[Oref](https://github.com/medz/oref)** - Magical reactive state management for Flutter
+- **[flutter_compositions](https://github.com/yoyo930021/flutter_compositions)** - Vue-inspired reactive building blocks for Flutter
 
 ### Growing Ecosystem
 Join our thriving community of developers building reactive applications with Alien Signals!

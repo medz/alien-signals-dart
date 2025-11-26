@@ -442,11 +442,14 @@ void trigger(void Function() fn) {
     fn();
   } finally {
     activeSub = prevSub;
-    while (sub.deps != null) {
-      final link = sub.deps!, dep = link.dep;
-      unlink(link, sub);
+    Link? link = sub.deps;
+    while (link != null) {
+      final dep = link.dep;
+      link = unlink(link, sub);
+
       final subs = dep.subs;
       if (subs != null) {
+        sub.flags = ReactiveFlags.none;
         propagate(subs);
         shallowPropagate(subs);
       }

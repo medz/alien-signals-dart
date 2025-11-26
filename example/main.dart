@@ -12,7 +12,7 @@ void basis() {
 
   print(doubleCount()); // 2
 
-  count(() => 2); // Count is: 2
+  count.set(2); // Count is: 2
 
   print(doubleCount()); // 4
 }
@@ -27,9 +27,9 @@ void scope() {
     }); // Count is: 1
   });
 
-  count(() => 2); // Count is: 2
+  count.set(2); // Count is: 2
   stop();
-  count(() => 3); // Not printed
+  count.set(3); // Not printed
 }
 
 void main() {

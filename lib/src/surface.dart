@@ -220,7 +220,8 @@ Computed<T> computed<T>(T Function(T?) getter) {
 Effect effect(void Function() fn) {
   final e = _EffectImpl(
     fn: fn,
-    flags: ReactiveFlags.watching | ReactiveFlags.recursedCheck,
+    flags: 6 /* ReactiveFlags.watching | ReactiveFlags.recursedCheck */
+        as ReactiveFlags,
   );
   final prevSub = setActiveSub(e);
   if (prevSub != null) link(e, prevSub, 0);
@@ -228,7 +229,7 @@ Effect effect(void Function() fn) {
     e.fn();
   } finally {
     activeSub = prevSub;
-    e.flags &= ~ReactiveFlags.recursedCheck;
+    e.flags &= -5 /*~ ReactiveFlags.recursedCheck */;
   }
   return e;
 }

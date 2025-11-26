@@ -1,6 +1,6 @@
-## 2.0.0-rc.5
+## 2.0.0
 
-Status: Unreleased
+Status: Released (2025-11-26)
 
 🚀 **Major Architecture Refactoring**
 

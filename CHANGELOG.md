@@ -1,3 +1,8 @@
+## 2.0.1
+
+- pref: replace bitwise flags with inline comments for clarity
+- example: add preset playground example
+
 ## 2.0.0
 
 Status: Released (2025-11-26)

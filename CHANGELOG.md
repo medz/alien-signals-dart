@@ -1,4 +1,4 @@
-## 2.0.0-rc.4
+## 2.0.0-rc.5
 
 Status: Unreleased
 
@@ -92,6 +92,7 @@ Version 2.0 represents a complete architectural overhaul of `alien_signals`, int
 - Improved type safety and null handling
 - Cleaner separation of concerns between modules
 - More maintainable codebase structure
+- Fix trigger dependency cleanup to prevent stale notifications
 
 ### 📦 Migration
 

@@ -55,12 +55,13 @@ class LinkedEffect extends ReactiveNode {
   /// Forms a singly-linked list of effects waiting to be executed.
   LinkedEffect? nextEffect;
 
-  LinkedEffect(
-      {required super.flags,
-      super.deps,
-      super.depsTail,
-      super.subs,
-      super.subsTail});
+  LinkedEffect({
+    required super.flags,
+    super.deps,
+    super.depsTail,
+    super.subs,
+    super.subsTail,
+  });
 }
 
 /// A reactive signal node that holds a value of type [T].
@@ -80,10 +81,11 @@ class SignalNode<T> extends ReactiveNode {
   /// Allows for batching multiple changes before propagation.
   T pendingValue;
 
-  SignalNode(
-      {required super.flags,
-      required this.currentValue,
-      required this.pendingValue});
+  SignalNode({
+    required super.flags,
+    required this.currentValue,
+    required this.pendingValue,
+  });
 
   /// Sets a new value for the signal.
   ///
@@ -93,11 +95,11 @@ class SignalNode<T> extends ReactiveNode {
   /// If not in a batch (batchDepth == 0), immediately flushes
   /// all queued effects.
   void set(T newValue) {
-    if (pendingValue != (pendingValue = newValue)) {
+    if (!identical(pendingValue, newValue)) {
+      pendingValue = newValue;
       flags =
           17 /*ReactiveFlags.mutable | ReactiveFlags.dirty*/ as ReactiveFlags;
-      final subs = this.subs;
-      if (subs != null) {
+      if (subs case final Link subs) {
         propagate(subs);
         if (batchDepth == 0) flush();
       }
@@ -202,9 +204,7 @@ class ComputedNode<T> extends ReactiveNode {
     }
 
     final sub = activeSub;
-    if (sub != null) {
-      link(this, sub, cycle);
-    }
+    if (sub != null) link(this, sub, cycle);
 
     return value as T;
   }

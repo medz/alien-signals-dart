@@ -87,12 +87,13 @@ class ReactiveNode {
   /// Points to the last subscriber link.
   Link? subsTail;
 
-  ReactiveNode(
-      {required this.flags,
-      this.deps,
-      this.depsTail,
-      this.subs,
-      this.subsTail});
+  ReactiveNode({
+    required this.flags,
+    this.deps,
+    this.depsTail,
+    this.subs,
+    this.subsTail,
+  });
 }
 
 /// Represents a dependency relationship between two reactive nodes.
@@ -299,11 +300,11 @@ abstract class ReactiveSystem {
   /// Returns the next link in the subscriber's dependency list, or `null`
   /// if this was the last dependency.
   Link? unlink(final Link link, final ReactiveNode sub) {
-    final dep = link.dep;
-    final prevDep = link.prevDep;
-    final nextDep = link.nextDep;
-    final nextSub = link.nextSub;
-    final prevSub = link.prevSub;
+    final dep = link.dep,
+        prevDep = link.prevDep,
+        nextDep = link.nextDep,
+        nextSub = link.nextSub,
+        prevSub = link.prevSub;
     if (nextDep != null) {
       nextDep.prevDep = prevDep;
     } else {
@@ -421,8 +422,7 @@ abstract class ReactiveSystem {
   void shallowPropagate(Link link) {
     Link? curr = link;
     do {
-      final sub = curr!.sub;
-      final flags = sub.flags;
+      final sub = curr!.sub, flags = sub.flags;
       if ((flags & 48 /*(ReactiveFlags.pending | ReactiveFlags.dirty)*/) ==
           ReactiveFlags.pending) {
         sub.flags = flags | ReactiveFlags.dirty;
@@ -454,8 +454,7 @@ abstract class ReactiveSystem {
 
     top:
     do {
-      final dep = link.dep;
-      final flags = dep.flags;
+      final dep = link.dep, flags = dep.flags;
 
       if ((sub.flags & ReactiveFlags.dirty) != ReactiveFlags.none) {
         dirty = true;
@@ -490,8 +489,8 @@ abstract class ReactiveSystem {
       }
 
       while ((checkDepth--) > 0) {
-        final firstSub = sub.subs!;
-        final hasMultipleSubs = firstSub.nextSub != null;
+        final firstSub = sub.subs!, hasMultipleSubs = firstSub.nextSub != null;
+
         if (hasMultipleSubs) {
           link = stack!.value;
           stack = stack.prev;
@@ -533,9 +532,7 @@ abstract class ReactiveSystem {
   bool isValidLink(final Link checkLink, final ReactiveNode sub) {
     Link? link = sub.depsTail;
     while (link != null) {
-      if (identical(link, checkLink)) {
-        return true;
-      }
+      if (identical(link, checkLink)) return true;
       link = link.prevDep;
     }
     return false;

@@ -26,7 +26,6 @@ effect(() => print(welcome()));
 
 Alien Signals is a reactive state management library that brings the power of signals to Dart and Flutter applications. Originally inspired by [StackBlitz's alien-signals](https://github.com/stackblitz/alien-signals), our Dart implementation provides:
 
-- **⚡ Exceptional Performance**: Proven fastest signal library in [dart-reactivity-benchmark](https://github.com/medz/dart-reactivity-benchmark)
 - **🪶 Ultra Lightweight**: Minimal overhead, maximum efficiency
 - **🎯 Simple API**: Intuitive `signal()`, `computed()`, and `effect()` functions
 - **🔧 Production Ready**: Battle-tested through comprehensive beta releases
@@ -61,22 +60,13 @@ void main() {
 - **Batch Operations**: Control when reactivity updates occur
 - **Flexible API**: Both high-level presets and low-level system access
 
-## 📊 Performance Highlights
-
-Based on [dart-reactivity-benchmark](https://github.com/medz/dart-reactivity-benchmark) results:
-
-- **🏆 #1 Performance**: Fastest among all Dart signal libraries
-- **⚡ Optimized Updates**: Cycle-based dependency tracking
-- **🎯 Minimal Overhead**: Efficient memory usage and garbage collection
-- **📈 Scales Well**: Performance remains consistent with complex dependency graphs
-
 ## 📦 Installation
 
 To install Alien Signals, add the following to your `pubspec.yaml`:
 
 ```yaml
 dependencies:
-  alien_signals: ^2.0.0
+  alien_signals: ^2.0.1
 ```
 
 Alternatively, you can run the following command:
@@ -101,4 +91,3 @@ Join our thriving community of developers building reactive applications with Al
 - **[API Documentation](https://pub.dev/documentation/alien_signals/latest/)** - Complete API reference
 - **[Examples](https://github.com/medz/alien-signals-dart/tree/main/example)** - Code examples and demos
 - **[Migration Guide](MIGRATION.md)** - Upgrade instructions
-- **[Performance Benchmarks](https://github.com/medz/dart-reactivity-benchmark)** - Performance comparisons

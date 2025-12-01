@@ -219,19 +219,19 @@ Computed<T> computed<T>(T Function(T?) getter) {
 /// - Returns: An [Effect] that can be called to stop it.
 Effect effect(void Function() fn) {
   final e = _EffectImpl(
-    fn: fn,
-    flags: 6 /* ReactiveFlags.watching | ReactiveFlags.recursedCheck */
-        as ReactiveFlags,
-  );
-  final prevSub = setActiveSub(e);
+        fn: fn,
+        flags: 6 /* ReactiveFlags.watching | ReactiveFlags.recursedCheck */
+            as ReactiveFlags,
+      ),
+      prevSub = setActiveSub(e);
   if (prevSub != null) link(e, prevSub, 0);
   try {
-    e.fn();
+    fn();
+    return e;
   } finally {
     activeSub = prevSub;
     e.flags &= -5 /*~ ReactiveFlags.recursedCheck */;
   }
-  return e;
 }
 
 /// Creates a scope for managing multiple effects.
@@ -270,23 +270,23 @@ Effect effect(void Function() fn) {
 @pragma('dart2js:tryInline')
 @pragma('wasm:prefer-inline')
 EffectScope effectScope(void Function() fn) {
-  final e = _EffectScopeImpl(flags: ReactiveFlags.none);
-  final prevSub = setActiveSub(e);
+  final e = _EffectScopeImpl(flags: ReactiveFlags.none),
+      prevSub = setActiveSub(e);
   if (prevSub != null) link(e, prevSub, 0);
-
   try {
     fn();
+    return e;
   } finally {
     activeSub = prevSub;
   }
-  return e;
 }
 
 final class _SignalImpl<T> extends SignalNode<T> implements WritableSignal<T> {
-  _SignalImpl(
-      {required super.flags,
-      required super.currentValue,
-      required super.pendingValue});
+  _SignalImpl({
+    required super.flags,
+    required super.currentValue,
+    required super.pendingValue,
+  });
 
   @override
   @pragma('vm:prefer-inline')

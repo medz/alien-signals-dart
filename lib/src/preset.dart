@@ -116,7 +116,7 @@ class SignalNode<T> extends ReactiveNode {
   @pragma('vm:align-loops')
   T get() {
     if ((flags & ReactiveFlags.dirty) != ReactiveFlags.none) {
-      if (update()) {
+      if (didUpdate()) {
         final subs = this.subs;
         if (subs != null) {
           shallowPropagate(subs);
@@ -143,7 +143,7 @@ class SignalNode<T> extends ReactiveNode {
   @pragma('vm:prefer-inline')
   @pragma('dart2js:tryInline')
   @pragma('wasm:prefer-inline')
-  bool update() {
+  bool didUpdate() {
     flags = ReactiveFlags.mutable;
     return !identical(currentValue, currentValue = pendingValue);
   }
@@ -167,7 +167,7 @@ class ComputedNode<T> extends ReactiveNode {
   /// The cached computed value.
   ///
   /// Null until first computation or after invalidation.
-  T? value;
+  T? currentValue;
 
   ComputedNode({required super.flags, required this.getter});
 
@@ -185,7 +185,7 @@ class ComputedNode<T> extends ReactiveNode {
             (checkDirty(deps!, this) ||
                 identical(this.flags = flags & -33 /*~ReactiveFlags.pending*/,
                     false)))) {
-      if (update()) {
+      if (didUpdate()) {
         final subs = this.subs;
         if (subs != null) {
           shallowPropagate(subs);
@@ -196,7 +196,7 @@ class ComputedNode<T> extends ReactiveNode {
           as ReactiveFlags;
       final prevSub = setActiveSub(this);
       try {
-        value = getter(null);
+        currentValue = getter(null);
       } finally {
         activeSub = prevSub;
         this.flags &= -5 /*~ReactiveFlags.recursedCheck*/;
@@ -206,7 +206,7 @@ class ComputedNode<T> extends ReactiveNode {
     final sub = activeSub;
     if (sub != null) link(this, sub, cycle);
 
-    return value as T;
+    return currentValue as T;
   }
 
   /// Updates the computed value by re-running the getter.
@@ -215,13 +215,13 @@ class ComputedNode<T> extends ReactiveNode {
   /// tracking enabled, and returns whether the value changed.
   ///
   /// Returns `true` if the computed value changed, `false` otherwise.
-  bool update() {
+  bool didUpdate() {
     ++cycle;
     depsTail = null;
     flags = ReactiveFlags.mutable | ReactiveFlags.recursedCheck;
     final prevSub = setActiveSub(this);
     try {
-      return !identical(value, value = getter(value));
+      return !identical(currentValue, currentValue = getter(currentValue));
     } finally {
       activeSub = prevSub;
       flags &= -5 /*~ReactiveFlags.recursedCheck*/;
@@ -300,8 +300,8 @@ class PresetReactiveSystem extends ReactiveSystem {
   @pragma('wasm:prefer-inline')
   bool update(ReactiveNode node) {
     return switch (node) {
-      ComputedNode() => node.update(),
-      SignalNode() => node.update(),
+      ComputedNode() => node.didUpdate(),
+      SignalNode() => node.didUpdate(),
       _ => false,
     };
   }

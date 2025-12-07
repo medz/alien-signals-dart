@@ -1,3 +1,8 @@
+## 2.1.0
+
+- **preset**: Rename `SignalNode.update`/`ComputedNode.update` to `didUpdate`
+- **preset**: Rename `ComputedNode.value` to `currentValue`
+
 ## 2.0.1
 
 - pref: replace bitwise flags with inline comments for clarity

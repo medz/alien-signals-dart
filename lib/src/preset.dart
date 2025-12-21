@@ -29,12 +29,10 @@ LinkedEffect? queuedEffects;
 LinkedEffect? queuedEffectsTail;
 
 @pragma('vm:prefer-inline')
-@pragma('dart2js:tryInline')
 @pragma('wasm:prefer-inline')
 const system = PresetReactiveSystem();
 
 @pragma('vm:prefer-inline')
-@pragma('dart2js:tryInline')
 @pragma('wasm:prefer-inline')
 final link = system.link,
     unlink = system.unlink,

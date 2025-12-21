@@ -1,3 +1,8 @@
+## 2.1.1
+
+- fix: remove unsupported `@pragma('dart2js:tryInline')` on top-level fields for dart2js
+- test: add dart2js compile regression test
+
 ## 2.1.0
 
 - **preset**: Rename `SignalNode.update`/`ComputedNode.update` to `didUpdate`

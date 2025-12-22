@@ -24,11 +24,21 @@ effect(() => print(welcome()));
 
 ## 🌟 What is Alien Signals?
 
-Alien Signals is a reactive state management library that brings the power of signals to Dart and Flutter applications. Originally inspired by [StackBlitz's alien-signals](https://github.com/stackblitz/alien-signals), our Dart implementation provides:
+Alien Signals is a reactive core for Dart built around a generic
+`ReactiveSystem`. It includes a high-performance signals preset and a small,
+ergonomic surface API. Inspired by
+[StackBlitz's alien-signals](https://github.com/stackblitz/alien-signals), the
+Dart implementation provides:
 
 - **🪶 Ultra Lightweight**: Minimal overhead, maximum efficiency
 - **🎯 Simple API**: Intuitive `signal()`, `computed()`, and `effect()` functions
 - **🔧 Production Ready**: Battle-tested through comprehensive beta releases
+
+## 🧭 Core Layers
+
+- **System**: A reusable reactive graph and propagation engine (`system`).
+- **Preset**: A complete signals implementation on top of the system (`preset`).
+- **Surface API**: Convenience `signal/computed/effect` wrappers built on the preset.
 
 ## 🚀 Key Features
 
@@ -58,7 +68,7 @@ void main() {
 
 - **Effect Scopes**: Group and manage effects together
 - **Batch Operations**: Control when reactivity updates occur
-- **Flexible API**: Both high-level presets and low-level system access
+- **Flexible API**: Build your own surface APIs on top of the core `system` or use the `preset` implementation
 
 ## 📦 Installation
 
@@ -66,7 +76,7 @@ To install Alien Signals, add the following to your `pubspec.yaml`:
 
 ```yaml
 dependencies:
-  alien_signals: ^2.0.1
+  alien_signals: ^2.1.1
 ```
 
 Alternatively, you can run the following command:
@@ -74,6 +84,12 @@ Alternatively, you can run the following command:
 ```bash
 dart pub add alien_signals
 ```
+
+## 📖 Documentation
+
+- **Guide**: Layers (system/preset/surface) and core concepts. See [docs/guide.md](docs/guide.md).
+- **API Reference**: System, preset, and surface APIs. See [docs/api.md](docs/api.md).
+- **Recipes**: Practical patterns and pitfalls. See [docs/recipes.md](docs/recipes.md).
 
 ## 🌍 Community & Ecosystem
 

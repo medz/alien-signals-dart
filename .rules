@@ -5,7 +5,7 @@
 - `test/` holds unit tests; files follow the `*_test.dart` naming pattern.
 - `example/` includes runnable demos (`main.dart`, `preset_playground.dart`) and a web demo in `example/web/`.
 - `assets/` stores package assets like logos used by the README and pubspec.
-- `bench.dart` defines a benchmark harness (optional, not part of the library API).
+- `bench/` contains benchmark harnesses (optional, not part of the library API).
 
 ## Build, Test, and Development Commands
 - `dart pub get` — install dependencies.
@@ -15,7 +15,7 @@
 - `dart run example/main.dart` — run the basic usage demo.
 - `dart run example/preset_playground.dart` — run the preset API playground.
 - `dart compile js example/web/main.dart -o example/web/main.js` — build the web demo; open `example/web/index.html`.
-- `dart run bench.dart` — run benchmarks (requires `reactivity_benchmark`).
+- `dart run bench/propagate.dart` — run benchmarks (uses `benchmark_harness`).
 
 ## Coding Style & Naming Conventions
 - Use Dart’s default formatting (`dart format`) and the `lints` package rules from `analysis_options.yaml`.

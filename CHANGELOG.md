@@ -1,3 +1,8 @@
+## 2.1.2
+
+- fix: clear queued effects after a failed flush to avoid running skipped effects later
+- test: add regression test for failed flush queue cleanup
+
 ## 2.1.1
 
 - fix: remove unsupported `@pragma('dart2js:tryInline')` on top-level fields for dart2js

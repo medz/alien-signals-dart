@@ -233,6 +233,61 @@ void main() {
     });
   });
 
+  test(
+      'should not execute skipped effects from previous failed flush when updating unrelated signal',
+      () {
+    final a = signal(0);
+    final b = signal(0);
+    final c = signal(0);
+    final d = signal(0);
+    final error = StateError('error');
+
+    effect(() {
+      if (a() == 1) {
+        throw error;
+      }
+    });
+
+    int bCalls = 0;
+    effect(() {
+      b();
+      bCalls++;
+    });
+
+    int cCalls = 0;
+    effect(() {
+      c();
+      cCalls++;
+    });
+
+    int dCalls = 0;
+    effect(() {
+      d();
+      dCalls++;
+    });
+
+    startBatch();
+    a.set(1);
+    b.set(1);
+    c.set(1);
+    expect(() => endBatch(), throwsA(same(error)));
+
+    expect(bCalls, 1);
+    expect(cCalls, 1);
+
+    d.set(1);
+
+    expect(bCalls, 1);
+    expect(cCalls, 1);
+    expect(dCalls, 2);
+
+    a.set(2);
+    b.set(2);
+
+    expect(bCalls, 2);
+    expect(cCalls, 1);
+  });
+
   test('should handle flags are indirectly updated during checkDirty', () {
     final a = signal(false);
     final b = computed((_) => a());

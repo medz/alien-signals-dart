@@ -319,9 +319,9 @@ class PresetReactiveSystem extends ReactiveSystem {
     final LinkedEffect tail = effect as LinkedEffect;
 
     do {
-      effect.flags &= -3 /*~ReactiveFlags.watching*/;
       (effect as LinkedEffect).nextEffect = head;
       head = effect;
+      effect.flags &= -3 /*~ReactiveFlags.watching*/;
 
       final next = effect.subs?.sub;
       if (next == null ||
@@ -499,14 +499,25 @@ void run(EffectNode e) {
 @pragma('dart2js:tryInline')
 @pragma('wasm:prefer-inline')
 void flush() {
-  while (queuedEffects != null) {
-    final effect = queuedEffects as EffectNode;
-    if ((queuedEffects = effect.nextEffect) != null) {
+  try {
+    while (queuedEffects != null) {
+      final effect = queuedEffects as EffectNode;
+      queuedEffects = effect.nextEffect;
       effect.nextEffect = null;
-    } else {
-      queuedEffectsTail = null;
+      if (queuedEffects == null) {
+        queuedEffectsTail = null;
+      }
+      run(effect);
     }
-    run(effect);
+  } finally {
+    for (var effect = queuedEffects; effect != null;) {
+      final next = effect.nextEffect;
+      effect.flags |= 10 /*ReactiveFlags.watching | ReactiveFlags.recursed*/
+          as ReactiveFlags;
+      effect.nextEffect = null;
+      effect = next;
+    }
+    queuedEffects = queuedEffectsTail = null;
   }
 }
 

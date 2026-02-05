@@ -98,8 +98,10 @@ dart pub add alien_signals
 - **[Solidart](https://github.com/nank1ro/solidart)** - Signals for Flutter inspired by SolidJS
 - **[Oref](https://github.com/medz/oref)** - Magical reactive state management for Flutter
 - **[flutter_compositions](https://github.com/yoyo930021/flutter_compositions)** - Vue-inspired reactive building blocks for Flutter
+- **[ZenBus](https://pub.dev/packages/zenbus)** - A high-performance, flexible event bus for Flutter applications
 
 ### Growing Ecosystem
+
 Join our thriving community of developers building reactive applications with Alien Signals!
 
 ## 📚 Resources

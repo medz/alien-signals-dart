@@ -124,7 +124,7 @@ class SignalNode<T> extends ReactiveNode {
     ReactiveNode? sub = activeSub;
     while (sub != null) {
       if ((sub.flags &
-              3 /*(ReactiveFlags.mutable | ReactiveFlags.watching)*/) !=
+              3 /*(ReactiveFlags.mutable | ReactiveFlags.watching)*/ ) !=
           ReactiveFlags.none) {
         link(this, sub, cycle);
         break;
@@ -181,8 +181,10 @@ class ComputedNode<T> extends ReactiveNode {
     if ((flags & ReactiveFlags.dirty) != ReactiveFlags.none ||
         ((flags & ReactiveFlags.pending) != ReactiveFlags.none &&
             (checkDirty(deps!, this) ||
-                identical(this.flags = flags & -33 /*~ReactiveFlags.pending*/,
-                    false)))) {
+                identical(
+                  this.flags = flags & -33 /*~ReactiveFlags.pending*/,
+                  false,
+                )))) {
       if (didUpdate()) {
         final subs = this.subs;
         if (subs != null) {
@@ -190,8 +192,9 @@ class ComputedNode<T> extends ReactiveNode {
         }
       }
     } else if (flags == ReactiveFlags.none) {
-      this.flags = 5 /*ReactiveFlags.mutable | ReactiveFlags.recursedCheck*/
-          as ReactiveFlags;
+      this.flags =
+          5 /*ReactiveFlags.mutable | ReactiveFlags.recursedCheck*/
+              as ReactiveFlags;
       final prevSub = setActiveSub(this);
       try {
         currentValue = getter(null);
@@ -470,8 +473,9 @@ void run(EffectNode e) {
           checkDirty(e.deps!, e))) {
     ++cycle;
     e.depsTail = null;
-    e.flags = 6 /*ReactiveFlags.watching | ReactiveFlags.recursedCheck*/
-        as ReactiveFlags;
+    e.flags =
+        6 /*ReactiveFlags.watching | ReactiveFlags.recursedCheck*/
+            as ReactiveFlags;
     final prevSub = setActiveSub(e);
     try {
       e.fn();
@@ -512,8 +516,9 @@ void flush() {
   } finally {
     for (var effect = queuedEffects; effect != null;) {
       final next = effect.nextEffect;
-      effect.flags |= 10 /*ReactiveFlags.watching | ReactiveFlags.recursed*/
-          as ReactiveFlags;
+      effect.flags |=
+          10 /*ReactiveFlags.watching | ReactiveFlags.recursed*/
+              as ReactiveFlags;
       effect.nextEffect = null;
       effect = next;
     }

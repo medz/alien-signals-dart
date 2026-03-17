@@ -149,9 +149,10 @@ abstract interface class EffectScope {
 @pragma('wasm:prefer-inline')
 WritableSignal<T> signal<T>(T initialValue) {
   return _SignalImpl(
-      flags: ReactiveFlags.mutable,
-      currentValue: initialValue,
-      pendingValue: initialValue);
+    flags: ReactiveFlags.mutable,
+    currentValue: initialValue,
+    pendingValue: initialValue,
+  );
 }
 
 /// Creates a computed value that derives from other signals.
@@ -218,11 +219,8 @@ Computed<T> computed<T>(T Function(T?) getter) {
 ///   immediately and re-executed when dependencies change.
 /// - Returns: An [Effect] that can be called to stop it.
 Effect effect(void Function() fn) {
-  final e = _EffectImpl(
-        fn: fn,
-        flags: 6 /* ReactiveFlags.watching | ReactiveFlags.recursedCheck */
-            as ReactiveFlags,
-      ),
+  // dart format off
+  final e = _EffectImpl(fn: fn, flags: 6 /* ReactiveFlags.watching | ReactiveFlags.recursedCheck */ as ReactiveFlags),// dart format on
       prevSub = setActiveSub(e);
   if (prevSub != null) link(e, prevSub, 0);
   try {

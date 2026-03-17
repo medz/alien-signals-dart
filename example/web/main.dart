@@ -1,3 +1,4 @@
+// ignore: deprecated_member_use
 import 'dart:html';
 
 import 'package:alien_signals/alien_signals.dart';

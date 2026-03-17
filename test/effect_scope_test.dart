@@ -47,21 +47,22 @@ void main() {
   });
 
   test(
-      'should track signal updates in an inner scope when accessed by an outer effect',
-      () {
-    final source = signal(1);
+    'should track signal updates in an inner scope when accessed by an outer effect',
+    () {
+      final source = signal(1);
 
-    int triggers = 0;
+      int triggers = 0;
 
-    effect(() {
-      effectScope(() {
-        source();
+      effect(() {
+        effectScope(() {
+          source();
+        });
+        triggers++;
       });
-      triggers++;
-    });
 
-    expect(triggers, 1);
-    source.set(2);
-    expect(triggers, 2);
-  });
+      expect(triggers, 1);
+      source.set(2);
+      expect(triggers, 2);
+    },
+  );
 }

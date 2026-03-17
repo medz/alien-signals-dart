@@ -5,23 +5,26 @@ import 'package:alien_signals/system.dart';
 
 extension type signal<T>._(SignalNode<T> _) {
   factory signal(T initialValue) {
-    return signal._(SignalNode(
-      flags: ReactiveFlags.mutable,
-      currentValue: initialValue,
-      pendingValue: initialValue,
-    ));
+    return signal._(
+      SignalNode(
+        flags: ReactiveFlags.mutable,
+        currentValue: initialValue,
+        pendingValue: initialValue,
+      ),
+    );
   }
 
   T get value => _.get();
+
+  // ignore: strict_top_level_inference
   set value(newValue) => _.set(newValue);
 }
 
 extension type computed<T>._(ComputedNode<T> _) {
   factory computed(T Function() getter) {
-    return computed._(ComputedNode(
-      getter: (_) => getter(),
-      flags: ReactiveFlags.none,
-    ));
+    return computed._(
+      ComputedNode(getter: (_) => getter(), flags: ReactiveFlags.none),
+    );
   }
 
   T get value => _.get();
@@ -30,7 +33,9 @@ extension type computed<T>._(ComputedNode<T> _) {
 extension type effect._(EffectNode _) {
   factory effect(void Function() run) {
     final node = EffectNode(
-        fn: run, flags: ReactiveFlags.watching | ReactiveFlags.recursedCheck);
+      fn: run,
+      flags: ReactiveFlags.watching | ReactiveFlags.recursedCheck,
+    );
     final prevSub = setActiveSub(node);
     if (prevSub != null) link(node, prevSub, 0);
     try {

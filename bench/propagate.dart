@@ -3,7 +3,7 @@ import 'package:benchmark_harness/benchmark_harness.dart';
 
 class PropagateBenchmark extends BenchmarkBase {
   PropagateBenchmark({required this.w, required this.h})
-      : super('propagate: $w * $h');
+    : super('propagate: $w * $h');
 
   final int w;
   final int h;

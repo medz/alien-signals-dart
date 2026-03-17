@@ -16,18 +16,20 @@ void main() {
     expect(c3(), 1);
   });
 
-  test('should propagate updated source value through chained computations',
-      () {
-    final src = signal(0);
-    final a = computed((_) => src());
-    final b = computed((_) => a() % 2);
-    final c = computed((_) => src());
-    final d = computed((_) => b() + c());
+  test(
+    'should propagate updated source value through chained computations',
+    () {
+      final src = signal(0);
+      final a = computed((_) => src());
+      final b = computed((_) => a() % 2);
+      final c = computed((_) => src());
+      final d = computed((_) => b() + c());
 
-    expect(d(), 0);
-    src.set(2);
-    expect(d(), 2);
-  });
+      expect(d(), 0);
+      src.set(2);
+      expect(d(), 2);
+    },
+  );
 
   test('should handle flags are indirectly updated during checkDirty', () {
     final a = signal(false);

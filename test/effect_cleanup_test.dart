@@ -2,41 +2,43 @@ import 'package:alien_signals/alien_signals.dart';
 import 'package:test/test.dart';
 
 void main() {
-  test('effect should unsubscribe from stale dependencies when branches change',
-      () {
-    final useA = signal(true);
-    final a = signal(0);
-    final b = signal(0);
-    int runs = 0;
+  test(
+    'effect should unsubscribe from stale dependencies when branches change',
+    () {
+      final useA = signal(true);
+      final a = signal(0);
+      final b = signal(0);
+      int runs = 0;
 
-    effect(() {
-      runs++;
-      if (useA()) {
-        a();
-      } else {
-        b();
-      }
-    });
+      effect(() {
+        runs++;
+        if (useA()) {
+          a();
+        } else {
+          b();
+        }
+      });
 
-    expect(runs, 1);
-    a.set(1);
-    expect(runs, 2);
+      expect(runs, 1);
+      a.set(1);
+      expect(runs, 2);
 
-    useA.set(false);
-    expect(runs, 3);
+      useA.set(false);
+      expect(runs, 3);
 
-    a.set(2);
-    expect(runs, 3, reason: 'stale dependency should not trigger');
+      a.set(2);
+      expect(runs, 3, reason: 'stale dependency should not trigger');
 
-    b.set(1);
-    expect(runs, 4);
+      b.set(1);
+      expect(runs, 4);
 
-    useA.set(true);
-    expect(runs, 5);
+      useA.set(true);
+      expect(runs, 5);
 
-    b.set(2);
-    expect(runs, 5, reason: 'stale dependency should not trigger');
-  });
+      b.set(2);
+      expect(runs, 5, reason: 'stale dependency should not trigger');
+    },
+  );
 
   test('effectScope stops nested scopes and effects', () {
     final count = signal(0);

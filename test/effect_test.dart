@@ -85,63 +85,65 @@ void main() {
     a.set(2);
   });
 
-  test('should notify inner effects in the same order as non-inner effects',
-      () {
-    final a = signal(0);
-    final b = signal(0);
-    final c = computed((_) => a() - b());
-    final order1 = <String>[];
-    final order2 = <String>[];
-    final order3 = <String>[];
+  test(
+    'should notify inner effects in the same order as non-inner effects',
+    () {
+      final a = signal(0);
+      final b = signal(0);
+      final c = computed((_) => a() - b());
+      final order1 = <String>[];
+      final order2 = <String>[];
+      final order3 = <String>[];
 
-    effect(() {
-      order1.add('effect1');
-      a();
-    });
-    effect(() {
-      order1.add('effect2');
-      a();
-      b();
-    });
-
-    effect(() {
-      c();
       effect(() {
-        order2.add('effect1');
+        order1.add('effect1');
         a();
       });
       effect(() {
-        order2.add('effect2');
+        order1.add('effect2');
         a();
         b();
       });
-    });
 
-    effectScope(() {
       effect(() {
-        order3.add('effect1');
-        a();
+        c();
+        effect(() {
+          order2.add('effect1');
+          a();
+        });
+        effect(() {
+          order2.add('effect2');
+          a();
+          b();
+        });
       });
-      effect(() {
-        order3.add('effect2');
-        a();
-        b();
+
+      effectScope(() {
+        effect(() {
+          order3.add('effect1');
+          a();
+        });
+        effect(() {
+          order3.add('effect2');
+          a();
+          b();
+        });
       });
-    });
 
-    order1.length = 0;
-    order2.length = 0;
-    order3.length = 0;
+      order1.length = 0;
+      order2.length = 0;
+      order3.length = 0;
 
-    startBatch();
-    b.set(1);
-    a.set(1);
-    endBatch();
+      startBatch();
+      b.set(1);
+      a.set(1);
+      endBatch();
 
-    expect(order1, ['effect2', 'effect1']);
-    expect(order2, order1);
-    expect(order3, order1);
-  });
+      expect(order1, ['effect2', 'effect1']);
+      expect(order2, order1);
+      expect(order3, order1);
+    },
+  );
 
   test('should custom effect support batch', () {
     void batchEffect(void Function() fn) {
@@ -234,59 +236,60 @@ void main() {
   });
 
   test(
-      'should not execute skipped effects from previous failed flush when updating unrelated signal',
-      () {
-    final a = signal(0);
-    final b = signal(0);
-    final c = signal(0);
-    final d = signal(0);
-    final error = StateError('error');
+    'should not execute skipped effects from previous failed flush when updating unrelated signal',
+    () {
+      final a = signal(0);
+      final b = signal(0);
+      final c = signal(0);
+      final d = signal(0);
+      final error = StateError('error');
 
-    effect(() {
-      if (a() == 1) {
-        throw error;
-      }
-    });
+      effect(() {
+        if (a() == 1) {
+          throw error;
+        }
+      });
 
-    int bCalls = 0;
-    effect(() {
-      b();
-      bCalls++;
-    });
+      int bCalls = 0;
+      effect(() {
+        b();
+        bCalls++;
+      });
 
-    int cCalls = 0;
-    effect(() {
-      c();
-      cCalls++;
-    });
+      int cCalls = 0;
+      effect(() {
+        c();
+        cCalls++;
+      });
 
-    int dCalls = 0;
-    effect(() {
-      d();
-      dCalls++;
-    });
+      int dCalls = 0;
+      effect(() {
+        d();
+        dCalls++;
+      });
 
-    startBatch();
-    a.set(1);
-    b.set(1);
-    c.set(1);
-    expect(() => endBatch(), throwsA(same(error)));
+      startBatch();
+      a.set(1);
+      b.set(1);
+      c.set(1);
+      expect(() => endBatch(), throwsA(same(error)));
 
-    expect(bCalls, 1);
-    expect(cCalls, 1);
+      expect(bCalls, 1);
+      expect(cCalls, 1);
 
-    d.set(1);
+      d.set(1);
 
-    expect(bCalls, 1);
-    expect(cCalls, 1);
-    expect(dCalls, 2);
+      expect(bCalls, 1);
+      expect(cCalls, 1);
+      expect(dCalls, 2);
 
-    a.set(2);
-    b.set(2);
+      a.set(2);
+      b.set(2);
 
-    expect(bCalls, 2);
-    expect(cCalls, 1);
-  });
+      expect(bCalls, 2);
+      expect(cCalls, 1);
+    },
+  );
 
   test('should handle flags are indirectly updated during checkDirty', () {
     final a = signal(false);

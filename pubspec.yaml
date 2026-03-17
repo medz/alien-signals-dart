@@ -8,7 +8,6 @@ topics:
   - signals
   - reactive
   - state-management
-  - alien-signals
 
 funding:
   - https://github.com/sponsors/medz

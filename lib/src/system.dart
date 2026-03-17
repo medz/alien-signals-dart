@@ -260,9 +260,12 @@ abstract class ReactiveSystem {
       return;
     }
     final prevSub = dep.subsTail;
-    if (prevSub != null &&
-        prevSub.version == version &&
-        identical(prevSub.sub, sub)) {
+    // dart format off
+    if (
+      prevSub != null
+      && prevSub.version == version
+      && identical(prevSub.sub, sub)
+    ) { // dart format on
       return;
     }
     final newLink = sub.depsTail = dep.subsTail = Link(
@@ -353,9 +356,13 @@ abstract class ReactiveSystem {
       ReactiveFlags flags = sub.flags;
 
       // dart format off
-      if ((flags & 60 /*ReactiveFlags.recursedCheck | ReactiveFlags.recursed | ReactiveFlags.dirty | ReactiveFlags.pending*/ ) == ReactiveFlags.none) {
+      if (
+        (flags & 60 /*ReactiveFlags.recursedCheck | ReactiveFlags.recursed | ReactiveFlags.dirty | ReactiveFlags.pending*/ ) == ReactiveFlags.none
+      ) {
         sub.flags = flags | ReactiveFlags.pending;
-      } else if ((flags & 12 /*ReactiveFlags.recursedCheck | ReactiveFlags.recursed*/ ) == ReactiveFlags.none) {
+      } else if (
+        (flags & 12 /*ReactiveFlags.recursedCheck | ReactiveFlags.recursed*/ ) == ReactiveFlags.none
+      ) {
         flags = ReactiveFlags.none;
       } else if ((flags & ReactiveFlags.recursedCheck) == ReactiveFlags.none) {
         sub.flags = (flags & -9 /*~ReactiveFlags.recursed*/ ) | ReactiveFlags.pending;
@@ -418,15 +425,13 @@ abstract class ReactiveSystem {
     Link? curr = link;
     do {
       final sub = curr!.sub, flags = sub.flags;
-      if ((flags & 48 /*(ReactiveFlags.pending | ReactiveFlags.dirty)*/ ) ==
-          ReactiveFlags.pending) {
+      // dart format off
+      if ((flags & 48 /*(ReactiveFlags.pending | ReactiveFlags.dirty)*/ ) == ReactiveFlags.pending) {
         sub.flags = flags | ReactiveFlags.dirty;
-        if ((flags &
-                6 /*(ReactiveFlags.watching | ReactiveFlags.recursedCheck)*/ ) ==
-            ReactiveFlags.watching) {
+        if ((flags & 6 /*(ReactiveFlags.watching | ReactiveFlags.recursedCheck)*/ ) == ReactiveFlags.watching) {
           notify(sub);
         }
-      }
+      } // dart format on
     } while ((curr = curr.nextSub) != null);
   }
 
@@ -451,11 +456,10 @@ abstract class ReactiveSystem {
     do {
       final dep = link.dep, flags = dep.flags;
 
+      // dart format off
       if ((sub.flags & ReactiveFlags.dirty) != ReactiveFlags.none) {
         dirty = true;
-      } else if ((flags &
-              17 /*(ReactiveFlags.mutable | ReactiveFlags.dirty)*/ ) ==
-          17 /*(ReactiveFlags.mutable | ReactiveFlags.dirty)*/ ) {
+      } else if ((flags & 17 /*(ReactiveFlags.mutable | ReactiveFlags.dirty)*/ ) == 17 /*(ReactiveFlags.mutable | ReactiveFlags.dirty)*/) {
         if (update(dep)) {
           final subs = dep.subs!;
           if (subs.nextSub != null) {
@@ -463,10 +467,8 @@ abstract class ReactiveSystem {
           }
           dirty = true;
         }
-      } else if ((flags &
-              33 /*(ReactiveFlags.mutable | ReactiveFlags.pending)*/ ) ==
-          33 /*(ReactiveFlags.mutable | ReactiveFlags.pending)*/ ) {
-        if (link.nextSub != null || link.prevSub != null) {
+      } else if ((flags & 33 /*(ReactiveFlags.mutable | ReactiveFlags.pending)*/ ) == 33 /*(ReactiveFlags.mutable | ReactiveFlags.pending)*/) {
+        if (link.nextSub != null|| link.prevSub != null) {// dart format on
           stack = Stack(value: link, prev: stack);
         }
         link = dep.deps!;

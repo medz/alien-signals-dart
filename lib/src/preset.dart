@@ -123,9 +123,11 @@ class SignalNode<T> extends ReactiveNode {
     }
     ReactiveNode? sub = activeSub;
     while (sub != null) {
-      if ((sub.flags &
-              3 /*(ReactiveFlags.mutable | ReactiveFlags.watching)*/ ) !=
-          ReactiveFlags.none) {
+      // dart format off
+      if (
+        (sub.flags & 3 /*(ReactiveFlags.mutable | ReactiveFlags.watching)*/ ) !=
+        ReactiveFlags.none
+      ) { // dart format on
         link(this, sub, cycle);
         break;
       }
@@ -178,13 +180,17 @@ class ComputedNode<T> extends ReactiveNode {
   /// Returns the computed value.
   T get() {
     final flags = this.flags;
-    if ((flags & ReactiveFlags.dirty) != ReactiveFlags.none ||
-        ((flags & ReactiveFlags.pending) != ReactiveFlags.none &&
-            (checkDirty(deps!, this) ||
-                identical(
-                  this.flags = flags & -33 /*~ReactiveFlags.pending*/,
-                  false,
-                )))) {
+    // dart format off
+    if (
+      (flags & ReactiveFlags.dirty) != ReactiveFlags.none
+      || (
+        (flags & ReactiveFlags.pending) != ReactiveFlags.none
+        && (
+          checkDirty(deps!, this)
+          || identical(this.flags = flags & -33 /*~ReactiveFlags.pending*/, false)
+        )
+      )
+    ) { // dart format on
       if (didUpdate()) {
         final subs = this.subs;
         if (subs != null) {
@@ -327,9 +333,11 @@ class PresetReactiveSystem extends ReactiveSystem {
       effect.flags &= -3 /*~ReactiveFlags.watching*/;
 
       final next = effect.subs?.sub;
-      if (next == null ||
-          ((effect = next).flags & ReactiveFlags.watching) ==
-              ReactiveFlags.none) {
+      // dart format off
+      if (
+        next == null
+        || ((effect = next).flags & ReactiveFlags.watching) == ReactiveFlags.none
+      ) { // dart format on
         break;
       }
     } while (true);
@@ -468,9 +476,14 @@ void trigger(void Function() fn) {
 /// This is called internally when flushing queued effects.
 void run(EffectNode e) {
   final flags = e.flags;
-  if ((flags & ReactiveFlags.dirty) != ReactiveFlags.none ||
-      ((flags & ReactiveFlags.pending) != ReactiveFlags.none &&
-          checkDirty(e.deps!, e))) {
+  // dart format off
+  if (
+    (flags & ReactiveFlags.dirty) != ReactiveFlags.none
+    || (
+      (flags & ReactiveFlags.pending) != ReactiveFlags.none
+      && checkDirty(e.deps!, e)
+    )
+  ) { // dart format on
     ++cycle;
     e.depsTail = null;
     e.flags =

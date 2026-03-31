@@ -1,3 +1,12 @@
+## 2.2.0
+
+- build: bump minimum Dart SDK to `^3.8.0` and refresh dev dependency constraints
+- chore: refine pub.dev topics metadata
+- bench: move propagate benchmark into `bench/` and refresh benchmark setup
+- ci: narrow the Dart test matrix
+- docs: update related projects in the README
+- style: improve internal condition readability and reformat sources
+
 ## 2.1.2
 
 - fix: clear queued effects after a failed flush to avoid running skipped effects later

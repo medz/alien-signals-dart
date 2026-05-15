@@ -451,6 +451,7 @@ void trigger(void Function() fn) {
     fn();
   } finally {
     activeSub = prevSub;
+    sub.flags = ReactiveFlags.none;
     Link? link = sub.deps;
     while (link != null) {
       final dep = link.dep;
@@ -458,7 +459,6 @@ void trigger(void Function() fn) {
 
       final subs = dep.subs;
       if (subs != null) {
-        sub.flags = ReactiveFlags.none;
         propagate(subs);
         shallowPropagate(subs);
       }

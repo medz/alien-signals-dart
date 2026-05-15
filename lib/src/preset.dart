@@ -206,10 +206,8 @@ class ComputedNode<T> extends ReactiveNode {
               as ReactiveFlags;
       final prevSub = setActiveSub(this);
       try {
-        ++runDepth;
         currentValue = getter(null);
       } finally {
-        --runDepth;
         activeSub = prevSub;
         this.flags &= -5 /*~ReactiveFlags.recursedCheck*/;
       }
@@ -233,10 +231,8 @@ class ComputedNode<T> extends ReactiveNode {
     final prevSub = setActiveSub(this);
     try {
       ++cycle;
-      ++runDepth;
       return !identical(currentValue, currentValue = getter(currentValue));
     } finally {
-      --runDepth;
       activeSub = prevSub;
       flags &= -5 /*~ReactiveFlags.recursedCheck*/;
       purgeDeps(this);

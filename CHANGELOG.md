@@ -5,6 +5,7 @@
 - fix: keep computed-chain propagation active after inner writes
 - fix: make `effectScope()` participate in dependency propagation
 - fix: make `checkDirty()` resilient to graph mutations during updates
+- refactor: remove redundant run-depth tracking from computed evaluation
 - refactor: tighten `checkDirty()` subscriber snapshot handling
 - refactor: hoist `trigger()` flag reset before dependency propagation
 

@@ -2,24 +2,28 @@
 
 > Sync upstream [alien-signals](https://github.com/stackblitz/alien-signals/commit/8734d386d925025d0e99419bd9161c17b112c5ee)<sup>v3.2.1</sup>
 
-- **New Features**
-  - `effect()` can return a cleanup callback; `effectScope` nesting and
-    propagation are improved.
+### New Features
 
-- **Bug Fixes**
-  - Corrected disposal and cleanup ordering for effects and computeds.
-  - Preserved subscriptions across re-runs; fixed propagation for writes inside
-    effects.
-  - Made updates resilient to dependency-graph mutations; tightened cleanup
-    timing.
+- `effect()` can return a cleanup callback; `effectScope` nesting and
+  propagation are improved.
 
-- **Documentation**
-  - API and guide updated to document generic effect callbacks and cleanup
-    behavior.
+### Bug Fixes
 
-- **Tests**
-  - Added comprehensive tests covering cleanup, teardown, scopes, and mutation
-    cases.
+- Corrected disposal and cleanup ordering for effects and computeds.
+- Preserved subscriptions across re-runs; fixed propagation for writes inside
+  effects.
+- Made updates resilient to dependency-graph mutations; tightened cleanup
+  timing.
+
+### Documentation
+
+- API and guide updated to document generic effect callbacks and cleanup
+  behavior.
+
+### Tests
+
+- Added comprehensive tests covering cleanup, teardown, scopes, and mutation
+  cases.
 
 ## 2.2.0
 

@@ -65,4 +65,30 @@ void main() {
       expect(triggers, 2);
     },
   );
+
+  test('should propagate computed changes through nested scopes', () {
+    final source = signal(0);
+    final computedValue = computed((_) => source() * 2);
+    int triggers = 0;
+
+    effect(() {
+      triggers++;
+      effectScope(() {
+        effectScope(() {
+          source();
+          computedValue();
+        });
+      });
+    });
+
+    expect(triggers, 1);
+
+    source.set(1);
+    expect(triggers, 2);
+
+    trigger(() {
+      computedValue();
+    });
+    expect(triggers, 3);
+  });
 }

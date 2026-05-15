@@ -121,17 +121,9 @@ class SignalNode<T> extends ReactiveNode {
         }
       }
     }
-    ReactiveNode? sub = activeSub;
-    while (sub != null) {
-      // dart format off
-      if (
-        (sub.flags & 3 /*(ReactiveFlags.mutable | ReactiveFlags.watching)*/ ) !=
-        ReactiveFlags.none
-      ) { // dart format on
-        link(this, sub, cycle);
-        break;
-      }
-      sub = sub.subs?.sub;
+    final sub = activeSub;
+    if (sub != null) {
+      link(this, sub, cycle);
     }
     return currentValue;
   }
@@ -237,6 +229,20 @@ class ComputedNode<T> extends ReactiveNode {
   }
 }
 
+/// A reactive effect scope node that can participate in propagation.
+class EffectScopeNode extends ReactiveNode {
+  EffectScopeNode({required super.flags});
+
+  /// Marks the scope as mutable while dirty checking propagates through it.
+  @pragma('vm:prefer-inline')
+  @pragma('dart2js:tryInline')
+  @pragma('wasm:prefer-inline')
+  bool didUpdate() {
+    flags = ReactiveFlags.mutable;
+    return true;
+  }
+}
+
 /// A reactive effect node that runs side effects in response to changes.
 ///
 /// EffectNode extends [LinkedEffect] to add the capability to execute
@@ -309,6 +315,7 @@ class PresetReactiveSystem extends ReactiveSystem {
     return switch (node) {
       ComputedNode() => node.didUpdate(),
       SignalNode() => node.didUpdate(),
+      EffectScopeNode() => node.didUpdate(),
       _ => false,
     };
   }

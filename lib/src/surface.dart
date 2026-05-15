@@ -6,8 +6,9 @@ import 'package:alien_signals/preset.dart'
         stop,
         SignalNode,
         ComputedNode,
-        EffectNode;
-import 'package:alien_signals/system.dart' show ReactiveFlags, ReactiveNode;
+        EffectNode,
+        EffectScopeNode;
+import 'package:alien_signals/system.dart' show ReactiveFlags;
 
 /// A reactive signal that holds a value of type [T].
 ///
@@ -268,7 +269,7 @@ Effect effect(void Function() fn) {
 @pragma('dart2js:tryInline')
 @pragma('wasm:prefer-inline')
 EffectScope effectScope(void Function() fn) {
-  final e = _EffectScopeImpl(flags: ReactiveFlags.none),
+  final e = _EffectScopeImpl(flags: ReactiveFlags.mutable),
       prevSub = setActiveSub(e);
   if (prevSub != null) link(e, prevSub, 0);
   try {
@@ -313,7 +314,7 @@ final class _EffectImpl extends EffectNode implements Effect {
   void call() => stop(this);
 }
 
-class _EffectScopeImpl extends ReactiveNode implements EffectScope {
+class _EffectScopeImpl extends EffectScopeNode implements EffectScope {
   _EffectScopeImpl({required super.flags});
 
   @override

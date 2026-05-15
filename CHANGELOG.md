@@ -9,6 +9,8 @@
 
 ## 2.1.2
 
+> Sync upstream [alien-signals](https://github.com/stackblitz/alien-signals/commit/836130c4837f8184ae0079e6d550b0adba07b936)<sup>v3.1.2</sup>
+
 - fix: clear queued effects after a failed flush to avoid running skipped effects later
 - test: add regression test for failed flush queue cleanup
 
@@ -224,6 +226,8 @@ Status: Released(2025-09-29)
 - `Effect`/`EffectScope`'s `call()` is renamed to `dispose()`
 
 ## 1.0.0-beta.1
+
+> Sync upstream [alien-signals](https://github.com/stackblitz/alien-signals/commit/2de8565cea796a0a6ddd56b0bd0ac8c8ff54345c)<sup>v3.0.0</sup>
 
 Status: Released(2025-09-29)
 

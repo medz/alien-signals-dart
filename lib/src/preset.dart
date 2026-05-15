@@ -497,7 +497,7 @@ void run(EffectNode e) {
       e.flags &= -5 /*~ReactiveFlags.recursedCheck*/;
       purgeDeps(e);
     }
-  } else {
+  } else if (e.flags != ReactiveFlags.none) {
     e.flags = ReactiveFlags.watching;
   }
 }

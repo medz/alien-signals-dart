@@ -1,3 +1,7 @@
+## 2.3.0
+
+- refactor: hoist `trigger()` flag reset before dependency propagation
+
 ## 2.2.0
 
 - build: bump minimum Dart SDK to `^3.8.0` and refresh dev dependency constraints

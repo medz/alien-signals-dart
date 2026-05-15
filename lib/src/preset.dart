@@ -514,16 +514,8 @@ void run(EffectNode e) {
       && checkDirty(e.deps!, e)
     )
   ) { // dart format on
-    final cleanup = e.cleanup;
-    if (cleanup != null) {
-      e.cleanup = null;
-      final prevSub = activeSub;
-      activeSub = null;
-      try {
-        cleanup();
-      } finally {
-        activeSub = prevSub;
-      }
+    if (e.cleanup != null) {
+      runCleanup(e);
       if (e.flags == ReactiveFlags.none) {
         return;
       }
@@ -595,10 +587,8 @@ void flush() {
 /// This is essential for cleanup to prevent memory leaks.
 void stop(ReactiveNode node) {
   if (node is EffectNode) {
-    final cleanup = node.cleanup;
-    if (cleanup != null) {
-      node.cleanup = null;
-      cleanup();
+    if (node.cleanup != null) {
+      runCleanup(node);
     }
   }
   node.depsTail = null;
@@ -607,6 +597,19 @@ void stop(ReactiveNode node) {
   final subs = node.subs;
   if (subs != null) {
     unlink(subs, subs.sub);
+  }
+}
+
+/// Runs an effect cleanup outside dependency tracking.
+void runCleanup(EffectNode e) {
+  final cleanup = e.cleanup!;
+  e.cleanup = null;
+  final prevSub = activeSub;
+  activeSub = null;
+  try {
+    cleanup();
+  } finally {
+    activeSub = prevSub;
   }
 }
 

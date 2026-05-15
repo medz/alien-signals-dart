@@ -52,6 +52,30 @@ void main() {
     expect(cleanups, 1);
   });
 
+  test('effect cleanup reads are not tracked on dispose', () {
+    final cleanupSource = signal(0);
+    int outerRuns = 0;
+    int cleanups = 0;
+
+    effect(() {
+      outerRuns++;
+      final stop = effect(() {
+        return () {
+          cleanupSource();
+          cleanups++;
+        };
+      });
+      stop();
+    });
+
+    expect(outerRuns, 1);
+    expect(cleanups, 1);
+
+    cleanupSource.set(1);
+    expect(outerRuns, 1);
+    expect(cleanups, 1);
+  });
+
   test('effect cleanup can stop the effect before re-run', () {
     final source = signal(0);
     late Effect stop;

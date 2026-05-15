@@ -2,29 +2,25 @@
 
 > Sync upstream [alien-signals](https://github.com/stackblitz/alien-signals/commit/8734d386d925025d0e99419bd9161c17b112c5ee)<sup>v3.2.1</sup>
 
-### Added
+### Summary
 
-- Add cleanup callback support for `effect()`; callbacks may return a function
-  that runs before the next effect execution and when the effect is stopped.
+Adds effect cleanup callbacks and scope-aware teardown, refactors effect
+execution and dependency propagation around nested runs, aligns the Dart runtime
+with upstream `alien-signals` v3.2.1 behavior, and adds regression coverage for
+cleanup ordering, graph mutation, and failed setup paths.
 
-### Fixed
+### Changes
 
-- Dispose nested effects and scopes before parent cleanup, using reverse
-  creation order for siblings and depth-first cleanup for nested children.
-- Preserve outer effect subscriptions after inner effects re-run.
-- Keep computed-chain propagation active when a signal is written from inside an
-  effect.
-- Make `effectScope()` participate in dependency propagation so nested scopes
-  can invalidate their parent effect correctly.
-- Make `checkDirty()` resilient to graph mutations while dependencies are being
-  updated.
-- Run effect cleanup callbacks outside dependency tracking.
-
-### Changed
-
-- Hoist `trigger()` flag reset before dependency propagation.
-- Tighten `checkDirty()` subscriber snapshot handling.
-- Remove redundant run-depth tracking from computed evaluation.
+| Layer / File(s) | Summary |
+| --- | --- |
+| Type contracts and node definitions <br> `lib/src/preset.dart` | Adds `EffectCallback<T>` and `EffectCleanup`, makes `EffectNode<T>` store typed cleanup callbacks, introduces `EffectScopeNode`, and tracks child-effect ownership with an internal `hasChildEffect` flag. |
+| Dependency linking and propagation <br> `lib/src/preset.dart`, `lib/src/system.dart` | Tracks `runDepth` for effect callbacks, propagates inner writes with recursion context, and prevents inactive subscribers from being linked after teardown. |
+| Dirty checking and graph mutation safety <br> `lib/src/system.dart`, `lib/src/preset.dart` | Tightens `checkDirty()` stack handling and subscriber snapshots so dependency updates remain safe when effects or scopes are disposed during dirty checking. |
+| Effect execution and cleanup <br> `lib/src/preset.dart`, `lib/src/surface.dart` | Runs existing cleanup before re-execution, records cleanup returned by `effect()`, executes cleanup outside dependency tracking, and disposes partially initialized effects/scopes when setup throws. |
+| Stop and scope teardown <br> `lib/src/preset.dart` | Dispatches teardown by node type and disposes nested effects/scopes in reverse creation order before parent cleanup. |
+| Computed and trigger updates <br> `lib/src/preset.dart` | Disposes child effects created by computed getters before recomputation and hoists `trigger()` flag reset before dependency propagation. |
+| Public API and documentation <br> `lib/alien_signals.dart`, `lib/preset.dart`, `docs/api.md`, `docs/guide.md`, `example/preset_playground.dart` | Exports `EffectCallback` and `EffectCleanup`, keeps internal flags hidden, and documents cleanup-returning effects in the API guide and examples. |
+| Regression tests <br> `test/*.dart` | Covers cleanup before re-runs and disposal, nested cleanup order, effect scope propagation, computed-chain inner writes, graph mutation during dirty checking, and failed setup teardown. |
 
 ## 2.2.0
 

@@ -1,10 +1,11 @@
-import 'package:alien_signals/preset.dart'
+import 'preset.dart'
     show
         setActiveSub,
         activeSub,
         runDepth,
         link,
         stop,
+        hasChildEffect,
         SignalNode,
         ComputedNode,
         EffectNode,
@@ -226,7 +227,10 @@ Effect effect<T>(EffectCallback<T> fn) {
   // dart format off
   final e = _EffectImpl(fn: fn, flags: 6 /* ReactiveFlags.watching | ReactiveFlags.recursedCheck */ as ReactiveFlags),// dart format on
       prevSub = setActiveSub(e);
-  if (prevSub != null) link(e, prevSub, 0);
+  if (prevSub != null) {
+    link(e, prevSub, 0);
+    prevSub.flags |= hasChildEffect;
+  }
   try {
     ++runDepth;
     e.cleanup = e.runEffect();
@@ -276,7 +280,10 @@ Effect effect<T>(EffectCallback<T> fn) {
 EffectScope effectScope(void Function() fn) {
   final e = _EffectScopeImpl(flags: ReactiveFlags.mutable),
       prevSub = setActiveSub(e);
-  if (prevSub != null) link(e, prevSub, 0);
+  if (prevSub != null) {
+    link(e, prevSub, 0);
+    prevSub.flags |= hasChildEffect;
+  }
   try {
     fn();
     return e;

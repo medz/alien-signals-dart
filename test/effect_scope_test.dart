@@ -91,4 +91,56 @@ void main() {
     });
     expect(triggers, 3);
   });
+
+  test('scope disposal cleans child effects in reverse dependency order', () {
+    final log = <String>[];
+
+    final stop = effectScope(() {
+      effect(() {
+        return () {
+          log.add('first cleanup');
+        };
+      });
+      effectScope(() {
+        effect(() {
+          return () {
+            log.add('nested cleanup');
+          };
+        });
+      });
+      effect(() {
+        return () {
+          log.add('last cleanup');
+        };
+      });
+    });
+
+    stop();
+    expect(log, ['last cleanup', 'nested cleanup', 'first cleanup']);
+  });
+
+  test('scope nested in effect cleans children before parent cleanup', () {
+    final source = signal(0);
+    final log = <String>[];
+
+    effect(() {
+      source();
+      log.add('outer run');
+      effectScope(() {
+        effect(() {
+          log.add('inner run');
+          return () {
+            log.add('inner cleanup');
+          };
+        });
+      });
+      return () {
+        log.add('outer cleanup');
+      };
+    });
+
+    log.clear();
+    source.set(1);
+    expect(log, ['inner cleanup', 'outer cleanup', 'outer run', 'inner run']);
+  });
 }

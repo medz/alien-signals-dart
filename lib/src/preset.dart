@@ -51,6 +51,9 @@ typedef EffectCleanup = void Function();
 /// Callback passed to an effect.
 typedef EffectCallback<T> = T Function();
 
+/// Marks a parent effect, scope, or computed whose deps include a child effect.
+const hasChildEffect = 64 as ReactiveFlags;
+
 /// A reactive node that can be linked in a queue of effects.
 ///
 /// Extends [ReactiveNode] to add queueing capabilities, allowing
@@ -226,6 +229,9 @@ class ComputedNode<T> extends ReactiveNode {
   ///
   /// Returns `true` if the computed value changed, `false` otherwise.
   bool didUpdate() {
+    if ((flags & hasChildEffect) != ReactiveFlags.none) {
+      disposeChildDepsInReverse(this);
+    }
     depsTail = null;
     flags = ReactiveFlags.mutable | ReactiveFlags.recursedCheck;
     final prevSub = setActiveSub(this);
@@ -378,18 +384,26 @@ class PresetReactiveSystem extends ReactiveSystem {
 
   /// Called when a node no longer has any subscribers.
   ///
-  /// For non-mutable nodes (like effects), stops them completely.
-  /// For mutable nodes (like signals), marks them as dirty and
-  /// clears their dependencies for lazy re-evaluation.
+  /// Computed nodes become dirty and release their dependencies lazily,
+  /// signals stay alive, and effect-like nodes are stopped immediately.
   @override
   void unwatched(ReactiveNode node) {
-    if ((node.flags & ReactiveFlags.mutable) == ReactiveFlags.none) {
-      stop(node);
-    } else if (node.depsTail != null) {
-      node.depsTail = null;
-      node.flags =
-          17 /*ReactiveFlags.mutable | ReactiveFlags.dirty*/ as ReactiveFlags;
-      purgeDeps(node);
+    switch (node) {
+      case ComputedNode():
+        if (node.depsTail != null) {
+          node.flags =
+              17 /*ReactiveFlags.mutable | ReactiveFlags.dirty*/
+                  as ReactiveFlags;
+          disposeAllDepsInReverse(node);
+        }
+      case SignalNode():
+        break;
+      case EffectNode():
+        stopEffect(node);
+      case EffectScopeNode():
+        stopScope(node);
+      case _:
+        stop(node);
     }
   }
 }
@@ -510,6 +524,9 @@ void run(EffectNode e) {
       && checkDirty(e.deps!, e)
     )
   ) { // dart format on
+    if ((flags & hasChildEffect) != ReactiveFlags.none) {
+      disposeChildDepsInReverse(e);
+    }
     if (e.cleanup != null) {
       runCleanup(e);
       if (e.flags == ReactiveFlags.none) {
@@ -532,7 +549,7 @@ void run(EffectNode e) {
       purgeDeps(e);
     }
   } else if (e.deps != null) {
-    e.flags = ReactiveFlags.watching;
+    e.flags = ReactiveFlags.watching | (flags & hasChildEffect);
   }
 }
 
@@ -582,17 +599,27 @@ void flush() {
 ///
 /// This is essential for cleanup to prevent memory leaks.
 void stop(ReactiveNode node) {
-  if (node is EffectNode) {
-    if (node.cleanup != null) {
-      runCleanup(node);
-    }
+  switch (node) {
+    case EffectNode():
+      stopEffect(node);
+    case EffectScopeNode():
+      stopScope(node);
+    case _:
+      node.depsTail = null;
+      node.flags = ReactiveFlags.none;
+      purgeDeps(node);
+      final subs = node.subs;
+      if (subs != null) {
+        unlink(subs, subs.sub);
+      }
   }
-  node.depsTail = null;
-  node.flags = ReactiveFlags.none;
-  purgeDeps(node);
-  final subs = node.subs;
-  if (subs != null) {
-    unlink(subs, subs.sub);
+}
+
+/// Stops an effect after disposing its nested effects and scopes.
+void stopEffect(EffectNode e) {
+  stopScope(e);
+  if (e.cleanup != null) {
+    runCleanup(e);
   }
 }
 
@@ -606,6 +633,39 @@ void runCleanup(EffectNode e) {
     cleanup();
   } finally {
     activeSub = prevSub;
+  }
+}
+
+/// Stops a scope-like node and disposes all dependencies in reverse order.
+void stopScope(ReactiveNode node) {
+  node.flags = ReactiveFlags.none;
+  disposeAllDepsInReverse(node);
+  final subs = node.subs;
+  if (subs != null) {
+    unlink(subs, subs.sub);
+  }
+}
+
+/// Disposes child effects/scopes while leaving signal/computed deps for purge.
+void disposeChildDepsInReverse(ReactiveNode sub) {
+  Link? link = sub.depsTail;
+  while (link != null) {
+    final prev = link.prevDep;
+    final dep = link.dep;
+    if (dep is! ComputedNode && dep is! SignalNode) {
+      unlink(link, sub);
+    }
+    link = prev;
+  }
+}
+
+/// Removes every dependency from [sub], starting from the newest link.
+void disposeAllDepsInReverse(ReactiveNode sub) {
+  Link? link = sub.depsTail;
+  while (link != null) {
+    final prev = link.prevDep;
+    unlink(link, sub);
+    link = prev;
   }
 }
 

@@ -1,6 +1,7 @@
 ## 2.3.0
 
 - feat: support cleanup callbacks returned from `effect()`
+- fix: dispose nested effects before parent cleanup in reverse order
 - fix: preserve outer effect subscriptions after inner effect re-runs
 - fix: run effect cleanup outside dependency tracking on dispose
 - fix: keep computed-chain propagation active after inner writes

@@ -98,6 +98,151 @@ void main() {
     expect(runs, 1);
   });
 
+  test('nested effect cleanup runs before parent cleanup on re-run', () {
+    final source = signal(0);
+    final log = <String>[];
+
+    effect(() {
+      source();
+      log.add('outer run');
+      effect(() {
+        log.add('inner run');
+        return () {
+          log.add('inner cleanup');
+        };
+      });
+      return () {
+        log.add('outer cleanup');
+      };
+    });
+
+    expect(log, ['outer run', 'inner run']);
+
+    log.clear();
+    source.set(1);
+    expect(log, ['inner cleanup', 'outer cleanup', 'outer run', 'inner run']);
+  });
+
+  test('effect disposal cleans children in reverse dependency order', () {
+    final log = <String>[];
+
+    final stop = effect(() {
+      effect(() {
+        effect(() {
+          return () {
+            log.add('grandchild cleanup');
+          };
+        });
+        return () {
+          log.add('child cleanup');
+        };
+      });
+      effect(() {
+        return () {
+          log.add('sibling cleanup');
+        };
+      });
+      return () {
+        log.add('outer cleanup');
+      };
+    });
+
+    stop();
+    expect(log, [
+      'sibling cleanup',
+      'grandchild cleanup',
+      'child cleanup',
+      'outer cleanup',
+    ]);
+  });
+
+  test(
+    'computed refresh disposes child effects before running getter again',
+    () {
+      final source = signal(0);
+      final log = <String>[];
+
+      final value = computed((previous) {
+        log.add('computed run');
+        effect(() {
+          log.add('inner run');
+          return () {
+            log.add('inner cleanup');
+          };
+        });
+        return source();
+      });
+
+      effect(() {
+        value();
+      });
+
+      expect(log, ['computed run', 'inner run']);
+
+      log.clear();
+      source.set(1);
+      expect(log, ['inner cleanup', 'computed run', 'inner run']);
+    },
+  );
+
+  test('computed disposal cleans child effects in reverse order', () {
+    final log = <String>[];
+
+    final value = computed((previous) {
+      effect(() {
+        return () {
+          log.add('first cleanup');
+        };
+      });
+      effect(() {
+        return () {
+          log.add('second cleanup');
+        };
+      });
+      effect(() {
+        return () {
+          log.add('third cleanup');
+        };
+      });
+      return 0;
+    });
+
+    final stop = effect(() {
+      value();
+    });
+
+    log.clear();
+    stop();
+    expect(log, ['third cleanup', 'second cleanup', 'first cleanup']);
+  });
+
+  test('outer cleanup order survives an inner-only re-run', () {
+    final outerSource = signal(0);
+    final innerSource = signal(0);
+    final log = <String>[];
+
+    effect(() {
+      outerSource();
+      log.add('outer run');
+      effect(() {
+        innerSource();
+        log.add('inner run');
+        return () {
+          log.add('inner cleanup');
+        };
+      });
+      return () {
+        log.add('outer cleanup');
+      };
+    });
+
+    innerSource.set(1);
+    log.clear();
+
+    outerSource.set(1);
+    expect(log, ['inner cleanup', 'outer cleanup', 'outer run', 'inner run']);
+  });
+
   test(
     'effect should unsubscribe from stale dependencies when branches change',
     () {

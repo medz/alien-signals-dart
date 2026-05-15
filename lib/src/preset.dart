@@ -6,9 +6,10 @@ import 'package:alien_signals/system.dart';
 /// dependencies are properly tracked and invalidated.
 int cycle = 0;
 
-/// Current depth of nested reactive computations.
+/// Current depth of nested effect callback execution.
 ///
-/// When greater than 0, writes happen from inside an effect or computed getter.
+/// Incremented by effect runs, not by standalone computed evaluation. When
+/// greater than 0, writes should be treated as inner writes during propagation.
 int runDepth = 0;
 
 /// Current depth of nested batch operations.
@@ -53,6 +54,15 @@ typedef EffectCallback<T> = T Function();
 
 /// Marks a parent effect, scope, or computed whose deps include a child effect.
 const hasChildEffect = 64 as ReactiveFlags;
+
+/// Whether a subscriber is still eligible to track dependencies.
+@pragma('vm:prefer-inline')
+@pragma('dart2js:tryInline')
+@pragma('wasm:prefer-inline')
+bool shouldTrack(ReactiveNode sub) {
+  return (sub.flags & 3 /*ReactiveFlags.mutable | ReactiveFlags.watching*/ ) !=
+      ReactiveFlags.none;
+}
 
 /// A reactive node that can be linked in a queue of effects.
 ///
@@ -136,7 +146,7 @@ class SignalNode<T> extends ReactiveNode {
       }
     }
     final sub = activeSub;
-    if (sub != null) {
+    if (sub != null && shouldTrack(sub)) {
       link(this, sub, cycle);
     }
     return currentValue;
@@ -217,7 +227,7 @@ class ComputedNode<T> extends ReactiveNode {
     }
 
     final sub = activeSub;
-    if (sub != null) link(this, sub, cycle);
+    if (sub != null && shouldTrack(sub)) link(this, sub, cycle);
 
     return currentValue as T;
   }

@@ -1,1 +1,1 @@
-export 'src/preset.dart' hide system, hasChildEffect;
+export 'src/preset.dart' hide system, hasChildEffect, shouldTrack;

@@ -1,3 +1,31 @@
+## 2.3.0
+
+> Sync upstream [alien-signals](https://github.com/stackblitz/alien-signals/commit/8734d386d925025d0e99419bd9161c17b112c5ee)<sup>v3.2.1</sup>
+
+### Added
+
+- Add cleanup callback support for `effect()`; callbacks may return a function
+  that runs before the next effect execution and when the effect is stopped.
+
+### Fixed
+
+- Dispose nested effects and scopes before parent cleanup, using reverse
+  creation order for siblings and depth-first cleanup for nested children.
+- Preserve outer effect subscriptions after inner effects re-run.
+- Keep computed-chain propagation active when a signal is written from inside an
+  effect.
+- Make `effectScope()` participate in dependency propagation so nested scopes
+  can invalidate their parent effect correctly.
+- Make `checkDirty()` resilient to graph mutations while dependencies are being
+  updated.
+- Run effect cleanup callbacks outside dependency tracking.
+
+### Changed
+
+- Hoist `trigger()` flag reset before dependency propagation.
+- Tighten `checkDirty()` subscriber snapshot handling.
+- Remove redundant run-depth tracking from computed evaluation.
+
 ## 2.2.0
 
 - build: bump minimum Dart SDK to `^3.8.0` and refresh dev dependency constraints

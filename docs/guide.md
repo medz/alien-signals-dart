@@ -79,7 +79,7 @@ MyComputed<T> myComputed<T>(T Function(T?) getter) => MyComputed(getter);
 `EffectNode` handles scheduling; you still need to wire dependency tracking and
 provide a disposable handle.
 ```dart
-class MyEffect extends EffectNode {
+class MyEffect extends EffectNode<void> {
   MyEffect(void Function() fn)
       : super(flags: ReactiveFlags.watching | ReactiveFlags.recursedCheck,
               fn: fn);

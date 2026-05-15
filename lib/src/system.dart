@@ -346,7 +346,7 @@ abstract class ReactiveSystem {
   /// The propagation stops at non-mutable nodes (like effects) or when
   /// circular dependencies are detected.
   @pragma('vm:align-loops')
-  void propagate(Link link) {
+  void propagate(Link link, [bool innerWrite = false]) {
     Link? next = link.nextSub;
     Stack<Link?>? stack;
 
@@ -360,6 +360,9 @@ abstract class ReactiveSystem {
         (flags & 60 /*ReactiveFlags.recursedCheck | ReactiveFlags.recursed | ReactiveFlags.dirty | ReactiveFlags.pending*/ ) == ReactiveFlags.none
       ) {
         sub.flags = flags | ReactiveFlags.pending;
+        if (innerWrite) {
+          sub.flags |= ReactiveFlags.recursed;
+        }
       } else if (
         (flags & 12 /*ReactiveFlags.recursedCheck | ReactiveFlags.recursed*/ ) == ReactiveFlags.none
       ) {
@@ -460,17 +463,15 @@ abstract class ReactiveSystem {
       if ((sub.flags & ReactiveFlags.dirty) != ReactiveFlags.none) {
         dirty = true;
       } else if ((flags & 17 /*(ReactiveFlags.mutable | ReactiveFlags.dirty)*/ ) == 17 /*(ReactiveFlags.mutable | ReactiveFlags.dirty)*/) {
+        final subs = dep.subs;
         if (update(dep)) {
-          final subs = dep.subs!;
-          if (subs.nextSub != null) {
+          if (subs!.nextSub != null) {
             shallowPropagate(subs);
           }
           dirty = true;
         }
       } else if ((flags & 33 /*(ReactiveFlags.mutable | ReactiveFlags.pending)*/ ) == 33 /*(ReactiveFlags.mutable | ReactiveFlags.pending)*/) {
-        if (link.nextSub != null|| link.prevSub != null) {// dart format on
-          stack = Stack(value: link, prev: stack);
-        }
+        stack = Stack(value: link, prev: stack);
         link = dep.deps!;
         sub = dep;
         ++checkDepth;
@@ -486,18 +487,13 @@ abstract class ReactiveSystem {
       }
 
       while ((checkDepth--) > 0) {
-        final firstSub = sub.subs!, hasMultipleSubs = firstSub.nextSub != null;
-
-        if (hasMultipleSubs) {
-          link = stack!.value;
-          stack = stack.prev;
-        } else {
-          link = firstSub;
-        }
+        link = stack!.value;
+        stack = stack.prev;
         if (dirty) {
+          final subs = sub.subs;
           if (update(sub)) {
-            if (hasMultipleSubs) {
-              shallowPropagate(firstSub);
+            if (subs!.nextSub != null) {
+              shallowPropagate(subs);
             }
             sub = link.sub;
             continue;
@@ -514,7 +510,7 @@ abstract class ReactiveSystem {
         }
       }
 
-      return dirty;
+      return dirty && sub.flags != ReactiveFlags.none;
     } while (true);
   }
 

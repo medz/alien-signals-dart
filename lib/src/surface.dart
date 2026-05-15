@@ -1,13 +1,18 @@
-import 'package:alien_signals/preset.dart'
+import 'preset.dart'
     show
         setActiveSub,
         activeSub,
+        runDepth,
         link,
         stop,
+        hasChildEffect,
+        shouldTrack,
         SignalNode,
         ComputedNode,
-        EffectNode;
-import 'package:alien_signals/system.dart' show ReactiveFlags, ReactiveNode;
+        EffectNode,
+        EffectScopeNode,
+        EffectCallback;
+import 'package:alien_signals/system.dart' show ReactiveFlags;
 
 /// A reactive signal that holds a value of type [T].
 ///
@@ -194,7 +199,8 @@ Computed<T> computed<T>(T Function(T?) getter) {
 /// execution and re-run when those signals change.
 ///
 /// The effect runs immediately upon creation and then again whenever
-/// its dependencies change.
+/// its dependencies change. The callback may return a cleanup function that
+/// runs before the next execution and when the effect is stopped.
 ///
 /// The returned [Effect] can be called to stop the effect and clean up
 /// its subscriptions.
@@ -218,15 +224,23 @@ Computed<T> computed<T>(T Function(T?) getter) {
 /// - Parameter [fn]: The function to run as an effect. Will be executed
 ///   immediately and re-executed when dependencies change.
 /// - Returns: An [Effect] that can be called to stop it.
-Effect effect(void Function() fn) {
+Effect effect<T>(EffectCallback<T> fn) {
   // dart format off
   final e = _EffectImpl(fn: fn, flags: 6 /* ReactiveFlags.watching | ReactiveFlags.recursedCheck */ as ReactiveFlags),// dart format on
       prevSub = setActiveSub(e);
-  if (prevSub != null) link(e, prevSub, 0);
+  if (prevSub != null && shouldTrack(prevSub)) {
+    link(e, prevSub, 0);
+    prevSub.flags |= hasChildEffect;
+  }
   try {
-    fn();
+    ++runDepth;
+    e.cleanup = e.runEffect();
     return e;
+  } catch (_) {
+    stop(e);
+    rethrow;
   } finally {
+    --runDepth;
     activeSub = prevSub;
     e.flags &= -5 /*~ ReactiveFlags.recursedCheck */;
   }
@@ -268,12 +282,18 @@ Effect effect(void Function() fn) {
 @pragma('dart2js:tryInline')
 @pragma('wasm:prefer-inline')
 EffectScope effectScope(void Function() fn) {
-  final e = _EffectScopeImpl(flags: ReactiveFlags.none),
+  final e = _EffectScopeImpl(flags: ReactiveFlags.mutable),
       prevSub = setActiveSub(e);
-  if (prevSub != null) link(e, prevSub, 0);
+  if (prevSub != null && shouldTrack(prevSub)) {
+    link(e, prevSub, 0);
+    prevSub.flags |= hasChildEffect;
+  }
   try {
     fn();
     return e;
+  } catch (_) {
+    stop(e);
+    rethrow;
   } finally {
     activeSub = prevSub;
   }
@@ -303,7 +323,7 @@ final class _ComputedImpl<T> extends ComputedNode<T> implements Computed<T> {
   T call() => get();
 }
 
-final class _EffectImpl extends EffectNode implements Effect {
+final class _EffectImpl<T> extends EffectNode<T> implements Effect {
   _EffectImpl({required super.flags, required super.fn});
 
   @override
@@ -313,7 +333,7 @@ final class _EffectImpl extends EffectNode implements Effect {
   void call() => stop(this);
 }
 
-class _EffectScopeImpl extends ReactiveNode implements EffectScope {
+class _EffectScopeImpl extends EffectScopeNode implements EffectScope {
   _EffectScopeImpl({required super.flags});
 
   @override

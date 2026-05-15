@@ -6,6 +6,12 @@ import 'package:alien_signals/system.dart';
 /// dependencies are properly tracked and invalidated.
 int cycle = 0;
 
+/// Current depth of nested effect callback execution.
+///
+/// Incremented by effect runs, not by standalone computed evaluation. When
+/// greater than 0, writes should be treated as inner writes during propagation.
+int runDepth = 0;
+
 /// Current depth of nested batch operations.
 ///
 /// When greater than 0, effect execution is deferred until
@@ -39,6 +45,24 @@ final link = system.link,
     propagate = system.propagate,
     checkDirty = system.checkDirty,
     shallowPropagate = system.shallowPropagate;
+
+/// Cleanup function returned by an effect callback.
+typedef EffectCleanup = void Function();
+
+/// Callback passed to an effect.
+typedef EffectCallback<T> = T Function();
+
+/// Marks a parent effect, scope, or computed whose deps include a child effect.
+const hasChildEffect = 64 as ReactiveFlags;
+
+/// Whether a subscriber is still eligible to track dependencies.
+@pragma('vm:prefer-inline')
+@pragma('dart2js:tryInline')
+@pragma('wasm:prefer-inline')
+bool shouldTrack(ReactiveNode sub) {
+  return (sub.flags & 3 /*ReactiveFlags.mutable | ReactiveFlags.watching*/ ) !=
+      ReactiveFlags.none;
+}
 
 /// A reactive node that can be linked in a queue of effects.
 ///
@@ -98,7 +122,7 @@ class SignalNode<T> extends ReactiveNode {
       flags =
           17 /*ReactiveFlags.mutable | ReactiveFlags.dirty*/ as ReactiveFlags;
       if (subs case final Link subs) {
-        propagate(subs);
+        propagate(subs, runDepth > 0);
         if (batchDepth == 0) flush();
       }
     }
@@ -121,17 +145,9 @@ class SignalNode<T> extends ReactiveNode {
         }
       }
     }
-    ReactiveNode? sub = activeSub;
-    while (sub != null) {
-      // dart format off
-      if (
-        (sub.flags & 3 /*(ReactiveFlags.mutable | ReactiveFlags.watching)*/ ) !=
-        ReactiveFlags.none
-      ) { // dart format on
-        link(this, sub, cycle);
-        break;
-      }
-      sub = sub.subs?.sub;
+    final sub = activeSub;
+    if (sub != null && shouldTrack(sub)) {
+      link(this, sub, cycle);
     }
     return currentValue;
   }
@@ -211,7 +227,7 @@ class ComputedNode<T> extends ReactiveNode {
     }
 
     final sub = activeSub;
-    if (sub != null) link(this, sub, cycle);
+    if (sub != null && shouldTrack(sub)) link(this, sub, cycle);
 
     return currentValue as T;
   }
@@ -223,11 +239,14 @@ class ComputedNode<T> extends ReactiveNode {
   ///
   /// Returns `true` if the computed value changed, `false` otherwise.
   bool didUpdate() {
-    ++cycle;
+    if ((flags & hasChildEffect) != ReactiveFlags.none) {
+      disposeChildDepsInReverse(this);
+    }
     depsTail = null;
     flags = ReactiveFlags.mutable | ReactiveFlags.recursedCheck;
     final prevSub = setActiveSub(this);
     try {
+      ++cycle;
       return !identical(currentValue, currentValue = getter(currentValue));
     } finally {
       activeSub = prevSub;
@@ -237,20 +256,42 @@ class ComputedNode<T> extends ReactiveNode {
   }
 }
 
+/// A reactive effect scope node that can participate in propagation.
+class EffectScopeNode extends ReactiveNode {
+  EffectScopeNode({required super.flags});
+
+  /// Marks the scope as mutable while dirty checking propagates through it.
+  @pragma('vm:prefer-inline')
+  @pragma('dart2js:tryInline')
+  @pragma('wasm:prefer-inline')
+  bool didUpdate() {
+    flags = ReactiveFlags.mutable;
+    return true;
+  }
+}
+
 /// A reactive effect node that runs side effects in response to changes.
 ///
-/// EffectNode extends [LinkedEffect] to add the capability to execute
-/// a function when its dependencies change. Effects are the bridge
-/// between the reactive system and the outside world, allowing
-/// side effects like DOM updates or logging.
-class EffectNode extends LinkedEffect {
+/// EffectNode extends [LinkedEffect] to add the typed effect callback.
+/// Effects are the bridge between the reactive system and the outside world,
+/// allowing side effects like DOM updates or logging.
+class EffectNode<T> extends LinkedEffect {
   /// The side effect function to execute.
   ///
   /// This function is called whenever any of the effect's
   /// dependencies change.
-  final void Function() fn;
+  final EffectCallback<T> fn;
 
-  EffectNode({required super.flags, required this.fn});
+  /// Cleanup function returned by the latest effect execution.
+  EffectCleanup? cleanup;
+
+  EffectNode({required super.flags, required this.fn, this.cleanup});
+
+  /// Runs the effect callback and returns a cleanup if one was provided.
+  EffectCleanup? runEffect() {
+    final result = fn();
+    return result is EffectCleanup ? result : null;
+  }
 }
 
 /// Default implementation of the reactive system for Alien Signals.
@@ -309,6 +350,7 @@ class PresetReactiveSystem extends ReactiveSystem {
     return switch (node) {
       ComputedNode() => node.didUpdate(),
       SignalNode() => node.didUpdate(),
+      EffectScopeNode() => node.didUpdate(),
       _ => false,
     };
   }
@@ -352,18 +394,26 @@ class PresetReactiveSystem extends ReactiveSystem {
 
   /// Called when a node no longer has any subscribers.
   ///
-  /// For non-mutable nodes (like effects), stops them completely.
-  /// For mutable nodes (like signals), marks them as dirty and
-  /// clears their dependencies for lazy re-evaluation.
+  /// Computed nodes become dirty and release their dependencies lazily,
+  /// signals stay alive, and effect-like nodes are stopped immediately.
   @override
   void unwatched(ReactiveNode node) {
-    if ((node.flags & ReactiveFlags.mutable) == ReactiveFlags.none) {
-      stop(node);
-    } else if (node.depsTail != null) {
-      node.depsTail = null;
-      node.flags =
-          17 /*ReactiveFlags.mutable | ReactiveFlags.dirty*/ as ReactiveFlags;
-      purgeDeps(node);
+    switch (node) {
+      case ComputedNode():
+        if (node.depsTail != null) {
+          node.flags =
+              17 /*ReactiveFlags.mutable | ReactiveFlags.dirty*/
+                  as ReactiveFlags;
+          disposeAllDepsInReverse(node);
+        }
+      case SignalNode():
+        break;
+      case EffectNode():
+        stopEffect(node);
+      case EffectScopeNode():
+        stopScope(node);
+      case _:
+        stop(node);
     }
   }
 }
@@ -451,6 +501,7 @@ void trigger(void Function() fn) {
     fn();
   } finally {
     activeSub = prevSub;
+    sub.flags = ReactiveFlags.none;
     Link? link = sub.deps;
     while (link != null) {
       final dep = link.dep;
@@ -458,8 +509,7 @@ void trigger(void Function() fn) {
 
       final subs = dep.subs;
       if (subs != null) {
-        sub.flags = ReactiveFlags.none;
-        propagate(subs);
+        propagate(subs, runDepth > 0);
         shallowPropagate(subs);
       }
     }
@@ -484,21 +534,32 @@ void run(EffectNode e) {
       && checkDirty(e.deps!, e)
     )
   ) { // dart format on
-    ++cycle;
+    if ((flags & hasChildEffect) != ReactiveFlags.none) {
+      disposeChildDepsInReverse(e);
+    }
+    if (e.cleanup != null) {
+      runCleanup(e);
+      if (e.flags == ReactiveFlags.none) {
+        return;
+      }
+    }
     e.depsTail = null;
     e.flags =
         6 /*ReactiveFlags.watching | ReactiveFlags.recursedCheck*/
             as ReactiveFlags;
     final prevSub = setActiveSub(e);
     try {
-      e.fn();
+      ++cycle;
+      ++runDepth;
+      e.cleanup = e.runEffect();
     } finally {
+      --runDepth;
       activeSub = prevSub;
       e.flags &= -5 /*~ReactiveFlags.recursedCheck*/;
       purgeDeps(e);
     }
-  } else {
-    e.flags = ReactiveFlags.watching;
+  } else if (e.deps != null) {
+    e.flags = ReactiveFlags.watching | (flags & hasChildEffect);
   }
 }
 
@@ -548,12 +609,73 @@ void flush() {
 ///
 /// This is essential for cleanup to prevent memory leaks.
 void stop(ReactiveNode node) {
-  node.depsTail = null;
+  switch (node) {
+    case EffectNode():
+      stopEffect(node);
+    case EffectScopeNode():
+      stopScope(node);
+    case _:
+      node.depsTail = null;
+      node.flags = ReactiveFlags.none;
+      purgeDeps(node);
+      final subs = node.subs;
+      if (subs != null) {
+        unlink(subs, subs.sub);
+      }
+  }
+}
+
+/// Stops an effect after disposing its nested effects and scopes.
+void stopEffect(EffectNode e) {
+  stopScope(e);
+  if (e.cleanup != null) {
+    runCleanup(e);
+  }
+}
+
+/// Runs an effect cleanup outside dependency tracking.
+void runCleanup(EffectNode e) {
+  final cleanup = e.cleanup!;
+  e.cleanup = null;
+  final prevSub = activeSub;
+  activeSub = null;
+  try {
+    cleanup();
+  } finally {
+    activeSub = prevSub;
+  }
+}
+
+/// Stops a scope-like node and disposes all dependencies in reverse order.
+void stopScope(ReactiveNode node) {
   node.flags = ReactiveFlags.none;
-  purgeDeps(node);
+  disposeAllDepsInReverse(node);
   final subs = node.subs;
   if (subs != null) {
     unlink(subs, subs.sub);
+  }
+}
+
+/// Disposes child effects/scopes while leaving signal/computed deps for purge.
+void disposeChildDepsInReverse(ReactiveNode sub) {
+  Link? link = sub.depsTail;
+  while (link != null) {
+    final prev = link.prevDep;
+    final dep = link.dep;
+    if (dep is! ComputedNode && dep is! SignalNode) {
+      unlink(link, sub);
+    }
+    link = prev;
+  }
+}
+
+/// Removes every dependency from [sub], starting from the newest link.
+void disposeAllDepsInReverse(ReactiveNode sub) {
+  Link? link = sub.depsTail;
+  while (link != null) {
+    final prev = link.prevDep;
+    unlink(link, sub);
+    link = prev;
   }
 }
 

@@ -2,6 +2,7 @@ import 'package:alien_signals/preset.dart'
     show
         setActiveSub,
         activeSub,
+        runDepth,
         link,
         stop,
         SignalNode,
@@ -225,9 +226,11 @@ Effect effect(void Function() fn) {
       prevSub = setActiveSub(e);
   if (prevSub != null) link(e, prevSub, 0);
   try {
+    ++runDepth;
     fn();
     return e;
   } finally {
+    --runDepth;
     activeSub = prevSub;
     e.flags &= -5 /*~ ReactiveFlags.recursedCheck */;
   }

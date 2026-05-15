@@ -335,6 +335,33 @@ void main() {
     expect(triggers2, 1);
   });
 
+  test('should keep propagating computed chain after inner signal writes', () {
+    final source = signal(0);
+    final computedValue = computed((_) => source());
+    int runs = 0;
+
+    effect(() {
+      runs++;
+      if (computedValue() > 0) {
+        source.set(0);
+      }
+    });
+
+    expect(runs, 1);
+
+    source.set(1);
+    expect(source(), 0);
+    expect(runs, 2);
+
+    source.set(2);
+    expect(source(), 0);
+    expect(runs, 3);
+
+    source.set(3);
+    expect(source(), 0);
+    expect(runs, 4);
+  });
+
   test('should support custom recurse effect', () {
     final src = signal(0);
 

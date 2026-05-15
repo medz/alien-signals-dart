@@ -6,6 +6,11 @@ import 'package:alien_signals/system.dart';
 /// dependencies are properly tracked and invalidated.
 int cycle = 0;
 
+/// Current depth of nested reactive computations.
+///
+/// When greater than 0, writes happen from inside an effect or computed getter.
+int runDepth = 0;
+
 /// Current depth of nested batch operations.
 ///
 /// When greater than 0, effect execution is deferred until
@@ -98,7 +103,7 @@ class SignalNode<T> extends ReactiveNode {
       flags =
           17 /*ReactiveFlags.mutable | ReactiveFlags.dirty*/ as ReactiveFlags;
       if (subs case final Link subs) {
-        propagate(subs);
+        propagate(subs, runDepth > 0);
         if (batchDepth == 0) flush();
       }
     }
@@ -195,8 +200,10 @@ class ComputedNode<T> extends ReactiveNode {
               as ReactiveFlags;
       final prevSub = setActiveSub(this);
       try {
+        ++runDepth;
         currentValue = getter(null);
       } finally {
+        --runDepth;
         activeSub = prevSub;
         this.flags &= -5 /*~ReactiveFlags.recursedCheck*/;
       }
@@ -215,13 +222,15 @@ class ComputedNode<T> extends ReactiveNode {
   ///
   /// Returns `true` if the computed value changed, `false` otherwise.
   bool didUpdate() {
-    ++cycle;
     depsTail = null;
     flags = ReactiveFlags.mutable | ReactiveFlags.recursedCheck;
     final prevSub = setActiveSub(this);
     try {
+      ++cycle;
+      ++runDepth;
       return !identical(currentValue, currentValue = getter(currentValue));
     } finally {
+      --runDepth;
       activeSub = prevSub;
       flags &= -5 /*~ReactiveFlags.recursedCheck*/;
       purgeDeps(this);
@@ -466,7 +475,7 @@ void trigger(void Function() fn) {
 
       final subs = dep.subs;
       if (subs != null) {
-        propagate(subs);
+        propagate(subs, runDepth > 0);
         shallowPropagate(subs);
       }
     }
@@ -491,15 +500,17 @@ void run(EffectNode e) {
       && checkDirty(e.deps!, e)
     )
   ) { // dart format on
-    ++cycle;
     e.depsTail = null;
     e.flags =
         6 /*ReactiveFlags.watching | ReactiveFlags.recursedCheck*/
             as ReactiveFlags;
     final prevSub = setActiveSub(e);
     try {
+      ++cycle;
+      ++runDepth;
       e.fn();
     } finally {
+      --runDepth;
       activeSub = prevSub;
       e.flags &= -5 /*~ReactiveFlags.recursedCheck*/;
       purgeDeps(e);

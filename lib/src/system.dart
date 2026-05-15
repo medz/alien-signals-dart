@@ -346,7 +346,7 @@ abstract class ReactiveSystem {
   /// The propagation stops at non-mutable nodes (like effects) or when
   /// circular dependencies are detected.
   @pragma('vm:align-loops')
-  void propagate(Link link) {
+  void propagate(Link link, [bool innerWrite = false]) {
     Link? next = link.nextSub;
     Stack<Link?>? stack;
 
@@ -360,6 +360,9 @@ abstract class ReactiveSystem {
         (flags & 60 /*ReactiveFlags.recursedCheck | ReactiveFlags.recursed | ReactiveFlags.dirty | ReactiveFlags.pending*/ ) == ReactiveFlags.none
       ) {
         sub.flags = flags | ReactiveFlags.pending;
+        if (innerWrite) {
+          sub.flags |= ReactiveFlags.recursed;
+        }
       } else if (
         (flags & 12 /*ReactiveFlags.recursedCheck | ReactiveFlags.recursed*/ ) == ReactiveFlags.none
       ) {

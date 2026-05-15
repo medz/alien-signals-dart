@@ -362,6 +362,32 @@ void main() {
     expect(runs, 4);
   });
 
+  test('outer effect should keep responding after inner effect re-runs', () {
+    final outerSource = signal(0);
+    final innerSource = signal(0);
+    int outerRuns = 0;
+    int innerRuns = 0;
+
+    effect(() {
+      outerSource();
+      outerRuns++;
+      effect(() {
+        innerSource();
+        innerRuns++;
+      });
+    });
+
+    expect(outerRuns, 1);
+    expect(innerRuns, 1);
+
+    innerSource.set(1);
+    expect(outerRuns, 1);
+    expect(innerRuns, greaterThanOrEqualTo(2));
+
+    outerSource.set(1);
+    expect(outerRuns, 2);
+  });
+
   test('should support custom recurse effect', () {
     final src = signal(0);
 

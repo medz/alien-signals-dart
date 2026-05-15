@@ -462,7 +462,7 @@ abstract class ReactiveSystem {
       } else if ((flags & 17 /*(ReactiveFlags.mutable | ReactiveFlags.dirty)*/ ) == 17 /*(ReactiveFlags.mutable | ReactiveFlags.dirty)*/) {
         final subs = dep.subs;
         if (update(dep)) {
-          if (subs != null && subs.nextSub != null) {
+          if (subs!.nextSub != null) {
             shallowPropagate(subs);
           }
           dirty = true;
@@ -489,7 +489,7 @@ abstract class ReactiveSystem {
         if (dirty) {
           final subs = sub.subs;
           if (update(sub)) {
-            if (subs != null && subs.nextSub != null) {
+            if (subs!.nextSub != null) {
               shallowPropagate(subs);
             }
             sub = link.sub;

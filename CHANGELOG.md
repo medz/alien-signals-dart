@@ -1,6 +1,7 @@
 ## 2.3.0
 
 - fix: make `checkDirty()` resilient to graph mutations during updates
+- refactor: tighten `checkDirty()` subscriber snapshot handling
 - refactor: hoist `trigger()` flag reset before dependency propagation
 
 ## 2.2.0

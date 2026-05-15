@@ -45,6 +45,12 @@ final link = system.link,
     checkDirty = system.checkDirty,
     shallowPropagate = system.shallowPropagate;
 
+/// Cleanup function returned by an effect callback.
+typedef EffectCleanup = void Function();
+
+/// Callback passed to an effect.
+typedef EffectCallback<T> = T Function();
+
 /// A reactive node that can be linked in a queue of effects.
 ///
 /// Extends [ReactiveNode] to add queueing capabilities, allowing
@@ -254,18 +260,26 @@ class EffectScopeNode extends ReactiveNode {
 
 /// A reactive effect node that runs side effects in response to changes.
 ///
-/// EffectNode extends [LinkedEffect] to add the capability to execute
-/// a function when its dependencies change. Effects are the bridge
-/// between the reactive system and the outside world, allowing
-/// side effects like DOM updates or logging.
-class EffectNode extends LinkedEffect {
+/// EffectNode extends [LinkedEffect] to add the typed effect callback.
+/// Effects are the bridge between the reactive system and the outside world,
+/// allowing side effects like DOM updates or logging.
+class EffectNode<T> extends LinkedEffect {
   /// The side effect function to execute.
   ///
   /// This function is called whenever any of the effect's
   /// dependencies change.
-  final void Function() fn;
+  final EffectCallback<T> fn;
 
-  EffectNode({required super.flags, required this.fn});
+  /// Cleanup function returned by the latest effect execution.
+  EffectCleanup? cleanup;
+
+  EffectNode({required super.flags, required this.fn, this.cleanup});
+
+  /// Runs the effect callback and returns a cleanup if one was provided.
+  EffectCleanup? runEffect() {
+    final result = fn();
+    return result is EffectCleanup ? result : null;
+  }
 }
 
 /// Default implementation of the reactive system for Alien Signals.
@@ -500,6 +514,20 @@ void run(EffectNode e) {
       && checkDirty(e.deps!, e)
     )
   ) { // dart format on
+    final cleanup = e.cleanup;
+    if (cleanup != null) {
+      e.cleanup = null;
+      final prevSub = activeSub;
+      activeSub = null;
+      try {
+        cleanup();
+      } finally {
+        activeSub = prevSub;
+      }
+      if (e.flags == ReactiveFlags.none) {
+        return;
+      }
+    }
     e.depsTail = null;
     e.flags =
         6 /*ReactiveFlags.watching | ReactiveFlags.recursedCheck*/
@@ -508,7 +536,7 @@ void run(EffectNode e) {
     try {
       ++cycle;
       ++runDepth;
-      e.fn();
+      e.cleanup = e.runEffect();
     } finally {
       --runDepth;
       activeSub = prevSub;
@@ -566,6 +594,13 @@ void flush() {
 ///
 /// This is essential for cleanup to prevent memory leaks.
 void stop(ReactiveNode node) {
+  if (node is EffectNode) {
+    final cleanup = node.cleanup;
+    if (cleanup != null) {
+      node.cleanup = null;
+      cleanup();
+    }
+  }
   node.depsTail = null;
   node.flags = ReactiveFlags.none;
   purgeDeps(node);

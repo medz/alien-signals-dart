@@ -1,5 +1,6 @@
 ## 2.3.0
 
+- feat: support cleanup callbacks returned from `effect()`
 - fix: keep computed-chain propagation active after inner writes
 - fix: make `effectScope()` participate in dependency propagation
 - fix: make `checkDirty()` resilient to graph mutations during updates

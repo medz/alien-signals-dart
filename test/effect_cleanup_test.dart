@@ -2,6 +2,78 @@ import 'package:alien_signals/alien_signals.dart';
 import 'package:test/test.dart';
 
 void main() {
+  test('effect cleanup runs before re-run and on dispose', () {
+    final source = signal(0);
+    final log = <String>[];
+
+    final stop = effect(() {
+      final value = source();
+      log.add('run $value');
+      return () {
+        log.add('cleanup $value');
+      };
+    });
+
+    expect(log, ['run 0']);
+
+    source.set(1);
+    expect(log, ['run 0', 'cleanup 0', 'run 1']);
+
+    stop();
+    expect(log, ['run 0', 'cleanup 0', 'run 1', 'cleanup 1']);
+
+    source.set(2);
+    expect(log, ['run 0', 'cleanup 0', 'run 1', 'cleanup 1']);
+  });
+
+  test('effect cleanup reads are not tracked before re-run', () {
+    final source = signal(0);
+    final cleanupSource = signal(0);
+    int runs = 0;
+    int cleanups = 0;
+
+    effect(() {
+      source();
+      runs++;
+      return () {
+        cleanupSource();
+        cleanups++;
+      };
+    });
+
+    expect(runs, 1);
+
+    source.set(1);
+    expect(runs, 2);
+    expect(cleanups, 1);
+
+    cleanupSource.set(1);
+    expect(runs, 2);
+    expect(cleanups, 1);
+  });
+
+  test('effect cleanup can stop the effect before re-run', () {
+    final source = signal(0);
+    late Effect stop;
+    int runs = 0;
+    int cleanups = 0;
+
+    stop = effect(() {
+      source();
+      runs++;
+      return () {
+        cleanups++;
+        stop();
+      };
+    });
+
+    expect(runs, 1);
+
+    source.set(1);
+    expect(cleanups, 1);
+    expect(runs, 1);
+  });
+
   test(
     'effect should unsubscribe from stale dependencies when branches change',
     () {

@@ -8,7 +8,8 @@ import 'package:alien_signals/preset.dart'
         SignalNode,
         ComputedNode,
         EffectNode,
-        EffectScopeNode;
+        EffectScopeNode,
+        EffectCallback;
 import 'package:alien_signals/system.dart' show ReactiveFlags;
 
 /// A reactive signal that holds a value of type [T].
@@ -196,7 +197,8 @@ Computed<T> computed<T>(T Function(T?) getter) {
 /// execution and re-run when those signals change.
 ///
 /// The effect runs immediately upon creation and then again whenever
-/// its dependencies change.
+/// its dependencies change. The callback may return a cleanup function that
+/// runs before the next execution and when the effect is stopped.
 ///
 /// The returned [Effect] can be called to stop the effect and clean up
 /// its subscriptions.
@@ -220,14 +222,14 @@ Computed<T> computed<T>(T Function(T?) getter) {
 /// - Parameter [fn]: The function to run as an effect. Will be executed
 ///   immediately and re-executed when dependencies change.
 /// - Returns: An [Effect] that can be called to stop it.
-Effect effect(void Function() fn) {
+Effect effect<T>(EffectCallback<T> fn) {
   // dart format off
   final e = _EffectImpl(fn: fn, flags: 6 /* ReactiveFlags.watching | ReactiveFlags.recursedCheck */ as ReactiveFlags),// dart format on
       prevSub = setActiveSub(e);
   if (prevSub != null) link(e, prevSub, 0);
   try {
     ++runDepth;
-    fn();
+    e.cleanup = e.runEffect();
     return e;
   } finally {
     --runDepth;
@@ -307,7 +309,7 @@ final class _ComputedImpl<T> extends ComputedNode<T> implements Computed<T> {
   T call() => get();
 }
 
-final class _EffectImpl extends EffectNode implements Effect {
+final class _EffectImpl<T> extends EffectNode<T> implements Effect {
   _EffectImpl({required super.flags, required super.fn});
 
   @override

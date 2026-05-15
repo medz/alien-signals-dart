@@ -41,7 +41,7 @@ projects extend to build their own surface APIs.
 ### Node types
 - `SignalNode<T>`: `get()`, `set()`, `didUpdate()`.
 - `ComputedNode<T>`: `get()`, `didUpdate()`.
-- `EffectNode` / `LinkedEffect`: effect execution + queue linkage.
+- `EffectNode<T>` / `LinkedEffect`: effect execution + queue linkage.
 - `PresetReactiveSystem`: concrete `ReactiveSystem` implementation.
 
 ### Runtime helpers
@@ -60,9 +60,14 @@ Thin wrapper on the preset for out-of-the-box signals.
 ```dart
 WritableSignal<T> signal<T>(T initialValue)
 Computed<T> computed<T>(T Function(T?) getter)
-Effect effect(void Function() fn)
+typedef EffectCleanup = void Function()
+typedef EffectCallback<T> = T Function()
+Effect effect<T>(EffectCallback<T> fn)
 EffectScope effectScope(void Function() fn)
 void startBatch()
 void endBatch()
 void trigger(void Function() fn)
 ```
+
+`effect()` callbacks may return a `void Function()` cleanup. The cleanup runs
+before the effect re-runs and when the effect is stopped.

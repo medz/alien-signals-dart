@@ -30,9 +30,9 @@ extension type computed<T>._(ComputedNode<T> _) {
   T get value => _.get();
 }
 
-extension type effect._(EffectNode _) {
+extension type effect._(EffectNode<void> _) {
   factory effect(void Function() run) {
-    final node = EffectNode(
+    final node = EffectNode<void>(
       fn: run,
       flags: ReactiveFlags.watching | ReactiveFlags.recursedCheck,
     );

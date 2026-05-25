@@ -6,7 +6,6 @@ import 'preset.dart'
         link,
         stop,
         hasChildEffect,
-        shouldTrack,
         SignalNode,
         ComputedNode,
         EffectNode,
@@ -228,7 +227,7 @@ Effect effect<T>(EffectCallback<T> fn) {
   // dart format off
   final e = _EffectImpl(fn: fn, flags: 6 /* ReactiveFlags.watching | ReactiveFlags.recursedCheck */ as ReactiveFlags),// dart format on
       prevSub = setActiveSub(e);
-  if (prevSub != null && shouldTrack(prevSub)) {
+  if (prevSub != null) {
     link(e, prevSub, 0);
     prevSub.flags |= hasChildEffect;
   }
@@ -236,9 +235,6 @@ Effect effect<T>(EffectCallback<T> fn) {
     ++runDepth;
     e.cleanup = e.runEffect();
     return e;
-  } catch (_) {
-    stop(e);
-    rethrow;
   } finally {
     --runDepth;
     activeSub = prevSub;
@@ -284,16 +280,13 @@ Effect effect<T>(EffectCallback<T> fn) {
 EffectScope effectScope(void Function() fn) {
   final e = _EffectScopeImpl(flags: ReactiveFlags.mutable),
       prevSub = setActiveSub(e);
-  if (prevSub != null && shouldTrack(prevSub)) {
+  if (prevSub != null) {
     link(e, prevSub, 0);
     prevSub.flags |= hasChildEffect;
   }
   try {
     fn();
     return e;
-  } catch (_) {
-    stop(e);
-    rethrow;
   } finally {
     activeSub = prevSub;
   }

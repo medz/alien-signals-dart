@@ -1,3 +1,12 @@
+## 2.3.1
+
+### Behavior
+
+- Revert the extra Dart-only lifecycle cleanup and tracking guards added in
+  2.3.0, so setup failure and stopped-subscriber edge cases follow upstream
+  `alien-signals` semantics and downstream code can choose its own cleanup
+  policy.
+
 ## 2.3.0
 
 > Sync upstream [alien-signals](https://github.com/stackblitz/alien-signals/commit/8734d386d925025d0e99419bd9161c17b112c5ee)<sup>v3.2.1</sup>

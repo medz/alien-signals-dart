@@ -55,15 +55,6 @@ typedef EffectCallback<T> = T Function();
 /// Marks a parent effect, scope, or computed whose deps include a child effect.
 const hasChildEffect = 64 as ReactiveFlags;
 
-/// Whether a subscriber is still eligible to track dependencies.
-@pragma('vm:prefer-inline')
-@pragma('dart2js:tryInline')
-@pragma('wasm:prefer-inline')
-bool shouldTrack(ReactiveNode sub) {
-  return (sub.flags & 3 /*ReactiveFlags.mutable | ReactiveFlags.watching*/ ) !=
-      ReactiveFlags.none;
-}
-
 /// A reactive node that can be linked in a queue of effects.
 ///
 /// Extends [ReactiveNode] to add queueing capabilities, allowing
@@ -146,9 +137,7 @@ class SignalNode<T> extends ReactiveNode {
       }
     }
     final sub = activeSub;
-    if (sub != null && shouldTrack(sub)) {
-      link(this, sub, cycle);
-    }
+    if (sub != null) link(this, sub, cycle);
     return currentValue;
   }
 
@@ -227,7 +216,7 @@ class ComputedNode<T> extends ReactiveNode {
     }
 
     final sub = activeSub;
-    if (sub != null && shouldTrack(sub)) link(this, sub, cycle);
+    if (sub != null) link(this, sub, cycle);
 
     return currentValue as T;
   }

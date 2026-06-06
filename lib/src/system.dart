@@ -156,6 +156,41 @@ final class Stack<T> {
   Stack({required this.value, this.prev});
 }
 
+// ─── Pre-allocated stacks for propagate/checkDirty ─────────────────────
+// Replaces heap-allocated Stack<T> linked lists with array-based stacks
+// to eliminate allocation overhead during propagation. Starts at 128
+// slots and auto-grows if deeper graphs are encountered.
+
+/// Pre-allocated stack for [ReactiveSystem.propagate]. Stores sibling
+/// [Link] pointers that need to be resumed after recursing into a
+/// mutable node's subscribers.
+List<Link?> _propagateStack = List<Link?>.filled(128, null);
+
+/// Pre-allocated stack for [ReactiveSystem.checkDirty]. Stores [Link]
+/// pointers whose dependency chains need to be checked after the
+/// current recursive depth completes.
+List<Link?> _checkDirtyStack = List<Link?>.filled(128, null);
+
+// ─── Hoisted flag constants ────────────────────────────────────────────
+// Compound bitmasks used in hot-path flag checks. Hoisted to avoid
+// repeated inline magic numbers and help the compiler emit fewer
+// immediate loads.
+
+const _kRecurseMask =
+    12; // ReactiveFlags.recursedCheck | ReactiveFlags.recursed
+const _kDirtyPendingMask = 48; // ReactiveFlags.dirty | ReactiveFlags.pending
+const _kRecurseDirtyPendingMask =
+    60; // recursedCheck | recursed | dirty | pending
+const _kMutableDirtyMask = 17; // ReactiveFlags.mutable | ReactiveFlags.dirty
+const _kMutablePendingMask =
+    33; // ReactiveFlags.mutable | ReactiveFlags.pending
+const _kRecursePendingMask =
+    40; // ReactiveFlags.recursed | ReactiveFlags.pending
+const _kWatchingRecurseCheckMask =
+    6; // ReactiveFlags.watching | ReactiveFlags.recursedCheck
+const _kNotRecursedMask = -9; // ~ReactiveFlags.recursed
+const _kNotPendingMask = -33; // ~ReactiveFlags.pending
+
 /// Abstract base class for implementing a reactive system.
 ///
 /// The ReactiveSystem manages the core operations for maintaining a reactive
@@ -348,7 +383,7 @@ abstract class ReactiveSystem {
   @pragma('vm:align-loops')
   void propagate(Link link, [bool innerWrite = false]) {
     Link? next = link.nextSub;
-    Stack<Link?>? stack;
+    int stackDepth = 0;
 
     top:
     do {
@@ -357,23 +392,23 @@ abstract class ReactiveSystem {
 
       // dart format off
       if (
-        (flags & 60 /*ReactiveFlags.recursedCheck | ReactiveFlags.recursed | ReactiveFlags.dirty | ReactiveFlags.pending*/ ) == ReactiveFlags.none
+        (flags & _kRecurseDirtyPendingMask) == ReactiveFlags.none
       ) {
         sub.flags = flags | ReactiveFlags.pending;
         if (innerWrite) {
           sub.flags |= ReactiveFlags.recursed;
         }
       } else if (
-        (flags & 12 /*ReactiveFlags.recursedCheck | ReactiveFlags.recursed*/ ) == ReactiveFlags.none
+        (flags & _kRecurseMask) == ReactiveFlags.none
       ) {
         flags = ReactiveFlags.none;
       } else if ((flags & ReactiveFlags.recursedCheck) == ReactiveFlags.none) {
-        sub.flags = (flags & -9 /*~ReactiveFlags.recursed*/ ) | ReactiveFlags.pending;
+        sub.flags = (flags & _kNotRecursedMask) | ReactiveFlags.pending;
       } else if (
-        (flags & 48 /*ReactiveFlags.dirty | ReactiveFlags.pending*/ ) == ReactiveFlags.none
+        (flags & _kDirtyPendingMask) == ReactiveFlags.none
         && isValidLink(link, sub)
       ) {
-        sub.flags = flags | 40 /*(ReactiveFlags.recursed | ReactiveFlags.pending)*/;
+        sub.flags = flags | _kRecursePendingMask;
         flags &= ReactiveFlags.mutable;
       } else {
         flags = ReactiveFlags.none;
@@ -388,7 +423,13 @@ abstract class ReactiveSystem {
         if (subSubs != null) {
           final nextSub = (link = subSubs).nextSub;
           if (nextSub != null) {
-            stack = Stack(value: next, prev: stack);
+            if (stackDepth == _propagateStack.length) {
+              _propagateStack = List<Link?>.filled(
+                _propagateStack.length * 2,
+                null,
+              )..setAll(0, _propagateStack);
+            }
+            _propagateStack[stackDepth++] = next;
             next = nextSub;
           }
           continue;
@@ -401,9 +442,8 @@ abstract class ReactiveSystem {
         continue;
       }
 
-      while (stack != null) {
-        final Stack(:value, :prev) = stack;
-        stack = prev;
+      while (stackDepth > 0) {
+        final value = _propagateStack[--stackDepth];
         if (value != null) {
           link = value;
           next = link.nextSub;
@@ -429,9 +469,9 @@ abstract class ReactiveSystem {
     do {
       final sub = curr!.sub, flags = sub.flags;
       // dart format off
-      if ((flags & 48 /*(ReactiveFlags.pending | ReactiveFlags.dirty)*/ ) == ReactiveFlags.pending) {
+      if ((flags & _kDirtyPendingMask) == ReactiveFlags.pending) {
         sub.flags = flags | ReactiveFlags.dirty;
-        if ((flags & 6 /*(ReactiveFlags.watching | ReactiveFlags.recursedCheck)*/ ) == ReactiveFlags.watching) {
+        if ((flags & _kWatchingRecurseCheckMask) == ReactiveFlags.watching) {
           notify(sub);
         }
       } // dart format on
@@ -451,7 +491,7 @@ abstract class ReactiveSystem {
   /// or `false` if all dependencies are clean.
   @pragma('vm:align-loops')
   bool checkDirty(Link link, ReactiveNode sub) {
-    Stack<Link>? stack;
+    int stackDepth = 0;
     int checkDepth = 0;
     bool dirty = false;
 
@@ -462,7 +502,7 @@ abstract class ReactiveSystem {
       // dart format off
       if ((sub.flags & ReactiveFlags.dirty) != ReactiveFlags.none) {
         dirty = true;
-      } else if ((flags & 17 /*(ReactiveFlags.mutable | ReactiveFlags.dirty)*/ ) == 17 /*(ReactiveFlags.mutable | ReactiveFlags.dirty)*/) {
+      } else if ((flags & _kMutableDirtyMask) == _kMutableDirtyMask) {
         final subs = dep.subs;
         if (update(dep)) {
           if (subs!.nextSub != null) {
@@ -470,8 +510,14 @@ abstract class ReactiveSystem {
           }
           dirty = true;
         }
-      } else if ((flags & 33 /*(ReactiveFlags.mutable | ReactiveFlags.pending)*/ ) == 33 /*(ReactiveFlags.mutable | ReactiveFlags.pending)*/) {
-        stack = Stack(value: link, prev: stack);
+      } else if ((flags & _kMutablePendingMask) == _kMutablePendingMask) {
+        if (stackDepth == _checkDirtyStack.length) {
+          _checkDirtyStack = List<Link?>.filled(
+            _checkDirtyStack.length * 2,
+            null,
+          )..setAll(0, _checkDirtyStack);
+        }
+        _checkDirtyStack[stackDepth++] = link;
         link = dep.deps!;
         sub = dep;
         ++checkDepth;
@@ -487,8 +533,7 @@ abstract class ReactiveSystem {
       }
 
       while ((checkDepth--) > 0) {
-        link = stack!.value;
-        stack = stack.prev;
+        link = _checkDirtyStack[--stackDepth]!;
         if (dirty) {
           final subs = sub.subs;
           if (update(sub)) {
@@ -500,7 +545,7 @@ abstract class ReactiveSystem {
           }
           dirty = false;
         } else {
-          sub.flags &= -33 /*~ReactiveFlags.pending*/;
+          sub.flags &= _kNotPendingMask;
         }
         sub = link.sub;
         final nextDep = link.nextDep;

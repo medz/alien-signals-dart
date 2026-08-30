@@ -171,8 +171,14 @@ class ComputedNode<T> extends ReactiveNode {
 
   /// The cached computed value.
   ///
-  /// Null until first computation or after invalidation.
+  /// Null until the first successful computation. A failed recomputation keeps
+  /// the last successful value for the next call to [getter].
   T? currentValue;
+
+  /// The cached error from the latest computation, if any.
+  ///
+  /// Errors are cached like values and retried only after a dependency changes.
+  ({Object error, StackTrace stackTrace})? _failure;
 
   ComputedNode({required super.flags, required this.getter});
 
@@ -209,6 +215,8 @@ class ComputedNode<T> extends ReactiveNode {
       final prevSub = setActiveSub(this);
       try {
         currentValue = getter(null);
+      } on Object catch (error, stackTrace) {
+        _failure = (error: error, stackTrace: stackTrace);
       } finally {
         activeSub = prevSub;
         this.flags &= -5 /*~ReactiveFlags.recursedCheck*/;
@@ -217,6 +225,11 @@ class ComputedNode<T> extends ReactiveNode {
 
     final sub = activeSub;
     if (sub != null) link(this, sub, cycle);
+
+    final failure = _failure;
+    if (failure != null) {
+      Error.throwWithStackTrace(failure.error, failure.stackTrace);
+    }
 
     return currentValue as T;
   }
@@ -236,7 +249,15 @@ class ComputedNode<T> extends ReactiveNode {
     final prevSub = setActiveSub(this);
     try {
       ++cycle;
-      return !identical(currentValue, currentValue = getter(currentValue));
+      final previousValue = currentValue;
+      final previousFailure = _failure;
+      final nextValue = getter(previousValue);
+      currentValue = nextValue;
+      if (previousFailure != null) _failure = null;
+      return previousFailure != null || !identical(previousValue, nextValue);
+    } on Object catch (error, stackTrace) {
+      _failure = (error: error, stackTrace: stackTrace);
+      return true;
     } finally {
       activeSub = prevSub;
       flags &= -5 /*~ReactiveFlags.recursedCheck*/;

@@ -1,3 +1,11 @@
+## 2.3.2
+
+### Bug Fixes
+
+- Cache errors thrown by computed getters until a dependency changes, preserving
+  the original error and stack trace instead of returning `null` or a stale
+  value on later reads.
+
 ## 2.3.1
 
 ### Behavior

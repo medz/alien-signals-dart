@@ -164,6 +164,7 @@ WritableSignal<T> signal<T>(T initialValue) {
 /// Computed values automatically track the signals they depend on
 /// and recalculate when those dependencies change. They are lazily
 /// evaluated and cache their results until dependencies change.
+/// Getter errors are cached and rethrown until a dependency changes.
 ///
 /// The getter function receives the previous computed value as its
 /// parameter (or `null` on first computation), which can be useful
@@ -183,6 +184,7 @@ WritableSignal<T> signal<T>(T initialValue) {
 ///
 /// - Parameter [getter]: A function that computes the value. Receives the
 ///   previous value as a parameter (null on first run).
+///   After an error, the previous value remains the last successful value.
 /// - Returns: A [Computed] that automatically updates when dependencies change.
 @pragma('vm:prefer-inline')
 @pragma('dart2js:tryInline')

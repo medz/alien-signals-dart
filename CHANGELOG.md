@@ -1,3 +1,19 @@
+## 2.3.3
+
+### Bug Fixes
+
+- Preserve nested effects when appending another effect to the batch queue.
+
+### Documentation
+
+- Correct signal write examples and document identity comparison, computed
+  error recovery, and effect lifetimes.
+
+### Benchmarks
+
+- Add a small baseline for propagation, dynamic dependencies, batching, and
+  reactive graph creation and disposal.
+
 ## 2.3.2
 
 ### Bug Fixes

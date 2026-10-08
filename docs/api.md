@@ -69,5 +69,18 @@ void endBatch()
 void trigger(void Function() fn)
 ```
 
-`effect()` callbacks may return a `void Function()` cleanup. The cleanup runs
-before the effect re-runs and when the effect is stopped.
+Read signals with `value()` and write writable signals with `value.set(next)`.
+
+Signal writes and computed results are compared with `identical`, not `==`.
+Writing the same object does not notify dependents. For List/Map mutations in
+place, call `trigger(() => value())` on the signal holding that object.
+
+Computed getter errors are cached and rethrown until a tracked dependency
+changes. Successful recomputation clears the error. After a failure, the
+getter's previous-value argument remains the last successful value.
+
+`effect()` runs immediately and tracks synchronous reads. Callbacks may return
+a `void Function()` cleanup synchronously. Cleanup runs before the effect
+re-runs and when it stops, without tracking its reads. Nested effects and scopes
+stop before their parent's cleanup. Reads and nested effects/scopes after an
+`await` are not tracked or owned by the original effect/scope.

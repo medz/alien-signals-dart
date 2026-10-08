@@ -76,37 +76,32 @@ MyComputed<T> myComputed<T>(T Function(T?) getter) => MyComputed(getter);
 ```
 
 ### 3) Wrap EffectNode
-`EffectNode` handles scheduling; you still need to wire dependency tracking and
-provide a disposable handle.
+`EffectNode` handles scheduling. This wrapper adds a disposable handle, but
+constructing it alone does not execute or track the callback:
 ```dart
-class MyEffect extends EffectNode<void> {
-  MyEffect(void Function() fn)
+class MyEffect<T> extends EffectNode<T> {
+  MyEffect(EffectCallback<T> fn)
       : super(flags: ReactiveFlags.watching | ReactiveFlags.recursedCheck,
               fn: fn);
 
   void call() => stop(this);
 }
-
-MyEffect myEffect(void Function() fn) {
-  final e = MyEffect(fn);
-  final prev = setActiveSub(e);
-  if (prev != null) link(e, prev, 0);
-  try {
-    fn();
-    return e;
-  } finally {
-    setActiveSub(prev);
-    e.flags &= ~ReactiveFlags.recursedCheck;
-  }
-}
 ```
+
+For a complete factory, follow `effect()` in `lib/src/surface.dart`: initialize
+dependency tracking, link nested effects to their owner, maintain `runDepth`,
+capture the cleanup returned by `runEffect()`, and restore tracking in `finally`.
+The built-in surface API already handles this lifecycle.
 
 ### 4) Batching and manual propagation
 Use the preset helpers directly:
 ```dart
 startBatch();
-// multiple writes
-endBatch();
+try {
+  // multiple writes
+} finally {
+  endBatch();
+}
 
 trigger(() {
   // access signals to notify their subscribers
@@ -114,6 +109,20 @@ trigger(() {
 ```
 
 If you want scopes, mirror `effectScope` from `lib/src/surface.dart`.
+
+## Value and Lifecycle Semantics
+
+- Signal writes and computed results use `identical`, not `==`. Setting the
+  same object does not notify readers; after mutating a List or Map in place,
+  use `trigger(() => value())`, where `value` is the signal holding it.
+- Computed getters cache errors as well as values. A repeated read rethrows the
+  cached error until a tracked dependency changes. A successful retry clears
+  the error; the getter receives its last successful value as `prev`.
+- Effects run immediately and track synchronous reads. A cleanup returned
+  synchronously runs before the next execution and on stop, without tracking
+  its reads. Nested effects and scopes stop before their parent's cleanup.
+- Tracking and scope ownership do not continue across `await`. Reads after it
+  are not dependencies, and effects created after it need their own disposal.
 
 ## Build Custom Primitives (System)
 Use `ReactiveSystem` when you need different scheduling or new primitive types.

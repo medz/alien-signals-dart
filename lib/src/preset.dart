@@ -395,11 +395,11 @@ class PresetReactiveSystem extends ReactiveSystem {
     } while (true);
 
     if (queuedEffectsTail == null) {
-      queuedEffects = queuedEffectsTail = head;
+      queuedEffects = head;
     } else {
       queuedEffectsTail!.nextEffect = head;
-      queuedEffectsTail = tail;
     }
+    queuedEffectsTail = tail;
   }
 
   /// Called when a node no longer has any subscribers.

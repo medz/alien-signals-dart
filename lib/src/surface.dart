@@ -48,8 +48,9 @@ abstract interface class Signal<T> {
 abstract interface class WritableSignal<T> implements Signal<T> {
   /// Sets the value of this writable signal.
   ///
-  /// This will update the signal's value and trigger notifications to all
-  /// dependent computations and effects.
+  /// Values are compared with [identical], not `==`. Setting the same object
+  /// does not notify dependents; after mutating a List or Map in place, use
+  /// `trigger` with a read of this signal to notify readers.
   ///
   /// Example:
   /// ```dart
@@ -75,7 +76,7 @@ abstract interface class WritableSignal<T> implements Signal<T> {
 /// final count = signal(2);
 /// final doubled = computed((prev) => count() * 2);
 /// print(doubled()); // prints: 4
-/// count(3);
+/// count.set(3);
 /// print(doubled()); // prints: 6
 /// ```
 abstract interface class Computed<T> implements Signal<T> {}
@@ -135,8 +136,9 @@ abstract interface class EffectScope {
 /// Signals are the most basic reactive primitive. They hold a value
 /// and notify their dependents when that value changes.
 ///
-/// The returned signal can be called without arguments to read its value,
-/// or with an argument to write a new value.
+/// Call the returned signal without arguments to read its value, and use
+/// [WritableSignal.set] to write a new value. Changes use [identical] rather
+/// than `==`; mutating the same object in place does not notify dependents.
 ///
 /// Example:
 /// ```dart
@@ -164,7 +166,9 @@ WritableSignal<T> signal<T>(T initialValue) {
 /// Computed values automatically track the signals they depend on
 /// and recalculate when those dependencies change. They are lazily
 /// evaluated and cache their results until dependencies change.
-/// Getter errors are cached and rethrown until a dependency changes.
+/// Getter errors are cached and rethrown until a tracked dependency changes.
+/// On retry, the getter receives the last successful value as its previous-value
+/// argument. A successful retry clears the cached error.
 ///
 /// The getter function receives the previous computed value as its
 /// parameter (or `null` on first computation), which can be useful
@@ -178,7 +182,7 @@ WritableSignal<T> signal<T>(T initialValue) {
 ///   return '${firstName()} ${lastName()}';
 /// });
 /// print(fullName()); // "John Doe"
-/// lastName('Smith');
+/// lastName.set('Smith');
 /// print(fullName()); // "John Smith"
 /// ```
 ///
@@ -202,6 +206,12 @@ Computed<T> computed<T>(T Function(T?) getter) {
 /// The effect runs immediately upon creation and then again whenever
 /// its dependencies change. The callback may return a cleanup function that
 /// runs before the next execution and when the effect is stopped.
+/// Cleanup reads are not tracked. Nested effects and scopes are stopped before
+/// their parent's cleanup runs.
+///
+/// Dependency tracking and ownership of nested effects/scopes are synchronous.
+/// Reads or effects created after an `await` are not tracked by this effect,
+/// and cleanup must be returned synchronously.
 ///
 /// The returned [Effect] can be called to stop the effect and clean up
 /// its subscriptions.
@@ -215,11 +225,11 @@ Computed<T> computed<T>(T Function(T?) getter) {
 ///   messages.add('Count is: ${count()}');
 /// });
 ///
-/// count(1); // Effect runs again
-/// count(2); // Effect runs again
+/// count.set(1); // Effect runs again
+/// count.set(2); // Effect runs again
 ///
 /// dispose(); // Stop the effect
-/// count(3); // Effect no longer runs
+/// count.set(3); // Effect no longer runs
 /// ```
 ///
 /// - Parameter [fn]: The function to run as an effect. Will be executed
@@ -249,6 +259,8 @@ Effect effect<T>(EffectCallback<T> fn) {
 /// Any effects created within the provided function will be linked
 /// to this scope. When the scope is disposed, all linked effects
 /// are automatically stopped.
+/// Only effects and nested scopes created synchronously are linked; those
+/// created after an `await` need their own disposal handle.
 ///
 /// This is useful for organizing and cleaning up related effects,
 /// such as when a component is unmounted or a feature is disabled.
@@ -267,10 +279,10 @@ Effect effect<T>(EffectCallback<T> fn) {
 ///   });
 /// });
 ///
-/// count(1); // All effects run
+/// count.set(1); // All effects run
 ///
 /// scope(); // Stop all effects in this scope
-/// count(2); // No effects run
+/// count.set(2); // No effects run
 /// ```
 ///
 /// - Parameter [fn]: A function that creates effects. All effects created

@@ -180,9 +180,21 @@ class ComputedNode<T> extends ReactiveNode {
   /// Errors are cached like values and retried after a dependency write. A
   /// write that restores a dependency's previous value is no change for a
   /// cached value, but it does retry a cached error.
-  ({Object error, StackTrace stackTrace})? _failure;
+  ({Object error, StackTrace stackTrace, _RetryDependency? retry})? _failure;
 
   ComputedNode({required super.flags, required this.getter});
+
+  void _cacheFailure(Object error, StackTrace stackTrace) {
+    // No graph dependency means no dependency write can invalidate this node.
+    final retry = depsTail != null
+        ? _failure?.retry ?? _RetryDependency(this)
+        : null;
+    _failure = (error: error, stackTrace: stackTrace, retry: retry);
+    if (retry != null) {
+      retry.flags = ReactiveFlags.mutable | ReactiveFlags.dirty;
+      link(retry, this, cycle);
+    }
+  }
 
   /// Gets the computed value, recalculating if necessary.
   ///
@@ -200,9 +212,6 @@ class ComputedNode<T> extends ReactiveNode {
         (flags & ReactiveFlags.pending) != ReactiveFlags.none
         && (
           checkDirty(deps!, this)
-          // A cached error is retried on any dependency write, even one
-          // that restored the dependency's previous value.
-          || _failure != null
           || identical(this.flags = flags & -33 /*~ReactiveFlags.pending*/, false)
         )
       )
@@ -221,7 +230,7 @@ class ComputedNode<T> extends ReactiveNode {
       try {
         currentValue = getter(null);
       } on Object catch (error, stackTrace) {
-        _failure = (error: error, stackTrace: stackTrace);
+        _cacheFailure(error, stackTrace);
       } finally {
         activeSub = prevSub;
         this.flags &= -5 /*~ReactiveFlags.recursedCheck*/;
@@ -261,7 +270,7 @@ class ComputedNode<T> extends ReactiveNode {
       if (previousFailure != null) _failure = null;
       return previousFailure != null || !identical(previousValue, nextValue);
     } on Object catch (error, stackTrace) {
-      _failure = (error: error, stackTrace: stackTrace);
+      _cacheFailure(error, stackTrace);
       return true;
     } finally {
       activeSub = prevSub;
@@ -269,6 +278,15 @@ class ComputedNode<T> extends ReactiveNode {
       purgeDeps(this);
     }
   }
+}
+
+// A terminal dependency added only after a failed computation. Its update
+// checks the owner invalidation, after real dependencies settle iteratively.
+final class _RetryDependency extends ReactiveNode {
+  final ComputedNode<Object?> owner;
+
+  _RetryDependency(this.owner)
+    : super(flags: ReactiveFlags.mutable | ReactiveFlags.dirty);
 }
 
 /// A reactive effect scope node that can participate in propagation.
@@ -366,6 +384,8 @@ class PresetReactiveSystem extends ReactiveSystem {
       ComputedNode() => node.didUpdate(),
       SignalNode() => node.didUpdate(),
       EffectScopeNode() => node.didUpdate(),
+      _RetryDependency() =>
+        (node.owner.flags & ReactiveFlags.pending) != ReactiveFlags.none,
       _ => false,
     };
   }

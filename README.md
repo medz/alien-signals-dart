@@ -1,6 +1,6 @@
 <p align="center">
-  <img src="assets/logo.svg" width="250"><br>
-<p>
+  <img src="assets/mascot-patrol.webp" width="100%" alt="The Alien Signals mascot strolling, pausing, and sending signals." />
+</p>
 
 <p align="center">
   <a href="https://pub.dev/packages/alien_signals">

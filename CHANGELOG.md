@@ -1,3 +1,13 @@
+## 2.3.5
+
+### Bug Fixes
+
+- Retry cached computed errors through nested computed chains and batched
+  effects when a dependency changes and is restored (`a -> b -> a`).
+  Repeated reads without invalidation preserve the cached error and stack
+  trace, and successful computations keep the no-change optimization.
+  ([#47](https://github.com/medz/alien-signals-dart/pull/47), fixes [#46](https://github.com/medz/alien-signals-dart/issues/46))
+
 ## 2.3.4
 
 ### Bug Fixes

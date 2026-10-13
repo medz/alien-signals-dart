@@ -13,10 +13,6 @@ funding:
   - https://github.com/sponsors/medz
   - https://opencollective.com/openodroe
 
-screenshots:
-  - description: Alien Signals
-    path: assets/logo.png
-
 environment:
   sdk: ^3.8.0
 

@@ -177,7 +177,9 @@ class ComputedNode<T> extends ReactiveNode {
 
   /// The cached error from the latest computation, if any.
   ///
-  /// Errors are cached like values and retried only after a dependency changes.
+  /// Errors are cached like values and retried after a dependency write. A
+  /// write that restores a dependency's previous value is no change for a
+  /// cached value, but it does retry a cached error.
   ({Object error, StackTrace stackTrace})? _failure;
 
   ComputedNode({required super.flags, required this.getter});
@@ -198,6 +200,9 @@ class ComputedNode<T> extends ReactiveNode {
         (flags & ReactiveFlags.pending) != ReactiveFlags.none
         && (
           checkDirty(deps!, this)
+          // A cached error is retried on any dependency write, even one
+          // that restored the dependency's previous value.
+          || _failure != null
           || identical(this.flags = flags & -33 /*~ReactiveFlags.pending*/, false)
         )
       )

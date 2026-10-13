@@ -57,6 +57,48 @@ void main() {
     expect(calls, 3);
   });
 
+  test('retries after a dependency write that restores its value', () {
+    // The write pair leaves the dependency identical to what the failed
+    // computation read, so a cached VALUE would be kept. A cached ERROR is
+    // retried: the write is the only signal the getter has that the world
+    // it failed in may have changed.
+    final source = signal('a');
+    var failNext = true;
+    int calls = 0;
+    final value = computed<String>((_) {
+      calls++;
+      final key = source();
+      if (failNext) {
+        failNext = false;
+        throw StateError('open $key failed');
+      }
+      return 'opened $key';
+    });
+
+    expect(() => value(), throwsStateError);
+    expect(calls, 1);
+
+    source.set('b');
+    source.set('a');
+    expect(value(), 'opened a');
+    expect(calls, 2);
+  });
+
+  test('keeps a cached value across a write that restores it', () {
+    final source = signal('a');
+    int calls = 0;
+    final value = computed<String>((_) {
+      calls++;
+      return 'opened ${source()}';
+    });
+
+    expect(value(), 'opened a');
+    source.set('b');
+    source.set('a');
+    expect(value(), 'opened a');
+    expect(calls, 1);
+  });
+
   test('notifies effects when recovering to the previous value', () {
     final shouldThrow = signal(false);
     final error = StateError('boom');

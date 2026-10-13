@@ -1,3 +1,11 @@
+## 2.3.4
+
+### Bug Fixes
+
+- Retry a computed getter's cached error after any dependency write,
+  including one that restores the dependency's previous value. A cached
+  value is still kept across such a write.
+
 ## 2.3.3
 
 ### Bug Fixes

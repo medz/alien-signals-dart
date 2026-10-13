@@ -1,6 +1,8 @@
 <picture>
-  <source type="image/webp" srcset="assets/mascot-patrol.webp" />
-  <img src="assets/mascot-patrol.gif" width="1200" alt="The Alien Signals mascot strolling, pausing, and sending signals." />
+  <source media="(prefers-color-scheme: dark)" type="image/webp" srcset="assets/mascot-patrol-dark.webp" />
+  <source media="(prefers-color-scheme: dark)" type="image/gif" srcset="assets/mascot-patrol-dark.gif" />
+  <source type="image/webp" srcset="assets/mascot-patrol-light.webp" />
+  <img src="assets/mascot-patrol-light.gif" width="1200" alt="The Alien Signals mascot strolling, pausing, and sending signals." />
 </picture>
 
 <p align="center">

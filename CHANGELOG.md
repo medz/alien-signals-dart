@@ -2,9 +2,15 @@
 
 ### Bug Fixes
 
-- Retry a computed getter's cached error after any dependency write,
-  including one that restores the dependency's previous value. A cached
-  value is still kept across such a write.
+- Retry a directly read computed getter's cached error after a dependency
+  changes and is restored before the next read (`a -> b -> a`). Cached
+  successful values keep the existing no-change optimization. ([#45](https://github.com/medz/alien-signals-dart/pull/45))
+
+### Known Limitations
+
+- A nested computed reached through an outer dirty check can still lose
+  this retry. Follow-up: [#46](https://github.com/medz/alien-signals-dart/issues/46).
+- A same-value signal write (`a -> a`) does not propagate an invalidation.
 
 ## 2.3.3
 

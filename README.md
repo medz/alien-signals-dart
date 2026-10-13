@@ -99,6 +99,9 @@ dart pub add alien_signals
 - **[Oref](https://github.com/medz/oref)** - Magical reactive state management for Flutter
 - **[flutter_compositions](https://github.com/yoyo930021/flutter_compositions)** - Vue-inspired reactive building blocks for Flutter
 - **[ZenBus](https://pub.dev/packages/zenbus)** - A high-performance, flexible event bus for Flutter applications
+- **[ZenSignals](https://github.com/definev/zensuite/tree/main/packages/zensignals)** - Signal-based state bridging Flutter's ValueNotifier and ValueListenable APIs
+- **[alien_signals_translator](https://pub.dev/packages/alien_signals_translator)** - Reactive JSON-based localization with ICU message formatting for Flutter
+- **[signal_router](https://github.com/wildwind123/signal-router)** - Signal-based routing and navigation state for Dart and Flutter (alpha)
 
 ### Growing Ecosystem
 

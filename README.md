@@ -7,10 +7,10 @@
 
 <p align="center">
   <a href="https://pub.dev/packages/alien_signals">
-    <img src="https://img.shields.io/pub/v/alien_signals" alt="Alien Signals on pub.dev" />
+    <img src="https://img.shields.io/pub/v/alien_signals?style=flat" alt="Alien Signals on pub.dev" />
   </a>
-  <a href="https://github.com/medz/alien-signals-dart/actions/workflows/test.yml">
-    <img src="https://github.com/medz/alien-signals-dart/actions/workflows/test.yml/badge.svg" alt="testing status" />
+  <a href="https://github.com/medz/alien-signals-dart/actions/workflows/test.yml?query=branch%3Amain+event%3Apush">
+    <img src="https://img.shields.io/github/actions/workflow/status/medz/alien-signals-dart/test.yml?branch=main&amp;event=push&amp;style=flat&amp;label=CI" alt="CI status on main" />
   </a>
 </p>
 

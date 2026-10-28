@@ -11,6 +11,7 @@ import 'preset.dart'
         EffectNode,
         EffectScopeNode,
         EffectCallback;
+
 import 'package:alien_signals/system.dart' show ReactiveFlags;
 
 /// A reactive signal that holds a value of type [T].
@@ -155,7 +156,7 @@ abstract interface class EffectScope {
 @pragma('wasm:prefer-inline')
 WritableSignal<T> signal<T>(T initialValue) {
   return _SignalImpl(
-    flags: ReactiveFlags.mutable,
+    flags: .mutable,
     currentValue: initialValue,
     pendingValue: initialValue,
   );
@@ -194,7 +195,7 @@ WritableSignal<T> signal<T>(T initialValue) {
 @pragma('dart2js:tryInline')
 @pragma('wasm:prefer-inline')
 Computed<T> computed<T>(T Function(T?) getter) {
-  return _ComputedImpl(getter: getter, flags: ReactiveFlags.none);
+  return _ComputedImpl(getter: getter, flags: .none);
 }
 
 /// Creates an effect that runs whenever its dependencies change.
@@ -292,8 +293,7 @@ Effect effect<T>(EffectCallback<T> fn) {
 @pragma('dart2js:tryInline')
 @pragma('wasm:prefer-inline')
 EffectScope effectScope(void Function() fn) {
-  final e = _EffectScopeImpl(flags: ReactiveFlags.mutable),
-      prevSub = setActiveSub(e);
+  final e = _EffectScopeImpl(flags: .mutable), prevSub = setActiveSub(e);
   if (prevSub != null) {
     link(e, prevSub, 0);
     prevSub.flags |= hasChildEffect;
@@ -306,13 +306,11 @@ EffectScope effectScope(void Function() fn) {
   }
 }
 
-final class _SignalImpl<T> extends SignalNode<T> implements WritableSignal<T> {
-  _SignalImpl({
-    required super.flags,
-    required super.currentValue,
-    required super.pendingValue,
-  });
-
+final class _SignalImpl<T>({
+  required super.flags,
+  required super.currentValue,
+  required super.pendingValue,
+}) extends SignalNode<T> implements WritableSignal<T> {
   @override
   @pragma('vm:prefer-inline')
   @pragma('dart2js:tryInline')
@@ -320,9 +318,9 @@ final class _SignalImpl<T> extends SignalNode<T> implements WritableSignal<T> {
   T call() => get();
 }
 
-final class _ComputedImpl<T> extends ComputedNode<T> implements Computed<T> {
-  _ComputedImpl({required super.flags, required super.getter});
-
+final class _ComputedImpl<T>({required super.flags, required super.getter})
+    extends ComputedNode<T>
+    implements Computed<T> {
   @override
   @pragma('vm:prefer-inline')
   @pragma('dart2js:tryInline')
@@ -330,9 +328,9 @@ final class _ComputedImpl<T> extends ComputedNode<T> implements Computed<T> {
   T call() => get();
 }
 
-final class _EffectImpl<T> extends EffectNode<T> implements Effect {
-  _EffectImpl({required super.flags, required super.fn});
-
+final class _EffectImpl<T>({required super.flags, required super.fn})
+    extends EffectNode<T>
+    implements Effect {
   @override
   @pragma('vm:prefer-inline')
   @pragma('dart2js:tryInline')
@@ -340,9 +338,9 @@ final class _EffectImpl<T> extends EffectNode<T> implements Effect {
   void call() => stop(this);
 }
 
-class _EffectScopeImpl extends EffectScopeNode implements EffectScope {
-  _EffectScopeImpl({required super.flags});
-
+class _EffectScopeImpl({required super.flags})
+    extends EffectScopeNode
+    implements EffectScope {
   @override
   @pragma('vm:prefer-inline')
   @pragma('dart2js:tryInline')

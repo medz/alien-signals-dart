@@ -2,6 +2,13 @@
 
 This guide helps you migrate from earlier versions of `alien_signals` to latest version
 
+## Unreleased: Dart 3.13 minimum
+
+Upgrade to Dart 3.13 or later, or a Flutter SDK that includes Dart 3.13 or
+later. The package now uses primary constructors and dot shorthands.
+Existing constructor arguments and signal, computed, and effect APIs are
+unchanged; no application code changes are required.
+
 ## Migration from 1.x to 2.0
 
 Version 2.0 represents a complete architectural refactoring of `alien_signals` that introduces a cleaner API surface and improved performance characteristics. This guide covers the breaking changes and provides detailed migration instructions.

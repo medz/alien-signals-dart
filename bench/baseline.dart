@@ -3,8 +3,8 @@ import 'package:benchmark_harness/benchmark_harness.dart';
 
 import 'propagate.dart' show PropagateBenchmark;
 
-class DynamicDependenciesBenchmark extends BenchmarkBase {
-  DynamicDependenciesBenchmark() : super('switch dependency + update');
+class DynamicDependenciesBenchmark() extends BenchmarkBase {
+  this : super('switch dependency + update');
 
   late final WritableSignal<bool> useLeft;
   late final WritableSignal<int> left;
@@ -48,8 +48,8 @@ class DynamicDependenciesBenchmark extends BenchmarkBase {
   }
 }
 
-class BatchWritesBenchmark extends BenchmarkBase {
-  BatchWritesBenchmark() : super('batch: 32 writes');
+class BatchWritesBenchmark() extends BenchmarkBase {
+  this : super('batch: 32 writes');
 
   static const writes = 32;
   late final WritableSignal<int> src;
@@ -91,8 +91,8 @@ class BatchWritesBenchmark extends BenchmarkBase {
   }
 }
 
-class CreateGraphBenchmark extends BenchmarkBase {
-  CreateGraphBenchmark() : super('create + update + dispose graph');
+class CreateGraphBenchmark() extends BenchmarkBase {
+  this : super('create + update + dispose graph');
 
   var graphs = 0;
   var observed = 0;

@@ -1,12 +1,21 @@
-## Unreleased
+## 2.4.0
 
-- Require Dart 3.13 or later (previously Dart 3.8).
-- Adopt primary constructors and contextual dot shorthands while preserving
-  the existing API and reactive behavior.
-- Generate API examples from runnable Dart files and validate them in CI.
+### Requirements
+
+- Require Dart 3.13 or later (previously Dart 3.8). The public API and reactive
+  behavior are unchanged.
+
+### New Features
+
+- Bundle the `alien-signals-reactivity` agent skill with guidance for reactive
+  state, effect cleanup, asynchronous work, and downstream library integrations.
+
+### Documentation
+
+- Generate API examples from runnable Dart programs for signals, computeds,
+  effects, scopes, batching, and collection updates.
 - Reuse the public effect lifecycle in the custom preset example.
-- Bundle the `alien-signals-reactivity` agent skill for application usage and
-  downstream integrations, and validate its structure in CI.
+- Refresh the README artwork and simplify installation guidance.
 
 ## 2.3.5
 

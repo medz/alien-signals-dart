@@ -64,6 +64,8 @@ See the [runnable recipes](https://github.com/medz/alien-signals-dart/blob/main/
 
 ## 📦 Installation
 
+Requires Dart 3.13 or later.
+
 ```bash
 dart pub add alien_signals
 ```
@@ -76,11 +78,12 @@ dart pub add alien_signals
 
 ### AI agent skill
 
-Install `alien-signals-reactivity` to help your coding agent write reactive code,
-debug missed updates and cleanup, and build libraries on Alien Signals:
+From your project, install the bundled `alien-signals-reactivity` skill to help
+your coding agent write reactive code, debug missed updates and cleanup, and
+build libraries on Alien Signals:
 
 ```bash
-dart run skills@ add https://github.com/medz/alien-signals-dart --skill alien-signals-reactivity
+dart run skills@ get -p alien_signals
 ```
 
 Select your coding agent when prompted. Try asking it to:

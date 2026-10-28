@@ -86,6 +86,23 @@ dart pub add alien_signals
 - **API Reference**: Generated documentation for all three public libraries. See [docs/api.md](https://github.com/medz/alien-signals-dart/blob/main/docs/api.md).
 - **Recipes**: Runnable examples, lifecycle rules, and common pitfalls. See [docs/recipes.md](https://github.com/medz/alien-signals-dart/blob/main/docs/recipes.md).
 
+### AI agent skill
+
+The development version bundles `alien-signals-reactivity`, a skill for direct
+usage and downstream surface, preset, and system integrations. It is not included
+in the published 2.3.5 archive. Once your resolved dependency contains the skill,
+install it from your application's or downstream package's root:
+
+```bash
+dart run skills@ get -p alien_signals
+```
+
+Select your agent when prompted, or add `--agent codex` to install into
+`.agents/skills/`. The skill covers layer selection, lifecycle, batching, and
+error behavior, with an integration reference loaded when needed. Skills are
+discovered from direct dependencies; downstream libraries should document their
+own public API and any differences from the underlying engine.
+
 ## 🌍 Community & Ecosystem
 
 ### Adoptions

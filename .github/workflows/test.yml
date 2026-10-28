@@ -12,6 +12,8 @@ jobs:
           sdk: latest
       - run: dart pub get
       - run: dart analyze
+      - name: Validate package skills
+        run: dart run skills_lint --skills-directory skills --published-skill-name --check-relative-paths
       - name: Run examples with assertions
         run: |
           for example in example/*.dart; do

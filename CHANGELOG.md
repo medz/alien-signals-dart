@@ -5,6 +5,8 @@
   the existing API and reactive behavior.
 - Generate API examples from runnable Dart files and validate them in CI.
 - Reuse the public effect lifecycle in the custom preset example.
+- Bundle the `alien-signals-reactivity` agent skill for application usage and
+  downstream integrations, and validate its structure in CI.
 
 ## 2.3.5
 

@@ -64,18 +64,6 @@ See the [runnable recipes](https://github.com/medz/alien-signals-dart/blob/main/
 
 ## 📦 Installation
 
-The development version requires Dart 3.13 or later. Published version 2.3.5
-supports Dart 3.8 or later.
-
-To install Alien Signals, add the following to your `pubspec.yaml`:
-
-```yaml
-dependencies:
-  alien_signals: ^2.3.5
-```
-
-Alternatively, you can run the following command:
-
 ```bash
 dart pub add alien_signals
 ```
@@ -85,6 +73,21 @@ dart pub add alien_signals
 - **Guide**: Layers (system/preset/surface) and core concepts. See [docs/guide.md](https://github.com/medz/alien-signals-dart/blob/main/docs/guide.md).
 - **API Reference**: Generated documentation for all three public libraries. See [docs/api.md](https://github.com/medz/alien-signals-dart/blob/main/docs/api.md).
 - **Recipes**: Runnable examples, lifecycle rules, and common pitfalls. See [docs/recipes.md](https://github.com/medz/alien-signals-dart/blob/main/docs/recipes.md).
+
+### AI agent skill
+
+Install `alien-signals-reactivity` to help your coding agent write reactive code,
+debug missed updates and cleanup, and build libraries on Alien Signals:
+
+```bash
+dart run skills@ add https://github.com/medz/alien-signals-dart --skill alien-signals-reactivity
+```
+
+Select your coding agent when prompted. Try asking it to:
+
+- Find why a signal update does not reach an effect.
+- Add a reactive search that ignores outdated responses and stops on disposal.
+- Build a `.value` wrapper while preserving tracking and cleanup.
 
 ## 🌍 Community & Ecosystem
 

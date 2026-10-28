@@ -1,38 +1,20 @@
 import 'package:alien_signals/alien_signals.dart';
 
-void basis() {
-  print("\n=========== Basic Usage ===========");
-
-  final count = signal(1);
-  final doubleCount = computed((_) => count() * 2);
-
-  effect(() {
-    print("Count is: ${count()}");
-  }); // Count is: 1
-
-  print(doubleCount()); // 2
-
-  count.set(2); // Count is: 2
-
-  print(doubleCount()); // 4
-}
-
-void scope() {
-  print("\n=========== Effect Scope ===========");
-
-  final count = signal(1);
-  final stop = effectScope(() {
-    effect(() {
-      print("Count is: ${count()}");
-    }); // Count is: 1
-  });
-
-  count.set(2); // Count is: 2
-  stop();
-  count.set(3); // Not printed
-}
-
 void main() {
-  basis();
-  scope();
+  // #region basic
+  final count = signal(0);
+  final doubled = computed((_) => count() * 2);
+  var runs = 0; // #hide
+
+  final stop = effect(() {
+    runs++; // #hide
+    print('Count: ${count()}, Doubled: ${doubled()}');
+  }); // Count: 0, Doubled: 0
+
+  count.set(1); // Count: 1, Doubled: 2
+  assert(runs == 2 && doubled() == 2); // #hide
+  stop();
+  count.set(2); // The stopped effect no longer runs.
+  assert(runs == 2 && doubled() == 4); // #hide
+  // #endregion basic
 }

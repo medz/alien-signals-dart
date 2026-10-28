@@ -1,8 +1,8 @@
 <picture>
-  <source media="(prefers-color-scheme: dark)" type="image/webp" srcset="assets/mascot-patrol-dark.webp" />
-  <source media="(prefers-color-scheme: dark)" type="image/gif" srcset="assets/mascot-patrol-dark.gif" />
-  <source type="image/webp" srcset="assets/mascot-patrol-light.webp" />
-  <img src="assets/mascot-patrol-light.gif" width="1200" alt="The Alien Signals mascot strolling, pausing, and sending signals." />
+  <source media="(prefers-color-scheme: dark)" type="image/webp" srcset="https://raw.githubusercontent.com/medz/alien-signals-dart/main/assets/mascot-patrol-dark.webp" />
+  <source media="(prefers-color-scheme: dark)" type="image/gif" srcset="https://raw.githubusercontent.com/medz/alien-signals-dart/main/assets/mascot-patrol-dark.gif" />
+  <source type="image/webp" srcset="https://raw.githubusercontent.com/medz/alien-signals-dart/main/assets/mascot-patrol-light.webp" />
+  <img src="https://raw.githubusercontent.com/medz/alien-signals-dart/main/assets/mascot-patrol-light.gif" width="1200" alt="The Alien Signals mascot strolling, pausing, and sending signals." />
 </picture>
 
 <p align="center">
@@ -17,12 +17,22 @@
 ## 🎊 Get Started Today!
 
 ```dart
-// Your reactive journey starts here
 import 'package:alien_signals/alien_signals.dart';
 
-final welcome = signal('🎉 Welcome to Alien Signals!');
-effect(() => print(welcome()));
+void main() {
+  final count = signal(0);
+  final doubled = computed((_) => count() * 2);
+  final stop = effect(() {
+    print('Count: ${count()}, Doubled: ${doubled()}');
+  }); // Count: 0, Doubled: 0
+
+  count.set(1); // Count: 1, Doubled: 2
+  stop();
+  count.set(2); // The stopped effect no longer runs.
+}
 ```
+
+Run the [complete example](https://github.com/medz/alien-signals-dart/blob/main/example/main.dart) with `dart run example/main.dart`.
 
 ## 🌟 What is Alien Signals?
 
@@ -44,33 +54,13 @@ Dart implementation provides:
 
 ## 🚀 Key Features
 
-### Core Reactive Primitives
+- **Lazy Computed Values**: Cache derived state until dependencies change
+- **Effect Cleanup**: Release resources before re-running and on disposal
+- **Effect Scopes**: Group effects and nested scopes under one disposal handle
+- **Batch Operations**: Defer effects while applying multiple writes
+- **Flexible API**: Use the surface directly or customize the preset and system
 
-```dart
-import 'package:alien_signals/alien_signals.dart';
-
-void main() {
-  // Create reactive state
-  final count = signal(0);
-
-  // Create derived state
-  final doubled = computed((_) => count() * 2);
-
-  // Create side effects
-  effect(() {
-    print('Count: ${count()}, Doubled: ${doubled()}');
-  });
-
-  // Update state - triggers all dependencies
-  count.set(1); // Output: Count: 1, Doubled: 2
-}
-```
-
-### Advanced Features
-
-- **Effect Scopes**: Group and manage effects together
-- **Batch Operations**: Control when reactivity updates occur
-- **Flexible API**: Build your own surface APIs on top of the core `system` or use the `preset` implementation
+See the [runnable recipes](https://github.com/medz/alien-signals-dart/blob/main/docs/recipes.md) for each feature.
 
 ## 📦 Installation
 
@@ -92,9 +82,9 @@ dart pub add alien_signals
 
 ## 📖 Documentation
 
-- **Guide**: Layers (system/preset/surface) and core concepts. See [docs/guide.md](docs/guide.md).
-- **API Reference**: System, preset, and surface APIs. See [docs/api.md](docs/api.md).
-- **Recipes**: Practical patterns and pitfalls. See [docs/recipes.md](docs/recipes.md).
+- **Guide**: Layers (system/preset/surface) and core concepts. See [docs/guide.md](https://github.com/medz/alien-signals-dart/blob/main/docs/guide.md).
+- **API Reference**: Generated documentation for all three public libraries. See [docs/api.md](https://github.com/medz/alien-signals-dart/blob/main/docs/api.md).
+- **Recipes**: Runnable examples, lifecycle rules, and common pitfalls. See [docs/recipes.md](https://github.com/medz/alien-signals-dart/blob/main/docs/recipes.md).
 
 ## 🌍 Community & Ecosystem
 
@@ -116,4 +106,4 @@ Join our thriving community of developers building reactive applications with Al
 
 - **[API Documentation](https://pub.dev/documentation/alien_signals/latest/)** - Complete API reference
 - **[Examples](https://github.com/medz/alien-signals-dart/tree/main/example)** - Code examples and demos
-- **[Migration Guide](MIGRATION.md)** - Upgrade instructions
+- **[Migration Guide](https://github.com/medz/alien-signals-dart/blob/main/MIGRATION.md)** - Upgrade instructions

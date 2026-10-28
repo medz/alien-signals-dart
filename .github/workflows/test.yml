@@ -12,6 +12,13 @@ jobs:
           sdk: latest
       - run: dart pub get
       - run: dart analyze
+      - name: Run examples with assertions
+        run: |
+          for example in example/*.dart; do
+            dart --enable-asserts run "$example"
+          done
+      - name: Build API documentation
+        run: dart doc --validate-links --output build/api
 
   test:
     needs: analyze

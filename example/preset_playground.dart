@@ -1,62 +1,48 @@
-// ignore_for_file: camel_case_types
-
+import 'package:alien_signals/alien_signals.dart' show effect;
 import 'package:alien_signals/preset.dart';
-import 'package:alien_signals/system.dart';
 
-extension type signal<T>._(SignalNode<T> _) {
-  factory signal(T initialValue) {
-    return signal._(
-      SignalNode(
-        flags: .mutable,
-        currentValue: initialValue,
-        pendingValue: initialValue,
-      ),
-    );
-  }
+// #region wrappers
+extension type Signal<T>._(SignalNode<T> _node) {
+  factory Signal(T initialValue) => Signal._(
+    SignalNode(
+      flags: .mutable,
+      currentValue: initialValue,
+      pendingValue: initialValue,
+    ),
+  );
 
-  T get value => _.get();
+  T get value => _node.get();
 
-  // ignore: strict_top_level_inference
-  set value(newValue) => _.set(newValue);
+  set value(T newValue) => _node.set(newValue);
 }
 
-extension type computed<T>._(ComputedNode<T> _) {
-  factory computed(T Function() getter) {
-    return computed._(ComputedNode(getter: (_) => getter(), flags: .none));
-  }
+extension type Computed<T>._(ComputedNode<T> _node) {
+  factory Computed(T Function() getter) =>
+      Computed._(ComputedNode(getter: (_) => getter(), flags: .none));
 
-  T get value => _.get();
+  T get value => _node.get();
 }
-
-extension type effect._(EffectNode<void> _) {
-  factory effect(void Function() run) {
-    final node = EffectNode<void>(
-      fn: run,
-      flags: ReactiveFlags.watching | ReactiveFlags.recursedCheck,
-    );
-    final prevSub = setActiveSub(node);
-    if (prevSub != null) link(node, prevSub, 0);
-    try {
-      run();
-      return effect._(node);
-    } finally {
-      activeSub = prevSub;
-      node.flags &= ~ReactiveFlags.recursedCheck;
-    }
-  }
-
-  void call() => stop(_);
-}
+// #endregion wrappers
 
 void main() {
-  final count = signal(0);
-  final doubled = computed(() => count.value * 2);
+  // #region usage
+  final count = Signal(0);
+  final doubled = Computed(() => count.value * 2);
+  var runs = 0; // #hide
+  var cleanups = 0; // #hide
 
+  // Reuse the public effect lifecycle with the custom value accessors.
   final stop = effect(() {
+    runs++; // #hide
     print('Count: ${count.value}, Doubled: ${doubled.value}');
-  });
+    return () => cleanups++; // #hide
+  }); // Count: 0, Doubled: 0
 
-  count.value = 2;
+  count.value = 2; // Count: 2, Doubled: 4
+  assert(runs == 2 && cleanups == 1); // #hide
   stop();
-  count.value = 3;
+  count.value = 3; // The stopped effect no longer runs.
+  assert(runs == 2 && cleanups == 2); // #hide
+  assert(doubled.value == 6); // #hide
+  // #endregion usage
 }

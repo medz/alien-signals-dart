@@ -1,78 +1,42 @@
 # Recipes
 
-If you are building a custom surface API, start with `docs/guide.md` for the
-step-by-step preset and system workflows.
+Each example is a standalone program. Run it from the package root with
+`dart run example/<name>.dart`, or enable its assertions with
+`dart --enable-asserts run example/<name>.dart`.
 
-## Avoiding Leaky Effects
-Always retain and stop effects you create in long-lived contexts.
-```dart
-final stop = effect(() => print(count()));
-// later
-stop();
-```
+| Task | Example | Behavior to notice |
+| --- | --- | --- |
+| Read and write reactive state | [main.dart](../example/main.dart) | Effects run immediately, observe writes, and stop when their handle is called. |
+| Cache derived state | [computed.dart](../example/computed.dart) | The getter runs lazily; unchanged reads reuse its result. |
+| Clean up an effect | [effect_cleanup.dart](../example/effect_cleanup.dart) | Cleanup runs before the next execution and on stop. |
+| Dispose a group of effects | [effect_scope.dart](../example/effect_scope.dart) | Stopping the scope also stops its nested scopes. |
+| Batch writes | [batch.dart](../example/batch.dart) | Effects wait until the outermost batch ends; reads still see updated values. |
+| Notify after mutating a collection | [trigger.dart](../example/trigger.dart) | Setting the same object does not notify; `trigger` explicitly notifies its readers. |
+| Customize value accessors | [preset_playground.dart](../example/preset_playground.dart) | Preset nodes work with the public effect lifecycle. |
+| Manage a dependency graph | [system.dart](../example/system.dart) | Linking, notification, and unlinking are independent of value storage. |
+| Update a web page | [Web demo](../example/web/README.md) | Compile the browser entrypoint separately. |
 
-Only synchronous reads are tracked. Read the reactive inputs before starting
-asynchronous work; reads after `await` do not subscribe the effect.
+## Effect lifetimes
 
-Return a cleanup synchronously to release resources before the next run and
-when stopping:
+Retain and stop effects in long-lived contexts, or create them inside a scope
+whose handle you retain. Return cleanup synchronously to release resources
+before the next execution and on disposal. Cleanup reads are not dependencies;
+nested effects and scopes are disposed before their parent's cleanup.
 
-```dart
-final stop = effect(() {
-  final value = count();
-  print('start $value');
-  return () => print('stop $value');
-});
-```
+Only synchronous reads are tracked. Read reactive inputs before starting
+asynchronous work. Effects created after an `await` require their own disposal.
 
-Cleanup reads are not tracked. Nested effects/scopes stop before the parent's
-cleanup runs.
+## Batching
 
-## Scoped Cleanup
-Use scopes when multiple effects should stop together.
-```dart
-final scope = effectScope(() {
-  effect(() => print('one ${count()}'));
-  effect(() => print('two ${count()}'));
-});
-// later
-scope();
-```
+Always pair `startBatch()` with `endBatch()` in a `finally` block so an exception
+does not leave later effects deferred. Nested batches flush at the outermost
+`endBatch()`.
 
-## Batching Updates
-Batch writes to avoid redundant effect runs.
-```dart
-startBatch();
-try {
-  count.set(1);
-  count.set(2);
-} finally {
-  endBatch();
-}
-```
+## Computed failures
 
-## Derived State With Computed
-Prefer `computed` for derived values; it caches and reuses results.
-```dart
-final total = computed((prev) => price() * qty());
-```
-If the getter throws, repeated reads rethrow the cached error until a tracked
-dependency changes. A successful retry clears the error; `prev` remains the
-last successful value after a failure.
+A computed getter caches errors until a tracked dependency changes. A successful
+retry clears the error, and the previous-value argument remains the last
+successful value after a failure. Prefer a computed value for derived state
+instead of an effect that writes another signal.
 
-## Manual Notification
-Values use `identical` rather than `==` to detect changes. Mutating a List or
-Map and setting the same instance does not notify dependents. Use `trigger` on
-the signal holding it:
-```dart
-final items = signal(<String>[]);
-final stop = effect(() => print(items().length));
-items().add('new item');
-trigger(() => items()); // prints: 1
-stop();
-```
-
-## Testing Tips
-- Keep tests focused and deterministic.
-- Use `dart test` to run the suite.
-- Name tests after behavior (for example, `computed_test.dart`).
+For layer selection and implementation details, see the [guide](guide.md).

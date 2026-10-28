@@ -1,3 +1,6 @@
+/// @docImport 'preset.dart';
+library;
+
 import 'preset.dart'
     show
         setActiveSub,
@@ -14,18 +17,11 @@ import 'preset.dart'
 
 import 'package:alien_signals/system.dart' show ReactiveFlags;
 
-/// A reactive signal that holds a value of type [T].
+/// A reactive value of type [T].
 ///
-/// Signals are the foundation of the reactive system. They are observable
-/// values that notify their dependents when their value changes.
+/// Use [call] to read the value and track it inside a [computed] or [effect].
 ///
-/// Use the [call] method to read the current value of the signal.
-///
-/// Example:
-/// ```dart
-/// final count = signal(0);
-/// print(count()); // prints: 0
-/// ```
+/// {@example /example/main.dart#basic}
 abstract interface class Signal<T> {
   /// Reads the current value of the signal.
   ///
@@ -34,71 +30,36 @@ abstract interface class Signal<T> {
   T call();
 }
 
-/// A reactive signal that can be both read and written.
+/// A reactive value that can be read and written.
 ///
-/// WritableSignal extends [Signal] to provide write capabilities.
-/// It allows updating the signal's value, which will trigger updates
-/// to all dependent computations and effects.
+/// Use [call] to read the value and [set] to update it.
 ///
-/// Example:
-/// ```dart
-/// final count = signal(0);
-/// count.set(5); // sets value to 5
-/// print(count()); // prints: 5
-/// ```
+/// {@example /example/main.dart#basic}
 abstract interface class WritableSignal<T> implements Signal<T> {
-  /// Sets the value of this writable signal.
+  /// Sets this signal to [value].
   ///
   /// Values are compared with [identical], not `==`. Setting the same object
-  /// does not notify dependents; after mutating a List or Map in place, use
-  /// `trigger` with a read of this signal to notify readers.
+  /// does not notify dependents; after mutating a list or map in place, use
+  /// [trigger] with a read of this signal to notify readers.
   ///
-  /// Example:
-  /// ```dart
-  /// final count = signal(0);
-  /// count.set(5); // sets value to 5
-  /// print(count()); // prints: 5
-  /// ```
-  ///
-  /// - Parameter [value]: The new value to set.
+  /// {@example /example/trigger.dart#trigger}
   void set(T value);
 }
 
-/// A reactive computed value that derives from other signals.
+/// A cached, read-only value derived from other signals.
 ///
-/// Computed values automatically recalculate when their dependencies change.
-/// They are lazily evaluated, meaning they only recompute when accessed
-/// and their dependencies have changed.
+/// The getter runs lazily when the value is read and its dependencies have
+/// changed. See [computed] for error caching and previous-value semantics.
 ///
-/// Computed values are read-only and cannot be directly set.
-///
-/// Example:
-/// ```dart
-/// final count = signal(2);
-/// final doubled = computed((prev) => count() * 2);
-/// print(doubled()); // prints: 4
-/// count.set(3);
-/// print(doubled()); // prints: 6
-/// ```
+/// {@example /example/computed.dart#computed}
 abstract interface class Computed<T> implements Signal<T> {}
 
-/// A reactive effect that runs side effects in response to signal changes.
+/// A side effect that tracks synchronous reads of reactive values.
 ///
-/// Effects automatically track their dependencies and re-run when any
-/// dependency changes. They are useful for performing side effects like
-/// DOM updates, logging, or API calls.
+/// Use [call] to stop the effect and run its final cleanup.
+/// See [effect] for dependency tracking and cleanup ordering.
 ///
-/// Use the [call] method to stop the effect and clean up its subscriptions.
-///
-/// Example:
-/// ```dart
-/// final count = signal(0);
-/// final dispose = effect(() {
-///   print('Count is: ${count()}');
-/// });
-/// // Later, stop the effect:
-/// dispose();
-/// ```
+/// {@example /example/effect_cleanup.dart#cleanup}
 abstract interface class Effect {
   /// Stops this effect and removes it from the reactive system.
   ///
@@ -107,23 +68,11 @@ abstract interface class Effect {
   void call();
 }
 
-/// A scope that manages a collection of effects.
+/// A group of effects and nested scopes with a shared lifetime.
 ///
-/// EffectScope provides a way to group multiple effects together
-/// and dispose of them all at once. Any effects created within
-/// the scope will be automatically linked to it.
+/// Use [call] to stop everything created synchronously within the scope.
 ///
-/// Use the [call] method to stop all effects within this scope.
-///
-/// Example:
-/// ```dart
-/// final scope = effectScope(() {
-///   effect(() => print('Effect 1'));
-///   effect(() => print('Effect 2'));
-/// });
-/// // Later, stop all effects in the scope:
-/// scope();
-/// ```
+/// {@example /example/effect_scope.dart#scope}
 abstract interface class EffectScope {
   /// Stops all effects within this scope.
   ///
@@ -132,25 +81,13 @@ abstract interface class EffectScope {
   void call();
 }
 
-/// Creates a writable signal with the given initial value.
+/// Creates a writable signal containing [initialValue].
 ///
-/// Signals are the most basic reactive primitive. They hold a value
-/// and notify their dependents when that value changes.
+/// Call the returned signal to read its value, and use [WritableSignal.set]
+/// to write a new value. Changes use [identical] rather than `==`; mutating
+/// the same object in place requires [trigger] to notify readers.
 ///
-/// Call the returned signal without arguments to read its value, and use
-/// [WritableSignal.set] to write a new value. Changes use [identical] rather
-/// than `==`; mutating the same object in place does not notify dependents.
-///
-/// Example:
-/// ```dart
-/// final count = signal(0);
-/// print(count()); // reads: 0
-/// count.set(5);   // writes: 5
-/// print(count()); // reads: 5
-/// ```
-///
-/// - Parameter [initialValue]: The initial value of the signal.
-/// - Returns: A [WritableSignal] that can be read and written.
+/// {@example /example/main.dart#basic}
 @pragma('vm:prefer-inline')
 @pragma('dart2js:tryInline')
 @pragma('wasm:prefer-inline')
@@ -162,35 +99,17 @@ WritableSignal<T> signal<T>(T initialValue) {
   );
 }
 
-/// Creates a computed value that derives from other signals.
+/// Creates a cached value derived by [getter] from other signals.
 ///
-/// Computed values automatically track the signals they depend on
-/// and recalculate when those dependencies change. They are lazily
-/// evaluated and cache their results until dependencies change.
+/// Synchronous reads inside [getter] become dependencies. The getter runs
+/// lazily on the first read and when a subsequent read needs an updated value.
+/// Its argument is the previous successful value, or `null` before any success.
+///
 /// Getter errors are cached and rethrown until a tracked dependency changes.
-/// On retry, the getter receives the last successful value as its previous-value
-/// argument. A successful retry clears the cached error.
+/// A successful retry clears the cached error; a failed run does not replace
+/// the previous successful value.
 ///
-/// The getter function receives the previous computed value as its
-/// parameter (or `null` on first computation), which can be useful
-/// for incremental computations.
-///
-/// Example:
-/// ```dart
-/// final firstName = signal('John');
-/// final lastName = signal('Doe');
-/// final fullName = computed((prev) {
-///   return '${firstName()} ${lastName()}';
-/// });
-/// print(fullName()); // "John Doe"
-/// lastName.set('Smith');
-/// print(fullName()); // "John Smith"
-/// ```
-///
-/// - Parameter [getter]: A function that computes the value. Receives the
-///   previous value as a parameter (null on first run).
-///   After an error, the previous value remains the last successful value.
-/// - Returns: A [Computed] that automatically updates when dependencies change.
+/// {@example /example/computed.dart#computed}
 @pragma('vm:prefer-inline')
 @pragma('dart2js:tryInline')
 @pragma('wasm:prefer-inline')
@@ -198,44 +117,20 @@ Computed<T> computed<T>(T Function(T?) getter) {
   return _ComputedImpl(getter: getter, flags: .none);
 }
 
-/// Creates an effect that runs whenever its dependencies change.
+/// Runs [fn] immediately and again when its tracked dependencies change.
 ///
-/// Effects are functions that run side effects in response to reactive
-/// state changes. They automatically track any signals accessed during
-/// execution and re-run when those signals change.
+/// The callback may return a cleanup function synchronously. Cleanup runs
+/// before the next execution and when the effect is stopped. Cleanup reads
+/// are not tracked. Nested effects and scopes stop before their parent's
+/// cleanup runs.
 ///
-/// The effect runs immediately upon creation and then again whenever
-/// its dependencies change. The callback may return a cleanup function that
-/// runs before the next execution and when the effect is stopped.
-/// Cleanup reads are not tracked. Nested effects and scopes are stopped before
-/// their parent's cleanup runs.
+/// Dependency tracking and ownership of nested effects and scopes are
+/// synchronous. Reads or effects created after an `await` are not tracked
+/// or owned by this effect.
 ///
-/// Dependency tracking and ownership of nested effects/scopes are synchronous.
-/// Reads or effects created after an `await` are not tracked by this effect,
-/// and cleanup must be returned synchronously.
+/// Call the returned [Effect] to stop it and run its final cleanup.
 ///
-/// The returned [Effect] can be called to stop the effect and clean up
-/// its subscriptions.
-///
-/// Example:
-/// ```dart
-/// final count = signal(0);
-/// final messages = <String>[];
-///
-/// final dispose = effect(() {
-///   messages.add('Count is: ${count()}');
-/// });
-///
-/// count.set(1); // Effect runs again
-/// count.set(2); // Effect runs again
-///
-/// dispose(); // Stop the effect
-/// count.set(3); // Effect no longer runs
-/// ```
-///
-/// - Parameter [fn]: The function to run as an effect. Will be executed
-///   immediately and re-executed when dependencies change.
-/// - Returns: An [Effect] that can be called to stop it.
+/// {@example /example/effect_cleanup.dart#cleanup}
 Effect effect<T>(EffectCallback<T> fn) {
   // dart format off
   final e = _EffectImpl(fn: fn, flags: 6 /* ReactiveFlags.watching | ReactiveFlags.recursedCheck */ as ReactiveFlags),// dart format on
@@ -255,40 +150,13 @@ Effect effect<T>(EffectCallback<T> fn) {
   }
 }
 
-/// Creates a scope for managing multiple effects.
+/// Runs [fn] in a scope that groups effects for disposal.
 ///
-/// Any effects created within the provided function will be linked
-/// to this scope. When the scope is disposed, all linked effects
-/// are automatically stopped.
-/// Only effects and nested scopes created synchronously are linked; those
-/// created after an `await` need their own disposal handle.
+/// Call the returned [EffectScope] to stop its effects and nested scopes.
+/// Only effects and scopes created synchronously within [fn] are owned;
+/// those created after an `await` need their own disposal handle.
 ///
-/// This is useful for organizing and cleaning up related effects,
-/// such as when a component is unmounted or a feature is disabled.
-///
-/// Example:
-/// ```dart
-/// final count = signal(0);
-///
-/// final scope = effectScope(() {
-///   effect(() => print('Effect 1: ${count()}'));
-///   effect(() => print('Effect 2: ${count() * 2}'));
-///
-///   // Nested scopes are also supported
-///   effectScope(() {
-///     effect(() => print('Nested effect: ${count() * 3}'));
-///   });
-/// });
-///
-/// count.set(1); // All effects run
-///
-/// scope(); // Stop all effects in this scope
-/// count.set(2); // No effects run
-/// ```
-///
-/// - Parameter [fn]: A function that creates effects. All effects created
-///   within this function will be linked to the scope.
-/// - Returns: An [EffectScope] that can be called to stop all contained effects.
+/// {@example /example/effect_scope.dart#scope}
 @pragma('vm:prefer-inline')
 @pragma('dart2js:tryInline')
 @pragma('wasm:prefer-inline')

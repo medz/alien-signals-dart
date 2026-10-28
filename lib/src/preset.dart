@@ -317,44 +317,16 @@ class EffectNode<T>({
   }
 }
 
-/// Default implementation of the reactive system for Alien Signals.
+/// The default reactive graph, scheduler, and cleanup implementation.
 ///
-/// PresetReactiveSystem provides the standard reactive behavior used by
-/// the alien_signals library. It implements the abstract [ReactiveSystem]
-/// methods to manage signal updates, effect scheduling, and dependency cleanup.
+/// Dispatches updates to [SignalNode] and [ComputedNode], queues effects in
+/// [notify], and releases unused dependencies in [unwatched]. The preset
+/// helpers share this system and the active subscriber and batch state.
 ///
-/// This implementation features:
-/// - **Type-based dispatch**: Uses pattern matching to handle different node types
-/// - **Effect batching**: Queues effects for efficient batch execution
-/// - **Lazy cleanup**: Delays dependency cleanup for mutable nodes until needed
-/// - **Automatic propagation**: Handles change propagation through the reactive graph
+/// Use the node types to customize value accessors while retaining the
+/// public surface API's effect lifecycle.
 ///
-/// The system maintains global state including:
-/// - Effect queue ([queuedEffects]/[queuedEffectsTail])
-/// - Batch depth tracking ([batchDepth])
-/// - Active subscriber tracking ([activeSub])
-/// - Version tracking ([cycle])
-///
-/// ## Internal Operation
-///
-/// When a signal changes:
-/// 1. The change propagates through [propagate] to mark dependents
-/// 2. Effects are queued via [notify] for batch execution
-/// 3. When batch completes, [flush] executes all queued effects
-/// 4. Each effect's dependencies are tracked during execution
-///
-/// ## Usage
-///
-/// This class is used internally by the library and is instantiated as
-/// a singleton constant:
-///
-/// ```dart
-/// const system = PresetReactiveSystem();
-/// ```
-///
-/// Most users don't interact with this class directly - they use the
-/// high-level API functions like `signal()`, `computed()`, and `effect()`
-/// which internally use this system.
+/// {@example /example/preset_playground.dart#wrappers}
 class const PresetReactiveSystem() extends ReactiveSystem {
   /// Updates a reactive node's value.
   ///
@@ -478,20 +450,23 @@ ReactiveNode? setActiveSub([ReactiveNode? sub]) {
 @pragma('wasm:prefer-inline')
 int getBatchDepth() => batchDepth;
 
-/// Starts a new batch operation.
+/// Starts a batch that defers effect execution until [endBatch].
 ///
-/// While in a batch, effect execution is deferred to avoid
-/// redundant computations. Multiple nested batches are supported.
-/// Effects are executed when all batches complete.
+/// Signal values remain readable during the batch. Nested batches are
+/// supported; queued effects run when the outermost batch ends.
+/// Always pair this call with [endBatch] in a `finally` block.
+///
+/// {@example /example/batch.dart#batch}
 @pragma('vm:prefer-inline')
 @pragma('dart2js:tryInline')
 @pragma('wasm:prefer-inline')
 void startBatch() => ++batchDepth;
 
-/// Ends the current batch operation.
+/// Ends a batch started by [startBatch].
 ///
-/// Decrements the batch depth. If this was the last batch
-/// (depth reaches 0), immediately flushes all queued effects.
+/// When the outermost batch ends, immediately flushes all queued effects.
+///
+/// {@example /example/batch.dart#batch}
 @pragma('vm:prefer-inline')
 @pragma('dart2js:tryInline')
 @pragma('wasm:prefer-inline')
@@ -499,22 +474,12 @@ void endBatch() {
   if ((--batchDepth) == 0) flush();
 }
 
-/// Manually triggers reactive updates within a function.
+/// Notifies subscribers of the signals read synchronously by [fn].
 ///
-/// Creates a temporary reactive context and executes the given
-/// function. Any signals accessed during execution will be
-/// tracked, and their subscribers will be notified of changes.
+/// Use this after mutating a list or map in place. Setting the same object
+/// does not notify readers because values are compared with [identical].
 ///
-/// Useful for imperatively triggering updates in the reactive
-/// system without creating a permanent effect.
-///
-/// Example:
-/// ```dart
-/// final count = signal(0);
-/// trigger(() {
-///   count(); // Access triggers propagation to subscribers
-/// });
-/// ```
+/// {@example /example/trigger.dart#trigger}
 @pragma('vm:align-loops')
 void trigger(void Function() fn) {
   final sub = ReactiveNode(flags: .watching), prevSub = setActiveSub(sub);

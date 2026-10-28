@@ -1,0 +1,7 @@
+dartdoc:
+  errors:
+    - missing-example-file
+    - missing-example-region
+    - invalid-parameter
+    - unresolved-doc-reference
+    - broken-link

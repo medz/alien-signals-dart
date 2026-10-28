@@ -161,29 +161,11 @@ final class Stack<T>({required var T value, var Stack<T>? prev});
 /// - [checkDirty]: Determines if a node needs updating
 /// - [isValidLink]: Validates link integrity
 ///
-/// ## Example Implementation
+/// A minimal manual graph can queue notifications for its caller to process:
 ///
-/// ```dart
-/// class MyReactiveSystem extends ReactiveSystem {
-///   @override
-///   bool update(ReactiveNode node) {
-///     // Update node value, return true if changed
-///     return node.updateValue();
-///   }
+/// {@example /example/system.dart#system}
 ///
-///   @override
-///   void notify(ReactiveNode node) {
-///     // Queue node for processing
-///     queueEffect(node);
-///   }
-///
-///   @override
-///   void unwatched(ReactiveNode node) {
-///     // Clean up node when no longer watched
-///     node.cleanup();
-///   }
-/// }
-/// ```
+/// {@example /example/system.dart#graph}
 abstract class const ReactiveSystem() {
   /// Updates a reactive node's value.
   ///

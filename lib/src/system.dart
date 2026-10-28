@@ -66,35 +66,27 @@ extension type const ReactiveFlags._(int _) implements int {
 /// - SignalNode: Holds a mutable value
 /// - ComputedNode: Derives its value from other nodes
 /// - EffectNode: Runs side effects when dependencies change
-class ReactiveNode {
+class ReactiveNode({
   /// Bit flags representing the current state of this node.
   /// See [ReactiveFlags] for possible values.
-  ReactiveFlags flags;
+  required var ReactiveFlags flags,
 
   /// Head of the linked list of dependencies (nodes this node depends on).
   /// Null if this node has no dependencies.
-  Link? deps;
+  var Link? deps,
 
   /// Tail of the linked list of dependencies for O(1) append operations.
   /// Points to the last dependency link.
-  Link? depsTail;
+  var Link? depsTail,
 
   /// Head of the linked list of subscribers (nodes that depend on this node).
   /// Null if no other nodes depend on this one.
-  Link? subs;
+  var Link? subs,
 
   /// Tail of the linked list of subscribers for O(1) append operations.
   /// Points to the last subscriber link.
-  Link? subsTail;
-
-  ReactiveNode({
-    required this.flags,
-    this.deps,
-    this.depsTail,
-    this.subs,
-    this.subsTail,
-  });
-}
+  var Link? subsTail,
+});
 
 /// Represents a dependency relationship between two reactive nodes.
 ///
@@ -109,52 +101,37 @@ class ReactiveNode {
 ///
 /// The version tracking ensures that stale dependencies are properly updated
 /// or removed during reactive computations.
-final class Link {
+final class Link({
   /// Version number for tracking staleness of this dependency relationship.
   /// Used to determine if the link is still valid or needs updating.
-  int version;
+  required var int version,
 
   /// The dependency node (the node being depended upon).
   /// This is the source of data that the subscriber reads from.
-  ReactiveNode dep;
+  required var ReactiveNode dep,
 
   /// The subscriber node (the node that depends on dep).
   /// This node will be notified when dep changes.
-  ReactiveNode sub;
+  required var ReactiveNode sub,
 
   /// Previous link in the subscriber list of the dependency node.
   /// Used for traversing all subscribers of a dependency.
-  Link? prevSub;
+  var Link? prevSub,
 
   /// Next link in the subscriber list of the dependency node.
   /// Used for traversing all subscribers of a dependency.
-  Link? nextSub;
+  var Link? nextSub,
 
   /// Previous link in the dependency list of the subscriber node.
   /// Used for traversing all dependencies of a subscriber.
-  Link? prevDep;
+  var Link? prevDep,
 
   /// Next link in the dependency list of the subscriber node.
   /// Used for traversing all dependencies of a subscriber.
-  Link? nextDep;
+  var Link? nextDep,
+});
 
-  Link({
-    required this.version,
-    required this.dep,
-    required this.sub,
-    this.prevSub,
-    this.nextSub,
-    this.prevDep,
-    this.nextDep,
-  });
-}
-
-final class Stack<T> {
-  T value;
-  Stack<T>? prev;
-
-  Stack({required this.value, this.prev});
-}
+final class Stack<T>({required var T value, var Stack<T>? prev});
 
 /// Abstract base class for implementing a reactive system.
 ///
@@ -207,9 +184,7 @@ final class Stack<T> {
 ///   }
 /// }
 /// ```
-abstract class ReactiveSystem {
-  const ReactiveSystem();
-
+abstract class const ReactiveSystem() {
   /// Updates a reactive node's value.
   ///
   /// This method should recompute the node's value if necessary and
@@ -248,7 +223,7 @@ abstract class ReactiveSystem {
   /// The implementation maintains two doubly-linked lists:
   /// - deps/depsTail on the subscriber for its dependencies
   /// - subs/subsTail on the dependency for its subscribers
-  void link(final ReactiveNode dep, final ReactiveNode sub, final int version) {
+  void link(ReactiveNode dep, ReactiveNode sub, int version) {
     final prevDep = sub.depsTail;
     if (prevDep != null && identical(prevDep.dep, dep)) {
       return;
@@ -302,7 +277,7 @@ abstract class ReactiveSystem {
   ///
   /// Returns the next link in the subscriber's dependency list, or `null`
   /// if this was the last dependency.
-  Link? unlink(final Link link, final ReactiveNode sub) {
+  Link? unlink(Link link, ReactiveNode sub) {
     final dep = link.dep,
         prevDep = link.prevDep,
         nextDep = link.nextDep,
@@ -357,38 +332,38 @@ abstract class ReactiveSystem {
 
       // dart format off
       if (
-        (flags & 60 /*ReactiveFlags.recursedCheck | ReactiveFlags.recursed | ReactiveFlags.dirty | ReactiveFlags.pending*/ ) == ReactiveFlags.none
+        (flags & 60 /*ReactiveFlags.recursedCheck | ReactiveFlags.recursed | ReactiveFlags.dirty | ReactiveFlags.pending*/ ) == .none
       ) {
         sub.flags = flags | ReactiveFlags.pending;
         if (innerWrite) {
           sub.flags |= ReactiveFlags.recursed;
         }
       } else if (
-        (flags & 12 /*ReactiveFlags.recursedCheck | ReactiveFlags.recursed*/ ) == ReactiveFlags.none
+        (flags & 12 /*ReactiveFlags.recursedCheck | ReactiveFlags.recursed*/ ) == .none
       ) {
-        flags = ReactiveFlags.none;
-      } else if ((flags & ReactiveFlags.recursedCheck) == ReactiveFlags.none) {
+        flags = .none;
+      } else if ((flags & ReactiveFlags.recursedCheck) == .none) {
         sub.flags = (flags & -9 /*~ReactiveFlags.recursed*/ ) | ReactiveFlags.pending;
       } else if (
-        (flags & 48 /*ReactiveFlags.dirty | ReactiveFlags.pending*/ ) == ReactiveFlags.none
+        (flags & 48 /*ReactiveFlags.dirty | ReactiveFlags.pending*/ ) == .none
         && isValidLink(link, sub)
       ) {
         sub.flags = flags | 40 /*(ReactiveFlags.recursed | ReactiveFlags.pending)*/;
         flags &= ReactiveFlags.mutable;
       } else {
-        flags = ReactiveFlags.none;
+        flags = .none;
       } // dart format on
 
-      if ((flags & ReactiveFlags.watching) != ReactiveFlags.none) {
+      if ((flags & ReactiveFlags.watching) != .none) {
         notify(sub);
       }
 
-      if ((flags & ReactiveFlags.mutable) != ReactiveFlags.none) {
+      if ((flags & ReactiveFlags.mutable) != .none) {
         final subSubs = sub.subs;
         if (subSubs != null) {
           final nextSub = (link = subSubs).nextSub;
           if (nextSub != null) {
-            stack = Stack(value: next, prev: stack);
+            stack = .new(value: next, prev: stack);
             next = nextSub;
           }
           continue;
@@ -429,9 +404,9 @@ abstract class ReactiveSystem {
     do {
       final sub = curr!.sub, flags = sub.flags;
       // dart format off
-      if ((flags & 48 /*(ReactiveFlags.pending | ReactiveFlags.dirty)*/ ) == ReactiveFlags.pending) {
+      if ((flags & 48 /*(ReactiveFlags.pending | ReactiveFlags.dirty)*/ ) == .pending) {
         sub.flags = flags | ReactiveFlags.dirty;
-        if ((flags & 6 /*(ReactiveFlags.watching | ReactiveFlags.recursedCheck)*/ ) == ReactiveFlags.watching) {
+        if ((flags & 6 /*(ReactiveFlags.watching | ReactiveFlags.recursedCheck)*/ ) == .watching) {
           notify(sub);
         }
       } // dart format on
@@ -460,7 +435,7 @@ abstract class ReactiveSystem {
       final dep = link.dep, flags = dep.flags;
 
       // dart format off
-      if ((sub.flags & ReactiveFlags.dirty) != ReactiveFlags.none) {
+      if ((sub.flags & ReactiveFlags.dirty) != .none) {
         dirty = true;
       } else if ((flags & 17 /*(ReactiveFlags.mutable | ReactiveFlags.dirty)*/ ) == 17 /*(ReactiveFlags.mutable | ReactiveFlags.dirty)*/) {
         final subs = dep.subs;
@@ -471,7 +446,7 @@ abstract class ReactiveSystem {
           dirty = true;
         }
       } else if ((flags & 33 /*(ReactiveFlags.mutable | ReactiveFlags.pending)*/ ) == 33 /*(ReactiveFlags.mutable | ReactiveFlags.pending)*/) {
-        stack = Stack(value: link, prev: stack);
+        stack = .new(value: link, prev: stack);
         link = dep.deps!;
         sub = dep;
         ++checkDepth;
@@ -510,7 +485,7 @@ abstract class ReactiveSystem {
         }
       }
 
-      return dirty && sub.flags != ReactiveFlags.none;
+      return dirty && sub.flags != .none;
     } while (true);
   }
 
@@ -522,7 +497,7 @@ abstract class ReactiveSystem {
   ///
   /// Returns `true` if the link is valid, `false` otherwise.
   @pragma('vm:align-loops')
-  bool isValidLink(final Link checkLink, final ReactiveNode sub) {
+  bool isValidLink(Link checkLink, ReactiveNode sub) {
     Link? link = sub.depsTail;
     while (link != null) {
       if (identical(link, checkLink)) return true;

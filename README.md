@@ -74,6 +74,9 @@ void main() {
 
 ## 📦 Installation
 
+The development version requires Dart 3.13 or later. Published version 2.3.5
+supports Dart 3.8 or later.
+
 To install Alien Signals, add the following to your `pubspec.yaml`:
 
 ```yaml

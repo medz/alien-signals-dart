@@ -1,3 +1,9 @@
+## Unreleased
+
+- Require Dart 3.13 or later (previously Dart 3.8).
+- Adopt primary constructors and contextual dot shorthands while preserving
+  the existing API and reactive behavior.
+
 ## 2.3.5
 
 ### Bug Fixes

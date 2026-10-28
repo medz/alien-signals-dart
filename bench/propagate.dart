@@ -1,12 +1,10 @@
 import 'package:alien_signals/alien_signals.dart';
 import 'package:benchmark_harness/benchmark_harness.dart';
 
-class PropagateBenchmark extends BenchmarkBase {
-  PropagateBenchmark({required this.w, required this.h})
-    : super('propagate: $w * $h');
+class PropagateBenchmark({required final int w, required final int h})
+    extends BenchmarkBase {
+  this : super('propagate: $w * $h');
 
-  final int w;
-  final int h;
   late final WritableSignal<int> src;
   late final EffectScope scope;
   var observed = 0;

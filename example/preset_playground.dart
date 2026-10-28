@@ -7,7 +7,7 @@ extension type signal<T>._(SignalNode<T> _) {
   factory signal(T initialValue) {
     return signal._(
       SignalNode(
-        flags: ReactiveFlags.mutable,
+        flags: .mutable,
         currentValue: initialValue,
         pendingValue: initialValue,
       ),
@@ -22,9 +22,7 @@ extension type signal<T>._(SignalNode<T> _) {
 
 extension type computed<T>._(ComputedNode<T> _) {
   factory computed(T Function() getter) {
-    return computed._(
-      ComputedNode(getter: (_) => getter(), flags: ReactiveFlags.none),
-    );
+    return computed._(ComputedNode(getter: (_) => getter(), flags: .none));
   }
 
   T get value => _.get();

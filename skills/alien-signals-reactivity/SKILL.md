@@ -1,157 +1,91 @@
 ---
 name: alien-signals-reactivity
 description: >-
-  Implement or debug reactive code that directly uses alien_signals, or build a
-  downstream reactive library on its surface, preset, or system APIs. Guides
-  layer selection, dependency tracking, lifecycle, batching, and error behavior.
+  Build, review, or debug Dart reactive code using the alien_signals package.
+  Use for signal/computed/effect code, missing or repeated updates, effect cleanup,
+  asynchronous races, or downstream libraries built on preset.dart or system.dart.
 ---
 
-# Alien Signals
+# Alien Signals Reactivity
 
-## Choose the integration layer
+## Start at the consumer
 
-Check the code's imports and resolved package version first. Preserve the public
-API of an existing downstream library: its `.value` or `.dispose()` interface
-may intentionally differ from alien_signals. When behavior needs verification,
-resolve the installed package through `.dart_tool/package_config.json` and read
-that version's public libraries and implementation, rather than assuming the
-repository's latest branch matches the consumer.
+1. Read the affected imports, call sites, and package constraint. A downstream
+   library may intentionally expose `.value`, `.dispose()`, or different policies;
+   preserve its public contract. This skill concerns Dart `alien_signals`, not
+   the JavaScript package with a similar name.
+2. Establish the observable result: which values should change, how often work
+   should run, and when it should stop. For a bug, reduce the failing sequence to
+   reads, writes, and disposal before changing the implementation.
+3. Choose the smallest integration layer below. Read only the reference section
+   needed for the task. If behavior or API availability is unclear, resolve the
+   installed package through `.dart_tool/package_config.json` and inspect that
+   version's public libraries and implementation.
+4. Implement the change, then verify the affected behavior using the consumer's
+   existing test setup. For performance work, measure execution counts or the
+   relevant hot path before adding a cache, equality policy, or scheduler.
 
-| Task | Starting point |
-| --- | --- |
-| Use signals in an application | `package:alien_signals/alien_signals.dart` |
-| Change accessor names or API shape | Compose the surface objects |
-| Work with concrete reactive nodes | `package:alien_signals/preset.dart` |
-| Build different primitives or scheduling | `package:alien_signals/system.dart` |
+| Task | Approach | Read when needed |
+| --- | --- | --- |
+| Add reactive state or derived values | Surface `signal` and `computed` | [Derivation](references/usage.md#derive-values-instead-of-synchronizing-copies) |
+| Connect resources, requests, or UI updates | Surface `effect` and `effectScope`, with an explicit owner | [Lifetime](references/usage.md#give-external-work-a-lifetime), [async work](references/usage.md#keep-asynchronous-results-current) |
+| Fix collection updates or repeated work | Check identity and batch boundaries | [Mutation and batching](references/usage.md#notify-intentional-mutations-and-batch-related-writes) |
+| Expose different accessors | Compose the surface API | [Wrappers](references/integration.md#adapt-the-surface-before-building-nodes) |
+| Integrate concrete nodes | Use `preset.dart` | [Preset integration](references/integration.md#customize-preset-nodes-with-their-lifecycle) |
+| Define a different reactive runtime | Implement `system.dart` policies | [System integration](references/integration.md#supply-policies-at-the-system-layer) |
 
-For wrappers, node customization, or a new reactive system, read
-[the integration reference](references/integration.md). Ordinary surface usage
-does not require reading the engine.
+## Keep these contracts visible
 
-The rules below describe the built-in surface and preset. A custom system or
-downstream library can define different comparison, scheduling, and ownership
-policies; identify those differences before applying these rules.
+These are surface/preset contracts; custom downstream APIs can differ.
 
-## Use the surface API
+- **Reads establish dependencies.** Read signals inside the computed/effect that
+  needs updates. Only synchronous reads are tracked, and each execution replaces
+  its previous dependency set with the dependencies it actually reads.
+- **Derive state with `computed`.** Use `effect` for external work. Copying a
+  derived value into another writable signal adds synchronization and extra work.
+- **Own every effect.** Keep its stop handle or create it synchronously in an
+  owned scope. Effects run once immediately, then synchronously on relevant
+  updates unless batched. Return cleanup synchronously. A Future returned from
+  the callback is not awaited, and cleanup returned through it is not registered.
+- **Compare by identity.** Signal writes and computed results use `identical`,
+  not `==`. An in-place mutation needs `trigger` with a read of the holding signal;
+  an unchanged derived identity may still suppress downstream work.
+- **Batch synchronously.** Pair `startBatch()` with `endBatch()` in `finally`.
+  Effects flush at the outermost end. Reads see current writes; errors do not
+  roll back writes. Do not hold a batch open across `await`.
 
-- Create writable state with `signal(initialValue)`, read with `value()`, and
-  write with `value.set(next)`. Writing through `value(next)` is an old API.
-- Derive state with `computed((previous) => expression)`. The argument is the
-  last successful value, or `null` before the first success. For nullable results,
-  a successful `null` is indistinguishable from no previous value.
-- Keep computed getters focused on deriving values. They run lazily, cache their
-  results, and track the dependencies read on the latest execution.
-- Use `effect` for external work. It runs once immediately and then synchronously
-  when an update requires it, unless a batch defers it.
-- Call the returned effect handle to stop it, not to execute it again. The
-  surface does not expose `.dispose()`, `.value`, `batch()`, or `untracked()`.
-  Those names can be valid in a downstream wrapper.
+Surface spelling: `signal(initial)`, `value()`, `value.set(next)`,
+`computed((previous) => ...)`, and `effect(() { ... })`. Calling an effect or scope
+handle **stops** it. The surface has no `.value`, `.dispose()`, `batch()`, or
+`untracked()` helper. Do not translate those names mechanically from other
+signals libraries.
 
-This complete example checks updates and cleanup:
+## Debug in this order
 
-```dart
-import 'package:alien_signals/alien_signals.dart';
+Trace one write through the dependent computation, observer, and cleanup. Use
+the symptom to choose a check rather than changing the whole reactive graph.
 
-void main() {
-  final count = signal(0);
-  final doubled = computed((_) => count() * 2);
-  final events = <String>[];
+| Symptom | First check | Useful verification |
+| --- | --- | --- |
+| Missing update | Read outside the observer, after `await`, or same-object mutation | Change a source and assert the observed value |
+| Obsolete branch still triggers work | A dependency read unconditionally or a wrapper retaining old links | Switch the branch, then change the old source |
+| Too many executions | Effects created repeatedly, state copied by effects, or separate related writes | Count initial execution and executions per update |
+| Work continues after disposal | Detached effects, lost stop handles, or unfinished async work | Stop the owner, then write and complete pending work |
+| An old request overwrites new state | Inputs read too late or stale results accepted | Complete requests in reverse order |
+| Computed keeps throwing | Cached failure has not been invalidated by a tracked dependency | Change that dependency and read again |
 
-  final stop = effect(() {
-    final value = doubled();
-    events.add('run $value');
-    return () {
-      events.add('cleanup $value');
-    };
-  });
+For Flutter, use the project's adapter or an explicit lifecycle-bound bridge.
+The core package has no widgets and does not automatically track ordinary
+`build` reads. Creating a persistent effect on each rebuild leaks work.
 
-  count.set(1);
-  stop();
-  count.set(2);
-  assert(events.join(',') == 'run 0,cleanup 0,run 2,cleanup 2');
-}
-```
+## Finish with evidence
 
-## Give effects an owner
+For a behavior change, assert values, execution counts, or cleanup order that
+distinguish the fix from the failure. Use explicit Future completion for async
+tests, not timing sleeps. Run the relevant tests and analyzer using the project's
+toolchain. If runtime policy changes, select the corresponding
+[integration checks](references/integration.md#verify-the-policy-you-changed).
 
-Retain an independent effect's stop handle, or create related effects inside
-`effectScope(() { ... })` and retain the scope's stop handle. Calling the scope
-handle stops its owned effects and nested scopes. Nested children are disposed
-before their parent's cleanup; children are disposed in reverse dependency order.
-
-Return a `void Function()` cleanup synchronously from the effect callback.
-Cleanup runs before re-execution and on stop, and its reads are not tracked.
-
-Tracking, ownership, and cleanup registration are synchronous. A returned Future
-is not awaited, and a cleanup produced by that Future is not registered. Read
-reactive inputs before launching asynchronous work. Handle asynchronous errors,
-cancellation where supported, and stale results explicitly. Effects created after
-`await` need their own lifetime management.
-
-In Flutter, use the project's adapter or an explicit lifecycle-bound bridge for
-widget updates. The core package does not supply widgets or automatically track
-ordinary `build` method reads. Avoid creating persistent effects on every rebuild.
-
-## Control updates without extra machinery
-
-Signal writes and computed results use `identical`, not `==`. Replacing a value
-can notify dependents; mutating a collection and setting the same instance does
-not. For intentional in-place mutation, read the holding signal inside `trigger`.
-Choose replacement or mutation according to the application's data model; do not
-add deep comparison, collection copies, or another cache by default.
-
-Batch related writes with `startBatch()` and `endBatch()` in `try/finally`.
-Effects flush at the outermost batch end, while reads can see current writes.
-Keep the boundary synchronous. A batch defers effects; it does not roll back
-writes if the body throws.
-
-```dart
-import 'package:alien_signals/alien_signals.dart';
-
-void main() {
-  final items = signal(<int>[]);
-  final sizes = <int>[];
-  final stop = effect(() {
-    sizes.add(items().length);
-  });
-
-  startBatch();
-  try {
-    items().add(1);
-    trigger(() => items());
-    items().add(2);
-    trigger(() => items());
-  } finally {
-    endBatch();
-  }
-
-  assert(sizes.join(',') == '0,2');
-  stop();
-}
-```
-
-`trigger` notifies subscribers of the values read inside its callback. It is not
-a general cache reset: a derived value that remains identical can still suppress
-its downstream work.
-
-## Diagnose behavior
-
-| Symptom | Check |
-| --- | --- |
-| No update | The signal was read inside the observer, the value's identity changed or was triggered, and the read happened before `await` |
-| Repeated work | Effects created repeatedly, writes inside effects, and whether related writes should be batched |
-| Work after disposal | Independent or asynchronously created effects, unfinished async work, and reads/creation with tracking disabled |
-| Computed keeps throwing | Errors are cached until a tracked dependency is invalidated; a same-value write does not invalidate it |
-
-A failed computed run preserves its last successful value for `previous` but
-rethrows the cached error to readers. Successful recomputation clears the error.
-An error without any tracked dependency has no dependency update to retry it.
-
-Effect and cleanup exceptions propagate. Initial effect setup is not rolled back
-automatically, and a throwing cleanup can interrupt further disposal. If the task
-requires stronger guarantees, define that policy explicitly and consult the
-integration reference before implementing it.
-
-Verify the behavior affected by the change: observed values, execution counts,
-dependency changes, and cleanup. Use deterministic tests and explicit async
-completion rather than sleeps. Reuse the consumer's existing test setup.
+Explain the changed behavior, the owner of any new effect, and what was verified.
+If the task is a usage question, give the smallest applicable example instead of
+an engine walkthrough. Report any unverified behavior as such.

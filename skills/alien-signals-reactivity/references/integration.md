@@ -5,7 +5,7 @@ a reactive system. Use the consumer's resolved alien_signals version. Import
 public libraries; reading implementation code to verify behavior does not make
 hidden exports or private flags a supported extension protocol.
 
-## Compose the surface for a different API shape
+## Adapt the surface before building nodes
 
 Delegate reads, writes, and disposal to the surface when its behavior already
 fits. Keep one dependency graph and one value cache. An extension type can adapt
@@ -50,7 +50,17 @@ Additional behavior such as cleanup registration, equality, or resource loading
 is a separate contract: describe its semantics and verify it rather than silently
 changing upstream behavior.
 
-## Use preset nodes when node access is needed
+When documenting a downstream library, teach its own imports, public names, and
+ownership rules. State any differences in equality, scheduling, or errors. Its
+users should not need preset-node knowledge to use a surface wrapper. If the
+task includes distributing a package skill, describe that public contract in a
+skill named for the downstream package; dependency skills are discovered from
+direct dependencies and do not replace the downstream library's guidance.
+
+## Customize preset nodes with their lifecycle
+
+Move here when concrete node access or node behavior is part of the requirement.
+Changing `.call()` into `.value` alone is already handled by surface composition.
 
 `SignalNode.get/set` and `ComputedNode.get` already implement tracking and updates.
 They share the surface's runtime, so surface effects can observe node wrappers
@@ -189,7 +199,7 @@ resource-owning nodes need a meaningful `unwatched` policy. Identity comparison,
 cached errors, and synchronous effects are preset choices, not requirements for
 every system built on this graph.
 
-## Preserve or deliberately change failure behavior
+## Verify the policy you changed
 
 The built-in preset propagates effect/cleanup errors. A failed initial effect can
 retain subscriptions without returning a stop handle. Cleanup from a throwing
@@ -203,14 +213,13 @@ contract requires these guarantees, design and test the policy at that boundary.
 
 Match regression checks to the behavior being customized:
 
-- Dynamic dependency switching and removal of unused subscriptions.
-- Lazy computed reads, unchanged results, and shared dependencies in a diamond.
-- Nested batching and execution counts, including writes made inside effects.
-- Initial and later computed failures, recovery, nullable values, and preservation
-  of the last successful value; for preset parity, include invalidation followed
-  by restoring a source value before the next read.
-- Stopping queued effects, child-before-parent cleanup, cleanup errors, and
-  independent effects created with tracking disabled or after `await`.
+| Changed policy | Sequence that should distinguish a correct implementation |
+| --- | --- |
+| Dependency tracking | Switch a conditional branch, mutate the old dependency, and assert no obsolete notification |
+| Computed evaluation or equality | Read twice, change a source without changing the derived result, then update a diamond graph; check values and evaluation counts |
+| Batching or scheduling | Nest batches, stop a queued effect before flushing, and make a write inside an effect; check order and execution counts |
+| Computed failure handling | Fail before and after a success, then recover; check the preserved previous value, including nullable results. For preset parity, invalidate and restore a source before the next read |
+| Ownership or disposal | Stop a parent and assert child-before-parent cleanup; check cleanup failures and independently owned effects created after `await` or with tracking disabled |
 
 Reuse the downstream test setup and assert observable results. Test intentional
 policy differences against the downstream contract rather than forcing all custom

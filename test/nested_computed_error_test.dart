@@ -115,30 +115,27 @@ void main() {
       stop();
     });
   }
-  test(
-    'unchanged successful intermediate does not prevent failed descendant retry',
-    () {
-      final source = signal(0);
-      var stableCalls = 0, failedCalls = 0;
-      final stable = computed((_) {
-        stableCalls++;
-        source();
-        return 1;
-      });
-      final inner = computed((_) {
-        final v = stable();
-        if (++failedCalls == 1) throw StateError('x');
-        return v;
-      });
-      final outer = computed((_) => inner());
-      expect(() => outer(), throwsStateError);
-      source.set(1);
-      source.set(0);
-      expect(outer(), 1);
-      expect(stableCalls, 1);
-      expect(failedCalls, 2);
-    },
-  );
+  test('unchanged successful intermediate does not prevent failed descendant retry', () {
+    final source = signal(0);
+    var stableCalls = 0, failedCalls = 0;
+    final stable = computed((_) {
+      stableCalls++;
+      source();
+      return 1;
+    });
+    final inner = computed((_) {
+      final v = stable();
+      if (++failedCalls == 1) throw StateError('x');
+      return v;
+    });
+    final outer = computed((_) => inner());
+    expect(() => outer(), throwsStateError);
+    source.set(1);
+    source.set(0);
+    expect(outer(), 1);
+    expect(stableCalls, 1);
+    expect(failedCalls, 2);
+  });
   test('successful chain retains cache after restore', () {
     final source = signal(0);
     var calls = 0;
@@ -235,39 +232,36 @@ void main() {
       }
     },
   );
-  test(
-    'retry keeps previous successful nullable result and notifies same-value recovery',
-    () {
-      final source = signal(0);
-      var shouldFail = false;
-      final previous = <int?>[];
-      final inner = computed<int?>((prev) {
-        previous.add(prev);
-        source();
-        if (shouldFail) throw StateError('x');
-        return null;
-      });
-      final outer = computed<int?>((_) => inner());
-      final seen = <Object?>[];
-      final stop = effect(() {
-        try {
-          seen.add(outer());
-        } catch (_) {
-          seen.add('error');
-        }
-      });
-      shouldFail = true;
-      source.set(1);
-      shouldFail = false;
-      startBatch();
-      source.set(2);
-      source.set(1);
-      endBatch();
-      expect(seen, [null, 'error', null]);
-      expect(previous, [null, null, null]);
-      stop();
-    },
-  );
+  test('retry keeps previous successful nullable result and notifies same-value recovery', () {
+    final source = signal(0);
+    var shouldFail = false;
+    final previous = <int?>[];
+    final inner = computed<int?>((prev) {
+      previous.add(prev);
+      source();
+      if (shouldFail) throw StateError('x');
+      return null;
+    });
+    final outer = computed<int?>((_) => inner());
+    final seen = <Object?>[];
+    final stop = effect(() {
+      try {
+        seen.add(outer());
+      } catch (_) {
+        seen.add('error');
+      }
+    });
+    shouldFail = true;
+    source.set(1);
+    shouldFail = false;
+    startBatch();
+    source.set(2);
+    source.set(1);
+    endBatch();
+    expect(seen, [null, 'error', null]);
+    expect(previous, [null, null, null]);
+    stop();
+  });
   test('retry keeps last successful non-null previous value', () {
     final source = signal(0);
     var shouldFail = false;

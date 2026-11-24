@@ -1,3 +1,19 @@
+## Unreleased
+
+### Bug Fixes
+
+- Keep dependency links consistent when an effect stops itself during a rerun
+  and then reads more signals. Links left over from the previous run could
+  corrupt the node's dependency list.
+
+### Changes
+
+- `SignalNode`, `ComputedNode`, `EffectNode`, and `EffectScopeNode` now implement
+  the public `WritableSignal`, `Computed`, `Effect`, and `EffectScope` interfaces.
+  Subclasses that declare an incompatible `call()` must rename it.
+- `stop` on a bare preset node disposes its dependencies in reverse order, as
+  unwatched computed values already did.
+
 ## 2.4.0
 
 ### Requirements

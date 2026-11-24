@@ -1,5 +1,9 @@
 include: package:lints/recommended.yaml
 
+analyzer:
+  exclude:
+    - build/**
+
 linter:
   rules:
     comment_references: true

@@ -1,9 +1,8 @@
 import 'package:alien_signals/system.dart';
 
-/// Global version counter for tracking dependency updates.
-///
-/// Incremented whenever a reactive computation runs to ensure
-/// dependencies are properly tracked and invalidated.
+import 'surface.dart' show WritableSignal, Computed, Effect, EffectScope;
+
+/// Version stamped on links, advanced by every rerun of an effect or computed.
 int cycle = 0;
 
 /// Current depth of nested effect callback execution.
@@ -12,37 +11,29 @@ int cycle = 0;
 /// greater than 0, writes should be treated as inner writes during propagation.
 int runDepth = 0;
 
-/// Current depth of nested batch operations.
-///
-/// When greater than 0, effect execution is deferred until
-/// all batches complete to avoid redundant computations.
+/// Depth of nested batches; effects wait while it is greater than 0.
 int batchDepth = 0;
 
-/// The currently active subscriber node.
-///
-/// Used during reactive computations to automatically track
-/// dependencies. When a signal is accessed, it links itself
-/// to this active subscriber.
+/// The running node that reads are linked to, if any.
 ReactiveNode? activeSub;
 
-/// Head of the queue of effects waiting to be executed.
-///
-/// Effects are queued during propagation and executed
-/// together when the batch completes or flush is called.
+/// First effect waiting for [flush].
 LinkedEffect? queuedEffects;
 
-/// Tail of the effects queue for O(1) append operations.
+/// Last effect waiting for [flush].
 LinkedEffect? queuedEffectsTail;
 
-@pragma('vm:prefer-inline')
-@pragma('wasm:prefer-inline')
 const system = PresetReactiveSystem();
 
 @pragma('vm:prefer-inline')
+@pragma('dart2js:tryInline')
 @pragma('wasm:prefer-inline')
+void propagate(Link link, [bool innerWrite = false]) =>
+    system.propagate(link, innerWrite);
+
+// Kept as tear-offs: calling these directly slowed deep chains in AOT.
 final link = system.link,
     unlink = system.unlink,
-    propagate = system.propagate,
     checkDirty = system.checkDirty,
     shallowPropagate = system.shallowPropagate;
 
@@ -55,13 +46,7 @@ typedef EffectCallback<T> = T Function();
 /// Marks a parent effect, scope, or computed whose deps include a child effect.
 const hasChildEffect = 64 as ReactiveFlags;
 
-/// A reactive node that can be linked in a queue of effects.
-///
-/// Extends [ReactiveNode] to add queueing capabilities, allowing
-/// effects to be scheduled and executed in batch for efficiency.
-///
-/// Used internally by the effect system to manage execution order
-/// and avoid redundant computations during reactive updates.
+/// A node that can wait in the effect queue.
 class LinkedEffect({
   required super.flags,
   super.deps,
@@ -69,43 +54,37 @@ class LinkedEffect({
   super.subs,
   super.subsTail,
 }) extends ReactiveNode {
-  /// Next effect in the execution queue.
-  ///
-  /// Forms a singly-linked list of effects waiting to be executed.
+  /// Next effect in the queue.
   LinkedEffect? nextEffect;
 }
 
-/// A reactive signal node that holds a value of type [T].
+/// A writable value of type [T].
 ///
-/// SignalNode is the core primitive for reactive state. It stores
-/// a value that can be read and written, automatically tracking
-/// dependencies and notifying subscribers when the value changes.
-///
-/// The node maintains both current and pending values to support
-/// batched updates and ensure consistency during propagation.
+/// Writes are held as pending and committed on the next read, so a value that
+/// is restored before anyone reads it counts as unchanged.
 class SignalNode<T>({
   required super.flags,
 
-  /// The current committed value of the signal.
+  /// The committed value.
   required var T currentValue,
 
-  /// The pending value to be committed on the next update.
-  ///
-  /// Allows for batching multiple changes before propagation.
+  /// The latest written value, committed by the next update.
   required var T pendingValue,
-}) extends ReactiveNode {
-  /// Sets a new value for the signal.
+}) extends ReactiveNode implements WritableSignal<T> {
+  @override
+  @pragma('vm:prefer-inline')
+  @pragma('dart2js:tryInline')
+  @pragma('wasm:prefer-inline')
+  T call() => get();
+
+  /// Writes [newValue] and, outside a batch, runs the affected effects.
   ///
-  /// If the new value differs from the pending value, marks the
-  /// signal as dirty and propagates changes to all subscribers.
-  ///
-  /// If not in a batch (batchDepth == 0), immediately flushes
-  /// all queued effects.
+  /// Does nothing if [newValue] is identical to the pending value.
+  @override
   void set(T newValue) {
     if (!identical(pendingValue, newValue)) {
       pendingValue = newValue;
-      flags =
-          17 /*ReactiveFlags.mutable | ReactiveFlags.dirty*/ as ReactiveFlags;
+      flags = ReactiveFlags.mutable | ReactiveFlags.dirty;
       if (subs case final Link subs) {
         propagate(subs, runDepth > 0);
         if (batchDepth == 0) flush();
@@ -113,14 +92,7 @@ class SignalNode<T>({
     }
   }
 
-  /// Gets the current value of the signal.
-  ///
-  /// If the signal is dirty, updates it first. Automatically
-  /// establishes a dependency relationship with the active
-  /// subscriber if one exists.
-  ///
-  /// Returns the current committed value.
-  @pragma('vm:align-loops')
+  /// Commits any pending write, then reads and tracks the value.
   T get() {
     if ((flags & ReactiveFlags.dirty) != .none) {
       if (didUpdate()) {
@@ -135,10 +107,7 @@ class SignalNode<T>({
     return currentValue;
   }
 
-  /// Updates the signal's current value from its pending value.
-  ///
-  /// Returns `true` if the value changed, `false` otherwise.
-  /// Used internally during propagation to commit pending changes.
+  /// Commits the pending value and returns whether the value changed.
   @pragma('vm:prefer-inline')
   @pragma('dart2js:tryInline')
   @pragma('wasm:prefer-inline')
@@ -148,23 +117,19 @@ class SignalNode<T>({
   }
 }
 
-/// A reactive computed node that derives its value from other reactive nodes.
-///
-/// ComputedNode automatically tracks its dependencies and recalculates
-/// its value when any dependency changes. The computation is lazy -
-/// it only runs when the value is accessed and dependencies have changed.
-///
-/// Computed nodes cannot be directly written to; they always derive
-/// their value from the getter function.
+/// A lazily computed, cached value derived from other nodes.
 class ComputedNode<T>({
   required super.flags,
 
-  /// The function that computes this node's value.
-  ///
-  /// Receives the previous value as a parameter, which can be
-  /// useful for incremental computations.
+  /// Computes the value, given the previous successful value if any.
   required final T Function(T?) getter,
-}) extends ReactiveNode {
+}) extends ReactiveNode implements Computed<T> {
+  @override
+  @pragma('vm:prefer-inline')
+  @pragma('dart2js:tryInline')
+  @pragma('wasm:prefer-inline')
+  T call() => get();
+
   /// The cached computed value.
   ///
   /// Null until the first successful computation. A failed recomputation keeps
@@ -190,36 +155,20 @@ class ComputedNode<T>({
     }
   }
 
-  /// Gets the computed value, recalculating if necessary.
-  ///
-  /// Checks if the value is dirty or pending, and if so,
-  /// re-runs the getter function. Automatically tracks
-  /// dependencies accessed during computation.
-  ///
-  /// Returns the computed value.
+  /// Recomputes the value if it is stale, then reads and tracks it.
   T get() {
     final flags = this.flags;
-    // dart format off
-    if (
-      (flags & ReactiveFlags.dirty) != .none
-      || (
-        (flags & ReactiveFlags.pending) != .none
-        && (
-          checkDirty(deps!, this)
-          || identical(this.flags = flags & -33 /*~ReactiveFlags.pending*/, false)
-        )
-      )
-    ) { // dart format on
-      if (didUpdate()) {
-        final subs = this.subs;
-        if (subs != null) {
-          shallowPropagate(subs);
+    if ((flags & (ReactiveFlags.dirty | ReactiveFlags.pending)) != .none) {
+      if ((flags & ReactiveFlags.dirty) != .none || checkDirty(deps!, this)) {
+        if (didUpdate()) {
+          final subs = this.subs;
+          if (subs != null) shallowPropagate(subs);
         }
+      } else {
+        this.flags = flags & ~ReactiveFlags.pending;
       }
     } else if (flags == .none) {
-      this.flags =
-          5 /*ReactiveFlags.mutable | ReactiveFlags.recursedCheck*/
-              as ReactiveFlags;
+      this.flags = ReactiveFlags.mutable | ReactiveFlags.recursedCheck;
       final prevSub = setActiveSub(this);
       try {
         currentValue = getter(null);
@@ -227,7 +176,7 @@ class ComputedNode<T>({
         _cacheFailure(error, stackTrace);
       } finally {
         activeSub = prevSub;
-        this.flags &= -5 /*~ReactiveFlags.recursedCheck*/;
+        this.flags &= ~ReactiveFlags.recursedCheck;
       }
     }
 
@@ -239,15 +188,11 @@ class ComputedNode<T>({
       Error.throwWithStackTrace(failure.error, failure.stackTrace);
     }
 
-    return currentValue as T;
+    // Only null needs the runtime check against T.
+    return currentValue ?? (null as T);
   }
 
-  /// Updates the computed value by re-running the getter.
-  ///
-  /// Clears old dependencies, runs the getter with dependency
-  /// tracking enabled, and returns whether the value changed.
-  ///
-  /// Returns `true` if the computed value changed, `false` otherwise.
+  /// Reruns the getter and returns whether the value or error changed.
   bool didUpdate() {
     if ((flags & hasChildEffect) != .none) {
       disposeChildDepsInReverse(this);
@@ -268,7 +213,7 @@ class ComputedNode<T>({
       return true;
     } finally {
       activeSub = prevSub;
-      flags &= -5 /*~ReactiveFlags.recursedCheck*/;
+      flags &= ~ReactiveFlags.recursedCheck;
       purgeDeps(this);
     }
   }
@@ -282,7 +227,15 @@ final class _RetryDependency(final ComputedNode<Object?> owner)
 }
 
 /// A reactive effect scope node that can participate in propagation.
-class EffectScopeNode({required super.flags}) extends ReactiveNode {
+class EffectScopeNode({required super.flags})
+    extends ReactiveNode
+    implements EffectScope {
+  @override
+  @pragma('vm:prefer-inline')
+  @pragma('dart2js:tryInline')
+  @pragma('wasm:prefer-inline')
+  void call() => stopScope(this);
+
   /// Marks the scope as mutable while dirty checking propagates through it.
   @pragma('vm:prefer-inline')
   @pragma('dart2js:tryInline')
@@ -293,27 +246,27 @@ class EffectScopeNode({required super.flags}) extends ReactiveNode {
   }
 }
 
-/// A reactive effect node that runs side effects in response to changes.
-///
-/// EffectNode extends [LinkedEffect] to add the typed effect callback.
-/// Effects are the bridge between the reactive system and the outside world,
-/// allowing side effects like DOM updates or logging.
+/// A side effect that reruns when its dependencies change.
 class EffectNode<T>({
   required super.flags,
 
-  /// The side effect function to execute.
-  ///
-  /// This function is called whenever any of the effect's
-  /// dependencies change.
+  /// The side effect to run.
   required final EffectCallback<T> fn,
 
   /// Cleanup function returned by the latest effect execution.
   var EffectCleanup? cleanup,
-}) extends LinkedEffect {
+}) extends LinkedEffect implements Effect {
+  @override
+  @pragma('vm:prefer-inline')
+  @pragma('dart2js:tryInline')
+  @pragma('wasm:prefer-inline')
+  void call() => stop(this);
+
   /// Runs the effect callback and returns a cleanup if one was provided.
   EffectCleanup? runEffect() {
     final result = fn();
-    return result is EffectCleanup ? result : null;
+    // `is Function` cheaply rejects the common non-closure results.
+    return result is Function && result is EffectCleanup ? result : null;
   }
 }
 
@@ -328,13 +281,7 @@ class EffectNode<T>({
 ///
 /// {@example /example/preset_playground.dart#wrappers}
 class const PresetReactiveSystem() extends ReactiveSystem {
-  /// Updates a reactive node's value.
-  ///
-  /// Dispatches to the appropriate update method based on node type.
-  /// For [ComputedNode] and [SignalNode], calls their update methods.
-  /// For other node types, returns false (no update needed).
-  ///
-  /// Returns `true` if the node's value changed, `false` otherwise.
+  /// Updates [node] and returns whether its value changed.
   @override
   @pragma('vm:prefer-inline')
   @pragma('dart2js:tryInline')
@@ -349,34 +296,22 @@ class const PresetReactiveSystem() extends ReactiveSystem {
     };
   }
 
-  /// Queues an effect for execution.
-  ///
-  /// Adds the effect and any watching parent effects to the
-  /// execution queue. Effects are executed together when
-  /// [flush] is called or when a batch completes.
-  ///
-  /// This batching mechanism prevents redundant computations
-  /// and ensures effects run in a consistent order.
+  /// Queues [effect] for [flush], after any watching parent effects.
   @override
   @pragma('vm:align-loops')
   void notify(ReactiveNode effect) {
+    var current = effect as LinkedEffect;
+    final tail = current;
     LinkedEffect? head;
-    final LinkedEffect tail = effect as LinkedEffect;
+    while (true) {
+      current.nextEffect = head;
+      head = current;
+      current.flags &= ~ReactiveFlags.watching;
 
-    do {
-      (effect as LinkedEffect).nextEffect = head;
-      head = effect;
-      effect.flags &= -3 /*~ReactiveFlags.watching*/;
-
-      final next = effect.subs?.sub;
-      // dart format off
-      if (
-        next == null
-        || ((effect = next).flags & ReactiveFlags.watching) == .none
-      ) { // dart format on
-        break;
-      }
-    } while (true);
+      final next = current.subs?.sub;
+      if (next == null || (next.flags & ReactiveFlags.watching) == .none) break;
+      current = next as LinkedEffect;
+    }
 
     if (queuedEffectsTail == null) {
       queuedEffects = head;
@@ -395,41 +330,26 @@ class const PresetReactiveSystem() extends ReactiveSystem {
     switch (node) {
       case ComputedNode():
         if (node.depsTail != null) {
-          node.flags =
-              17 /*ReactiveFlags.mutable | ReactiveFlags.dirty*/
-                  as ReactiveFlags;
+          node.flags = ReactiveFlags.mutable | ReactiveFlags.dirty;
           disposeAllDepsInReverse(node);
         }
       case SignalNode():
         break;
-      case EffectNode():
-        stopEffect(node);
-      case EffectScopeNode():
-        stopScope(node);
       case _:
         stop(node);
     }
   }
 }
 
-/// Gets the currently active subscriber node.
-///
-/// The active subscriber is the node currently being computed,
-/// which will be linked as a dependency to any signals accessed.
-///
-/// Returns the active subscriber or `null` if none is active.
+/// Returns the running node that reads are linked to, if any.
 @pragma('vm:prefer-inline')
 @pragma('dart2js:tryInline')
 @pragma('wasm:prefer-inline')
 ReactiveNode? getActiveSub() => activeSub;
 
-/// Sets the active subscriber node and returns the previous one.
+/// Links subsequent reads to [sub], or stops tracking when it is null.
 ///
-/// Used to establish a reactive context where dependencies
-/// are automatically tracked. The previous subscriber should
-/// be restored after the reactive computation completes.
-///
-/// Returns the previous active subscriber.
+/// Returns the previous subscriber, which the caller must restore.
 @pragma('vm:prefer-inline')
 @pragma('dart2js:tryInline')
 @pragma('wasm:prefer-inline')
@@ -439,12 +359,7 @@ ReactiveNode? setActiveSub([ReactiveNode? sub]) {
   return prevSub;
 }
 
-/// Gets the current batch depth.
-///
-/// A depth greater than 0 indicates that updates are being
-/// batched and effects are deferred.
-///
-/// Returns the current batch depth.
+/// Returns the depth of nested batches; effects wait while it exceeds 0.
 @pragma('vm:prefer-inline')
 @pragma('dart2js:tryInline')
 @pragma('wasm:prefer-inline')
@@ -503,23 +418,11 @@ void trigger(void Function() fn) {
   }
 }
 
-/// Executes an effect node if it needs updating.
-///
-/// Checks if the effect is dirty or has pending updates,
-/// and if so, runs its function with dependency tracking.
-/// Otherwise, just marks it as watching.
-///
-/// This is called internally when flushing queued effects.
+/// Reruns a queued effect if a dependency changed, else resumes watching.
 void run(EffectNode e) {
   final flags = e.flags;
-  // dart format off
-  if (
-    (flags & ReactiveFlags.dirty) != .none
-    || (
-      (flags & ReactiveFlags.pending) != .none
-      && checkDirty(e.deps!, e)
-    )
-  ) { // dart format on
+  if ((flags & ReactiveFlags.dirty) != .none ||
+      ((flags & ReactiveFlags.pending) != .none && checkDirty(e.deps!, e))) {
     if ((flags & hasChildEffect) != .none) {
       disposeChildDepsInReverse(e);
     }
@@ -530,9 +433,7 @@ void run(EffectNode e) {
       }
     }
     e.depsTail = null;
-    e.flags =
-        6 /*ReactiveFlags.watching | ReactiveFlags.recursedCheck*/
-            as ReactiveFlags;
+    e.flags = ReactiveFlags.watching | ReactiveFlags.recursedCheck;
     final prevSub = setActiveSub(e);
     try {
       ++cycle;
@@ -541,7 +442,7 @@ void run(EffectNode e) {
     } finally {
       --runDepth;
       activeSub = prevSub;
-      e.flags &= -5 /*~ReactiveFlags.recursedCheck*/;
+      e.flags &= ~ReactiveFlags.recursedCheck;
       purgeDeps(e);
     }
   } else if (e.deps != null) {
@@ -549,19 +450,9 @@ void run(EffectNode e) {
   }
 }
 
-/// Flushes all queued effects, executing them in order.
+/// Runs all queued effects in order.
 ///
-/// Processes the queue of effects that have been notified
-/// of changes, running each effect function and clearing
-/// the queue. This ensures all side effects are synchronized
-/// with the current reactive state.
-///
-/// Called automatically when a batch completes or can be
-/// called manually to force immediate effect execution.
-@pragma('vm:align-loops')
-@pragma('vm:prefer-inline')
-@pragma('dart2js:tryInline')
-@pragma('wasm:prefer-inline')
+/// If one throws, the rest leave the queue and wait for their next change.
 void flush() {
   try {
     while (queuedEffects != null) {
@@ -576,9 +467,7 @@ void flush() {
   } finally {
     for (var effect = queuedEffects; effect != null;) {
       final next = effect.nextEffect;
-      effect.flags |=
-          10 /*ReactiveFlags.watching | ReactiveFlags.recursed*/
-              as ReactiveFlags;
+      effect.flags |= ReactiveFlags.watching | ReactiveFlags.recursed;
       effect.nextEffect = null;
       effect = next;
     }
@@ -586,38 +475,17 @@ void flush() {
   }
 }
 
-/// Stops a reactive node and removes it from the reactive system.
+/// Stops [node], disposing its dependencies and running any effect cleanup.
 ///
-/// Clears all dependencies and subscribers of the node,
-/// effectively removing it from the dependency graph.
-/// After calling this, the node will no longer respond
-/// to or trigger reactive updates.
-///
-/// This is essential for cleanup to prevent memory leaks.
+/// Only the first subscriber is unlinked, which covers the single owner of an
+/// effect or scope.
 void stop(ReactiveNode node) {
-  switch (node) {
-    case EffectNode():
-      stopEffect(node);
-    case EffectScopeNode():
-      stopScope(node);
-    case _:
-      node.depsTail = null;
-      node.flags = .none;
-      purgeDeps(node);
-      final subs = node.subs;
-      if (subs != null) {
-        unlink(subs, subs.sub);
-      }
-  }
+  stopScope(node);
+  if (node is EffectNode && node.cleanup != null) runCleanup(node);
 }
 
 /// Stops an effect after disposing its nested effects and scopes.
-void stopEffect(EffectNode e) {
-  stopScope(e);
-  if (e.cleanup != null) {
-    runCleanup(e);
-  }
-}
+void stopEffect(EffectNode e) => stop(e);
 
 /// Runs an effect cleanup outside dependency tracking.
 void runCleanup(EffectNode e) {
@@ -657,6 +525,9 @@ void disposeChildDepsInReverse(ReactiveNode sub) {
 
 /// Removes every dependency from [sub], starting from the newest link.
 void disposeAllDepsInReverse(ReactiveNode sub) {
+  // A node stopped mid-run still has stale links after depsTail; unlinking in
+  // reverse needs depsTail to be the real end of the list.
+  purgeDeps(sub);
   Link? link = sub.depsTail;
   while (link != null) {
     final prev = link.prevDep;
@@ -665,12 +536,7 @@ void disposeAllDepsInReverse(ReactiveNode sub) {
   }
 }
 
-/// Removes all stale dependencies from a subscriber node.
-///
-/// Called after a reactive computation completes to remove
-/// dependencies that were not accessed in the latest run.
-/// This keeps the dependency graph clean and prevents
-/// unnecessary updates from old dependencies.
+/// Removes the dependencies that [sub] did not read in its latest run.
 @pragma('vm:align-loops')
 @pragma('vm:prefer-inline')
 @pragma('dart2js:tryInline')

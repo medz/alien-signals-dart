@@ -7,7 +7,6 @@ import 'preset.dart'
         activeSub,
         runDepth,
         link,
-        stop,
         hasChildEffect,
         SignalNode,
         ComputedNode,
@@ -15,7 +14,7 @@ import 'preset.dart'
         EffectScopeNode,
         EffectCallback;
 
-import 'package:alien_signals/system.dart' show ReactiveFlags;
+import 'package:alien_signals/system.dart' show ReactiveFlags, ReactiveNode;
 
 /// A reactive value of type [T].
 ///
@@ -92,7 +91,7 @@ abstract interface class EffectScope {
 @pragma('dart2js:tryInline')
 @pragma('wasm:prefer-inline')
 WritableSignal<T> signal<T>(T initialValue) {
-  return _SignalImpl(
+  return SignalNode(
     flags: .mutable,
     currentValue: initialValue,
     pendingValue: initialValue,
@@ -114,7 +113,7 @@ WritableSignal<T> signal<T>(T initialValue) {
 @pragma('dart2js:tryInline')
 @pragma('wasm:prefer-inline')
 Computed<T> computed<T>(T Function(T?) getter) {
-  return _ComputedImpl(getter: getter, flags: .none);
+  return ComputedNode(getter: getter, flags: .none);
 }
 
 /// Runs [fn] immediately and again when its tracked dependencies change.
@@ -132,13 +131,12 @@ Computed<T> computed<T>(T Function(T?) getter) {
 ///
 /// {@example /example/effect_cleanup.dart#cleanup}
 Effect effect<T>(EffectCallback<T> fn) {
-  // dart format off
-  final e = _EffectImpl(fn: fn, flags: 6 /* ReactiveFlags.watching | ReactiveFlags.recursedCheck */ as ReactiveFlags),// dart format on
+  final e = EffectNode(
+        fn: fn,
+        flags: ReactiveFlags.watching | ReactiveFlags.recursedCheck,
+      ),
       prevSub = setActiveSub(e);
-  if (prevSub != null) {
-    link(e, prevSub, 0);
-    prevSub.flags |= hasChildEffect;
-  }
+  if (prevSub != null) _own(e, prevSub);
   try {
     ++runDepth;
     e.cleanup = e.runEffect();
@@ -146,7 +144,7 @@ Effect effect<T>(EffectCallback<T> fn) {
   } finally {
     --runDepth;
     activeSub = prevSub;
-    e.flags &= -5 /*~ ReactiveFlags.recursedCheck */;
+    e.flags &= ~ReactiveFlags.recursedCheck;
   }
 }
 
@@ -161,11 +159,8 @@ Effect effect<T>(EffectCallback<T> fn) {
 @pragma('dart2js:tryInline')
 @pragma('wasm:prefer-inline')
 EffectScope effectScope(void Function() fn) {
-  final e = _EffectScopeImpl(flags: .mutable), prevSub = setActiveSub(e);
-  if (prevSub != null) {
-    link(e, prevSub, 0);
-    prevSub.flags |= hasChildEffect;
-  }
+  final e = EffectScopeNode(flags: .mutable), prevSub = setActiveSub(e);
+  if (prevSub != null) _own(e, prevSub);
   try {
     fn();
     return e;
@@ -174,44 +169,8 @@ EffectScope effectScope(void Function() fn) {
   }
 }
 
-final class _SignalImpl<T>({
-  required super.flags,
-  required super.currentValue,
-  required super.pendingValue,
-}) extends SignalNode<T> implements WritableSignal<T> {
-  @override
-  @pragma('vm:prefer-inline')
-  @pragma('dart2js:tryInline')
-  @pragma('wasm:prefer-inline')
-  T call() => get();
-}
-
-final class _ComputedImpl<T>({required super.flags, required super.getter})
-    extends ComputedNode<T>
-    implements Computed<T> {
-  @override
-  @pragma('vm:prefer-inline')
-  @pragma('dart2js:tryInline')
-  @pragma('wasm:prefer-inline')
-  T call() => get();
-}
-
-final class _EffectImpl<T>({required super.flags, required super.fn})
-    extends EffectNode<T>
-    implements Effect {
-  @override
-  @pragma('vm:prefer-inline')
-  @pragma('dart2js:tryInline')
-  @pragma('wasm:prefer-inline')
-  void call() => stop(this);
-}
-
-class _EffectScopeImpl({required super.flags})
-    extends EffectScopeNode
-    implements EffectScope {
-  @override
-  @pragma('vm:prefer-inline')
-  @pragma('dart2js:tryInline')
-  @pragma('wasm:prefer-inline')
-  void call() => stop(this);
+/// Makes [parent] dispose [child] when it reruns or stops.
+void _own(ReactiveNode child, ReactiveNode parent) {
+  link(child, parent, 0);
+  parent.flags |= hasChildEffect;
 }

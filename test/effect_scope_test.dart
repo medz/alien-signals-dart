@@ -46,25 +46,22 @@ void main() {
     });
   });
 
-  test(
-    'should track signal updates in an inner scope when accessed by an outer effect',
-    () {
-      final source = signal(1);
+  test('should track signal updates in an inner scope when accessed by an outer effect', () {
+    final source = signal(1);
 
-      int triggers = 0;
+    int triggers = 0;
 
-      effect(() {
-        effectScope(() {
-          source();
-        });
-        triggers++;
+    effect(() {
+      effectScope(() {
+        source();
       });
+      triggers++;
+    });
 
-      expect(triggers, 1);
-      source.set(2);
-      expect(triggers, 2);
-    },
-  );
+    expect(triggers, 1);
+    source.set(2);
+    expect(triggers, 2);
+  });
 
   test('should propagate computed changes through nested scopes', () {
     final source = signal(0);

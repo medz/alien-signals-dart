@@ -1,4 +1,11 @@
-## Unreleased
+## 2.5.0
+
+### Performance
+
+- Slim the reactive core and speed up batched writes and shallow propagation.
+  In Dart VM measurements on Apple silicon, batched writes are about 8% faster
+  in AOT and 22% faster in JIT; most other gains are smaller. Web performance
+  was not measured.
 
 ### Bug Fixes
 

@@ -2,6 +2,13 @@
 
 This guide helps you migrate from earlier versions of `alien_signals` to latest version
 
+## Migration to 2.5.0
+
+Applications using `alien_signals.dart` need no changes. If you subclass
+`SignalNode`, `ComputedNode`, `EffectNode`, or `EffectScopeNode` from
+`preset.dart`, note that they now declare `call()` as part of the public
+interfaces. Rename any `call()` of your own with an incompatible signature.
+
 ## Migration to 2.4.0
 
 Upgrade to Dart 3.13 or later, or a Flutter SDK that includes Dart 3.13 or
